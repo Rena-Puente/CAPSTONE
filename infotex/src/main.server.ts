@@ -1,29 +1,60 @@
-import 'zone.js';
+// src/main.server.ts
+import 'zone.js/node';
 
 import { bootstrapApplication } from '@angular/platform-browser';
+import { importProvidersFrom, isDevMode } from '@angular/core';
 import { provideServerRendering } from '@angular/platform-server';
-import { provideRouter, Routes } from '@angular/router';
-import { importProvidersFrom } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import {
+  provideHttpClient,
+  withFetch,
+  withInterceptorsFromDi,
+  HTTP_INTERCEPTORS,
+} from '@angular/common/http';
 
 import { AppComponent } from './app/app';
-import { Home } from './app/pages/home/home';
-import { About } from './app/pages/about/about';
+import { routes } from './app/app.routes';
 
-const routes: Routes = [
-  { path: 'home', component: Home },
-  { path: 'about', component: About },
-  { path: '', redirectTo: 'home', pathMatch: 'full' }
-];
+// Interceptor DI (clase)
+import { AuthInterceptor } from './app/core/interceptors/auth.interceptor';
 
-export default function bootstrap() {
-  return bootstrapApplication(AppComponent, {
+// NgRx (igual que en main.ts)
+import { provideStore, provideState } from '@ngrx/store';
+import { provideEffects } from '@ngrx/effects';
+import { provideStoreDevtools } from '@ngrx/store-devtools';
+import { authFeature } from './app/core/auth/state/auth.reducer';
+import { AuthEffects } from './app/core/auth/state/auth.effects';
+import { metaReducers } from './app/core/store/store.metareducer';
+
+// (Opcional) si usas Forms de forma global en SSR
+import { FormsModule } from '@angular/forms';
+
+const bootstrap = () =>
+  bootstrapApplication(AppComponent, {
     providers: [
-      provideServerRendering(),
-      provideRouter(routes),
+      provideServerRendering(), // 👈 habilita SSR
+
+      // Router
+      provideRouter(routes, withComponentInputBinding()),
+
+      // (Opcional) Formularios y animaciones en SSR
       importProvidersFrom(FormsModule),
-      provideNoopAnimations(), // en SSR quedamos sin animaciones
+      provideAnimations(),
+
+      // HttpClient + interceptor (igual que en main.ts)
+      provideHttpClient(withFetch(), withInterceptorsFromDi()),
+      { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
+
+      // NgRx (igual que en main.ts)
+      provideStore({}, { metaReducers }),
+      provideState(authFeature),
+      provideEffects([AuthEffects]),
+      provideStoreDevtools({ maxAge: 25, logOnly: !isDevMode(), connectInZone: true }),
     ],
   });
-}
+
+export default bootstrap;
+
+// (opcional) Manejo de errores tipado si ejecutas aquí:
+bootstrap().catch((err: unknown) => console.error(err));
