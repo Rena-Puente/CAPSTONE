@@ -1,8 +1,0 @@
-infotex_high = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g619191c2e3e6be_infotex_high.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
-
-infotex_low = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g619191c2e3e6be_infotex_low.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
-
-infotex_medium = (description= (retry_count=20)(retry_delay=3)(address=(protocol=tcps)(port=1522)(host=adb.sa-santiago-1.oraclecloud.com))(connect_data=(service_name=g619191c2e3e6be_infotex_medium.adb.oraclecloud.com))(security=(ssl_server_dn_match=yes)))
-
-
-
