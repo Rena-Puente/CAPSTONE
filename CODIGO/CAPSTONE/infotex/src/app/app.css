@@ -1,0 +1,108 @@
+/* ===== Bootstrap Icons (si no las tienes ya importadas) ===== */
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+/* ===== Overlay CDK por encima de la navbar ===== */
+.cdk-overlay-container { z-index: 1060; } /* > modal bootstrap (1055) */
+
+/* ===== Backdrop con blur y fade ===== */
+.cdk-overlay-backdrop.login-backdrop {
+  opacity: 0;
+  backdrop-filter: blur(6px) brightness(0.85);
+  -webkit-backdrop-filter: blur(6px) brightness(0.85);
+}
+.cdk-overlay-backdrop.login-backdrop.cdk-overlay-backdrop-showing {
+  opacity: 1;
+  transition: opacity 220ms ease-out, backdrop-filter 220ms ease-out;
+}
+
+/* ===== Panel del diálogo (cdk-dialog-container) ===== */
+.login-panel {
+  transform: translateY(8px);
+  opacity: 0; /* estado inicial si el navegador pinta antes de animar */
+}
+
+/* ===== Contenido animado (animate.enter/leave) ===== */
+.dialog-body { transform: none; opacity: 1; }
+
+/* ===== Tarjeta del diálogo ===== */
+.dialog-card {
+  width: min(92vw, 440px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--dialog-bg, #fff);
+  margin-inline: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+}
+
+/* Dark mode suave */
+@media (prefers-color-scheme: dark) {
+  .dialog-card { --dialog-bg: #1f2327; }
+}
+
+/* ===== Título ===== */
+.login-title {
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+/* ===== Inputs y foco ===== */
+.input-group-text {
+  border-radius: 10px 0 0 10px;
+}
+.input-group .form-control {
+  border-radius: 0 10px 10px 0;
+}
+.form-control:focus {
+  box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
+  border-color: rgba(13, 110, 253, .35);
+}
+
+/* ===== Botones ===== */
+.btn-success,
+.btn-outline-secondary {
+  border-radius: 10px;
+}
+.btn-success:hover {
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* ===== Botón X ===== */
+.btn-close { z-index: 10; }
+@media (prefers-color-scheme: dark) {
+  .btn-close { filter: invert(1); } /* X blanca en dark */
+}
+
+/* ===== Animaciones enter/leave ===== */
+.fade-in  { animation: slideIn 220ms ease-out both; }
+.fade-out { animation: slideOut 160ms ease-in  both; }
+@keyframes slideIn {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes slideOut {
+  from { transform: translateY(0);    opacity: 1; }
+  to   { transform: translateY(8px);  opacity: 0; }
+}
+/* Espaciado general del main ya lo maneja .page-wrap; opcional: */
+.container { max-width: 1100px; }
+
+/* Sutil mejora de tipografía en dark/light (opcional) */
+:root { scroll-behavior: smooth; }
+footer {
+  margin-top: 3rem;
+  padding: 1.5rem 0;
+  text-align: center;   /* 🔹 centra el contenido */
+  font-size: 0.9rem;
+  color: #aaa;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+footer a {
+  margin: 0 0.75rem;
+  color: #58a6ff;
+  text-decoration: none;
+}
+footer a:hover {
+  text-decoration: underline;
+}
