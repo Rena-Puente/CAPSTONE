@@ -1,6 +1,12 @@
 # Infotex
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.2.
+This project is configured to use [Angular CLI](https://github.com/angular/angular-cli) version 17.3.x.
+
+Before running any of the commands below, install the project dependencies with:
+
+```bash
+npm install
+```
 
 ## Development server
 
