@@ -1,19 +1,12 @@
 # Infotex
 
-This project is configured to use [Angular CLI](https://github.com/angular/angular-cli) version 17.3.x.
-
-Before running any of the commands below, install the project dependencies with:
-
-```bash
-npm install
-```
+This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.2.2.
 
 ## Development server
 
-To start a local development server, run the Angular CLI from the project root (`infotex/`):
+To start a local development server, run:
 
 ```bash
-cd path/to/infotex
 ng serve
 ```
 
@@ -64,7 +57,3 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
-
-## Troubleshooting
-
-If you see the error `Project "cli" is missing a required property "root"`, double-check that you are running Angular CLI commands from the project root (the folder that contains `angular.json`). Running `ng serve` or other CLI commands from nested folders such as `src/app` will trigger this error because the CLI cannot locate the workspace configuration file from there.
