@@ -7,7 +7,7 @@ import {
 
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideClientHydration } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import {
   HTTP_INTERCEPTORS,
@@ -36,7 +36,7 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
 
     provideRouter(routes),
-    provideClientHydration(withEventReplay()),
+    provideClientHydration(),
     provideAnimations(),
 
     provideHttpClient(withFetch(), withInterceptorsFromDi()),
