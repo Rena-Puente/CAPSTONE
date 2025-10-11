@@ -17,6 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
+            "outputPath": "dist/infotex",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -61,8 +62,9 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
-          "options": {
-              "browserTarget": "infotex:build:development"
+          "configurations": {
+            "production": {
+              "browserTarget": "infotex:build:production"
             },
             "development": {
               "browserTarget": "infotex:build:development"
@@ -85,8 +87,8 @@
               }
             ],
             "styles": [
-          "node_modules/bootstrap/dist/css/bootstrap.min.css",
-          "src/styles.scss"]
+              "node_modules/bootstrap/dist/css/bootstrap.min.css",
+              "src/styles.scss"]
           }
         }
       }
@@ -94,4 +96,5 @@
   "cli": {
     "analytics": false
   }
+}
 }
