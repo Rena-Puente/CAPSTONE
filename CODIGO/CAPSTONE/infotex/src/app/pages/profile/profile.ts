@@ -8,6 +8,5 @@ import { CommonModule } from '@angular/common';
   templateUrl: './profile.html',
   styleUrls: ['./profile.css'],
 })
-export class Profile {
 
-}
+export class Profile {}
