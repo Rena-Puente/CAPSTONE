@@ -1,5 +1,5 @@
 {
-  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "$schema": "https://raw.githubusercontent.com/angular/angular-cli/17.3.0/packages/angular/cli/lib/config/schema.json",
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
@@ -13,7 +13,7 @@
       "root": "",
       "sourceRoot": "src",
       "prefix": "app",
-      "architect": {
+      "targets": {
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
@@ -61,12 +61,11 @@
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
-          "configurations": {
-            "production": {
-              "buildTarget": "infotex:build:production"
+          "options": {
+              "browserTarget": "infotex:build:development"
             },
             "development": {
-              "buildTarget": "infotex:build:development"
+              "browserTarget": "infotex:build:development"
             }
           },
           "defaultConfiguration": "development"
@@ -91,8 +90,7 @@
           }
         }
       }
-    }
-  },
+    },
   "cli": {
     "analytics": false
   }
