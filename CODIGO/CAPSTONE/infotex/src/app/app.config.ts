@@ -1,11 +1,19 @@
 import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
-  provideZonelessChangeDetection
+  provideZonelessChangeDetection,
+  isDevMode,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import {
+  HTTP_INTERCEPTORS,
+  provideHttpClient,
+  withFetch,
+  withInterceptorsFromDi,
+} from '@angular/common/http';
 
 // ⬇️ NgRx
 import { provideStore, provideState } from '@ngrx/store';
@@ -16,6 +24,7 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { authFeature } from './core/auth/state/auth.reducer';
 import { AuthEffects } from './core/auth/state/auth.effects';
 import { metaReducers } from './core/store/store.metareducer';
+import { AuthInterceptor } from './core/interceptors/auth.interceptor';
 
 // (Opcional) si luego agregas la UI de pestañas:
 // import { uiFeature } from './core/ui/state/ui.reducer';
@@ -27,7 +36,10 @@ export const appConfig: ApplicationConfig = {
 
     provideRouter(routes),
     provideClientHydration(withEventReplay()),
+    provideAnimations(),
 
+    provideHttpClient(withFetch(), withInterceptorsFromDi()),
+    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
     // 🧠 Store raíz con persistencia (localStorageSync)
     provideStore({}, { metaReducers }),
 
@@ -43,7 +55,7 @@ export const appConfig: ApplicationConfig = {
     provideStoreDevtools({
       maxAge: 25,
       connectInZone: true,
-      logOnly: false
+      logOnly: !isDevMode(),
     }),
   ]
 };

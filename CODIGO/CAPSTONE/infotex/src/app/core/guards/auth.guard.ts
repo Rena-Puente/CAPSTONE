@@ -13,7 +13,7 @@ export const authGuard: CanActivateFn = () => {
 
   // Si no tengo, intento refresh (usando cookie). Si funciona, ok.
   return auth.hydrateFromRefresh().pipe(
-    map(ok => ok ? true : router.createUrlTree(['/welcome'])),
+    map(ok => (ok ? true : router.createUrlTree(['/welcome']))),
     catchError(() => of(router.createUrlTree(['/welcome'])))
   );
 };
