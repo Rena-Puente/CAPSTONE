@@ -91,6 +91,36 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body ?? {};
+
+  if (!email || !password) {
+    return res.status(400).json({ ok: false, error: 'El correo y la contraseña son obligatorios.' });
+  }
+
+  try {
+    const result = await executeQuery(
+      'BEGIN :result := fn_login(:correo, :contrasena); END;',
+      {
+        correo: email,
+        contrasena: password,
+        result: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
+
+    const userId = result.outBinds?.result ?? null;
+
+    if (!userId) {
+      return res.status(401).json({ ok: false, error: 'Credenciales inválidas.' });
+    }
+
+    res.json({ ok: true, userId });
+  } catch (error) {
+    console.error('[Auth] Login failed:', error);
+    res.status(500).json({ ok: false, error: 'No se pudo completar el inicio de sesión.' });
+  }
+});
+
 async function start() {
   await initPool();
 

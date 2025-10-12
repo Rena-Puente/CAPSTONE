@@ -4,6 +4,80 @@
     <p class="welcome__message">
       Esta es la zona de invitados. Inicia sesión para acceder al contenido completo de la plataforma.
     </p>
-    <a routerLink="/home" class="welcome__cta">Ir al inicio de sesión</a>
+    <button type="button" class="welcome__cta" (click)="openMenu()">Iniciar sesión</button>
+  </div>
+
+  <div class="login-menu" *ngIf="isMenuOpen()">
+    <div class="login-menu__backdrop" (click)="closeMenu()" aria-hidden="true"></div>
+    <div
+      class="login-menu__panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="loginMenuTitle"
+      aria-describedby="loginMenuSubtitle"
+      (click)="$event.stopPropagation()"
+    >
+      <button type="button" class="login-menu__close" (click)="closeMenu()" aria-label="Cerrar formulario">×</button>
+      <div class="login-menu__avatar" aria-hidden="true">
+        <span class="login-menu__avatar-icon">👤</span>
+      </div>
+      <h2 id="loginMenuTitle">Bienvenido de nuevo</h2>
+      <p class="login-menu__subtitle" id="loginMenuSubtitle">
+        Usa tu correo corporativo para ingresar.
+      </p>
+
+      <form class="login-menu__form" [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+        <div class="login-menu__field">
+          <label for="loginEmail">Correo electrónico</label>
+          <input
+            id="loginEmail"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            [class.is-invalid]="emailControl.invalid && (emailControl.dirty || emailControl.touched)"
+          />
+          <span class="login-menu__error" *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
+            El correo es obligatorio.
+          </span>
+          <span class="login-menu__error" *ngIf="emailControl.hasError('email') && emailControl.touched">
+            Ingresa un correo electrónico válido.
+          </span>
+        </div>
+
+        <div class="login-menu__field">
+          <label for="loginPassword">Contraseña</label>
+          <input
+            id="loginPassword"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)"
+          />
+          <span class="login-menu__error" *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
+            La contraseña es obligatoria.
+          </span>
+          <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
+            Debe contener al menos 6 caracteres.
+          </span>
+        </div>
+
+        <div class="login-menu__options">
+          <label class="login-menu__remember">
+            <input type="checkbox" />
+            <span>Recordarme</span>
+          </label>
+          <a class="login-menu__link" href="#">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <button type="submit" class="login-menu__submit" [disabled]="loading()">
+          <span *ngIf="!loading()">Acceder</span>
+          <span *ngIf="loading()">Accediendo...</span>
+        </button>
+
+        <p class="login-menu__error login-menu__error--global" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+      </form>
+
+      <p class="login-menu__register">¿No tienes una cuenta? <a routerLink="/register">Regístrate</a></p>
+    </div>
   </div>
 </section>
