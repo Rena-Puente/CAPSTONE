@@ -1,42 +1,279 @@
 .welcome {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 60vh;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  background: radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 55%),
+    radial-gradient(circle at bottom, rgba(147, 51, 234, 0.08), transparent 45%);
   text-align: center;
 }
 
 .welcome__card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 2.5rem 3rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  max-width: 520px;
+  background: linear-gradient(160deg, #0d1117 0%, #161b22 45%, #0d1117 100%);
+  border: 1px solid rgba(48, 54, 61, 0.7);
+  border-radius: 18px;
+  padding: 3rem 3.5rem;
+  box-shadow: 0 30px 60px rgba(13, 17, 23, 0.55);
+  max-width: 540px;
+  color: #f0f6fc;
+  backdrop-filter: blur(12px);
 }
 
 .welcome__title {
-  font-size: 2.25rem;
+  font-size: clamp(2rem, 3vw, 2.5rem);
   font-weight: 700;
   margin-bottom: 1.5rem;
 }
 
 .welcome__message {
-  font-size: 1.1rem;
-  color: #555555;
-  margin-bottom: 2rem;
+  font-size: 1.05rem;
+  color: rgba(240, 246, 252, 0.75);
+  margin-bottom: 2.5rem;
 }
 
 .welcome__cta {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background-color: #007bff;
-  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.9rem 2.4rem;
+  background: linear-gradient(135deg, #238636, #2ea043);
+  color: #f0f6fc;
   border-radius: 9999px;
-  text-decoration: none;
+  border: 1px solid rgba(63, 185, 80, 0.6);
   font-weight: 600;
-  transition: background-color 0.2s ease-in-out;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 12px 24px rgba(46, 160, 67, 0.35);
 }
 
-.welcome__cta:hover {
-  background-color: #0069d9;
+.welcome__cta:hover,
+.welcome__cta:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(35, 134, 54, 0.45);
+  background: linear-gradient(135deg, #2ea043, #3fb950);
+}
+
+.login-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.login-menu__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(13, 17, 23, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+.login-menu__panel {
+  position: relative;
+  z-index: 1;
+  width: min(480px, 100%);
+  padding: 3.5rem 3rem 2.5rem;
+  background: #161b22;
+  border-radius: 20px;
+  border: 1px solid rgba(48, 54, 61, 0.7);
+  box-shadow: 0 35px 70px rgba(8, 8, 10, 0.6);
+  color: #f0f6fc;
+  text-align: left;
+}
+
+.login-menu__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: 1px solid rgba(48, 54, 61, 0.7);
+  border-radius: 50%;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: rgba(240, 246, 252, 0.8);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.login-menu__close:hover,
+.login-menu__close:focus-visible {
+  outline: none;
+  background: rgba(48, 54, 61, 0.3);
+  color: #f0f6fc;
+  transform: rotate(90deg);
+}
+
+.login-menu__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(140deg, rgba(35, 134, 54, 0.15), rgba(9, 105, 218, 0.15));
+  border: 1px solid rgba(63, 185, 80, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  color: rgba(240, 246, 252, 0.9);
+  font-size: 1.75rem;
+}
+
+.login-menu__subtitle {
+  color: rgba(240, 246, 252, 0.65);
+  margin: 0 0 2rem;
+  text-align: center;
+}
+
+.login-menu__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.login-menu__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.login-menu__field label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.login-menu__field input {
+  background: #0d1117;
+  border: 1px solid rgba(48, 54, 61, 0.9);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  color: #f0f6fc;
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-menu__field input:focus-visible {
+  outline: none;
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+}
+
+.login-menu__field input.is-invalid {
+  border-color: #f85149;
+  box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.25);
+}
+
+.login-menu__error {
+  font-size: 0.85rem;
+  color: #ffa198;
+}
+
+.login-menu__error--global {
+  text-align: center;
+  margin-top: -0.5rem;
+}
+
+.login-menu__options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.login-menu__remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(240, 246, 252, 0.75);
+}
+
+.login-menu__remember input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #3fb950;
+}
+
+.login-menu__link {
+  color: #58a6ff;
+  text-decoration: none;
+}
+
+.login-menu__link:hover,
+.login-menu__link:focus-visible {
+  text-decoration: underline;
+}
+
+.login-menu__submit {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #238636, #2ea043);
+  color: #f0f6fc;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.login-menu__submit:hover,
+.login-menu__submit:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 35px rgba(35, 134, 54, 0.35);
+  background: linear-gradient(135deg, #2ea043, #3fb950);
+}
+
+.login-menu__submit:disabled {
+  cursor: progress;
+  opacity: 0.7;
+  transform: none;
+  box-shadow: none;
+}
+
+.login-menu__register {
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  text-align: center;
+  color: rgba(240, 246, 252, 0.75);
+}
+
+.login-menu__register a {
+  color: #58a6ff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-menu__register a:hover,
+.login-menu__register a:focus-visible {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .welcome {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .welcome__card {
+    padding: 2.5rem 2rem;
+  }
+
+  .login-menu__panel {
+    padding: 3rem 1.75rem 2rem;
+  }
+
+  .login-menu__options {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
