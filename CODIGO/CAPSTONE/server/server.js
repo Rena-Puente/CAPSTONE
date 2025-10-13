@@ -11,8 +11,21 @@ const {
   DB_PASSWORD,
   DB_CONNECT_ALIAS,
   DB_WALLET_DIR,
-  DB_WALLET_PASSWORD
+  DB_WALLET_PASSWORD,
+  ACCESS_TOKEN_MINUTES = '15',
+  REFRESH_TOKEN_DAYS = '30'
 } = process.env;
+
+const accessTokenMinutes = Number.parseInt(ACCESS_TOKEN_MINUTES, 10);
+const refreshTokenDays = Number.parseInt(REFRESH_TOKEN_DAYS, 10);
+
+if (Number.isNaN(accessTokenMinutes) || accessTokenMinutes <= 0) {
+  throw new Error('ACCESS_TOKEN_MINUTES must be a positive integer');
+}
+
+if (Number.isNaN(refreshTokenDays) || refreshTokenDays <= 0) {
+  throw new Error('REFRESH_TOKEN_DAYS must be a positive integer');
+}
 
 function ensureEnv(value, name) {
   if (!value) {
@@ -74,6 +87,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+function getClientIp(req) {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (typeof forwardedFor === 'string' && forwardedFor.trim().length > 0) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  return req.ip || (req.socket ? req.socket.remoteAddress : undefined);
+}
+
+function toIsoString(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  try {
+    return new Date(value).toISOString();
+  } catch (error) {
+    console.warn('[Util] Failed to convert value to ISO string:', value, error);
+    return null;
+  }
+}
+
+function handleOracleError(error, res, defaultMessage = 'Error de base de datos') {
+  console.error('[DB] Operation failed:', error);
+  const message = error?.message || defaultMessage;
+  res.status(500).json({ ok: false, error: message });
+}
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -113,11 +157,195 @@ app.post('/auth/login', async (req, res) => {
     if (!userId) {
       return res.status(401).json({ ok: false, error: 'Credenciales inválidas.' });
     }
+    const sessionResult = await executeQuery(
+      `BEGIN
+         sp_emitir_sesion(
+           p_id_usuario     => :userId,
+           p_minutos_access => :accessMinutes,
+           p_dias_refresh   => :refreshDays,
+           p_ip             => :ip,
+           p_ua             => :userAgent,
+           o_access_token   => :accessToken,
+           o_refresh_token  => :refreshToken,
+           o_expira_access  => :accessExpires,
+           o_expira_refresh => :refreshExpires
+         );
+       END;`,
+      {
+        userId,
+        accessMinutes: accessTokenMinutes,
+        refreshDays: refreshTokenDays,
+        ip: getClientIp(req),
+        userAgent: req.headers['user-agent'] || null,
+        accessToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
+        refreshToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
+        accessExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP },
+        refreshExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP }
+      },
+      { autoCommit: true }
+    );
 
-    res.json({ ok: true, userId });
+    const outBinds = sessionResult.outBinds ?? {};
+
+    res.json({
+      ok: true,
+      userId,
+      accessToken: outBinds.accessToken ?? null,
+      refreshToken: outBinds.refreshToken ?? null,
+      accessExpiresAt: toIsoString(outBinds.accessExpires),
+      refreshExpiresAt: toIsoString(outBinds.refreshExpires)
+    });
   } catch (error) {
     console.error('[Auth] Login failed:', error);
     res.status(500).json({ ok: false, error: 'No se pudo completar el inicio de sesión.' });
+  }
+});
+
+app.post('/auth/refresh', async (req, res) => {
+  const { refreshToken } = req.body ?? {};
+
+  if (!refreshToken) {
+    return res.status(400).json({ ok: false, error: 'El token de actualización es obligatorio.' });
+  }
+
+  try {
+    const result = await executeQuery(
+      `BEGIN
+         sp_refrescar_access(
+           p_refresh_token => :refreshToken,
+           o_access_token  => :accessToken,
+           o_expira_access => :accessExpires
+         );
+       END;`,
+      {
+        refreshToken,
+        accessToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
+        accessExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP }
+      },
+      { autoCommit: true }
+    );
+
+    const outBinds = result.outBinds ?? {};
+
+    if (!outBinds.accessToken) {
+      return res.status(401).json({ ok: false, error: 'No fue posible refrescar la sesión.' });
+    }
+
+    res.json({
+      ok: true,
+      accessToken: outBinds.accessToken,
+      accessExpiresAt: toIsoString(outBinds.accessExpires)
+    });
+  } catch (error) {
+    if (error && typeof error.message === 'string' && error.message.includes('ORA-01403')) {
+      return res.status(401).json({ ok: false, error: 'El token de actualización no es válido.' });
+    }
+
+    handleOracleError(error, res, 'No se pudo refrescar el token de acceso.');
+  }
+});
+
+app.post('/auth/logout', async (req, res) => {
+  const { accessToken, refreshToken } = req.body ?? {};
+
+  if (!accessToken && !refreshToken) {
+    return res.status(400).json({ ok: false, error: 'Debe proporcionar un token para cerrar sesión.' });
+  }
+
+  try {
+    if (accessToken) {
+      try {
+        await executeQuery(
+          'BEGIN sp_revocar_access(:token); END;',
+          { token: accessToken },
+          { autoCommit: true }
+        );
+      } catch (error) {
+        if (!error?.message || !error.message.includes('ORA-01403')) {
+          throw error;
+        }
+      }
+    }
+
+    if (refreshToken) {
+      try {
+        await executeQuery(
+          'BEGIN sp_revocar_refresh(:token); END;',
+          { token: refreshToken },
+          { autoCommit: true }
+        );
+      } catch (error) {
+        if (!error?.message || !error.message.includes('ORA-01403')) {
+          throw error;
+        }
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    handleOracleError(error, res, 'No se pudo cerrar la sesión.');
+  }
+});
+
+app.post('/auth/register', async (req, res) => {
+  const { email, password, passwordConfirmation } = req.body ?? {};
+
+  if (!email || !password || !passwordConfirmation) {
+    return res.status(400).json({ ok: false, error: 'El correo y ambas contraseñas son obligatorios.' });
+  }
+
+  try {
+    const result = await executeQuery(
+      `BEGIN
+         sp_registrar_usuario(
+           p_correo    => :correo,
+           p_password  => :password,
+           p_password2 => :password2,
+           p_resultado => :resultado
+         );
+       END;`,
+      {
+        correo: email,
+        password,
+        password2: passwordConfirmation,
+        resultado: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 }
+      },
+      { autoCommit: true }
+    );
+
+    const outcome = result.outBinds?.resultado;
+
+    if (outcome !== 'OK') {
+      return res.status(400).json({ ok: false, error: outcome || 'No se pudo registrar al usuario.' });
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    handleOracleError(error, res, 'No se pudo registrar al usuario.');
+  }
+});
+
+app.post('/auth/validate', async (req, res) => {
+  const { accessToken } = req.body ?? {};
+
+  if (!accessToken) {
+    return res.status(400).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const result = await executeQuery(
+      'BEGIN :es_valido := fn_validar_access(:token); END;',
+      {
+        token: accessToken,
+        es_valido: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
+
+    const isValid = (result.outBinds?.es_valido ?? 0) === 1;
+
+    res.json({ ok: isValid });
+  } catch (error) {
+    handleOracleError(error, res, 'No se pudo validar el token.');
   }
 });
 
