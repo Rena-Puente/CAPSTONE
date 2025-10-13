@@ -9,6 +9,7 @@
     ]
   },
   "include": [
+    "src/env.d.ts",
     "src/**/*.ts"
   ],
   "exclude": [

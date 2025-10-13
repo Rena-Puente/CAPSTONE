@@ -6,7 +6,7 @@ import { Observable, throwError } from 'rxjs';
 const STORAGE_KEY = 'infotex_is_logged_in';
 const STORAGE_USER_KEY = 'infotex_user_id';
 const DEFAULT_API_URL = 'http://localhost:3000';
-const configuredApiUrl = (import.meta as any)?.env?.NG_APP_API_URL as string | undefined;
+const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
 
 interface LoginResponse {
   ok: boolean;
