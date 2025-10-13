@@ -9,6 +9,18 @@ const STORAGE_SESSION_KEY = 'infotex_session';
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
 
+function summarizeToken(token: string | null | undefined): string | null {
+  if (!token) {
+    return null;
+  }
+
+  if (token.length <= 8) {
+    return token;
+  }
+
+  return `${token.slice(0, 4)}...${token.slice(-4)} (len=${token.length})`;
+}
+
 interface LoginResponse {
   ok: boolean;
   userId?: number | null;
@@ -98,10 +110,19 @@ export class AuthService {
           accessExpiresAt: response.accessExpiresAt ?? null,
           refreshExpiresAt: response.refreshExpiresAt ?? null
         });
+
+        console.info('[AuthService] Login successful', {
+          userId: response.userId,
+          accessToken: summarizeToken(response.accessToken),
+          refreshToken: summarizeToken(response.refreshToken),
+          accessExpiresAt: response.accessExpiresAt ?? null,
+          refreshExpiresAt: response.refreshExpiresAt ?? null
+        });
         return response.userId;
       }),
       catchError((error) => {
         const message = error?.error?.error || error?.message || 'No se pudo iniciar sesión.';
+        console.error('[AuthService] Login failed', { email, error: message });
         return throwError(() => new Error(message));
       })
     );
@@ -147,6 +168,12 @@ export class AuthService {
           accessToken: response.accessToken,
           accessExpiresAt: response.accessExpiresAt ?? null
         });
+
+        console.info('[AuthService] Access token refreshed', {
+          refreshToken: summarizeToken(refreshToken),
+          newAccessToken: summarizeToken(response.accessToken),
+          accessExpiresAt: response.accessExpiresAt ?? null
+        });
       })
     );
   }
@@ -171,6 +198,12 @@ export class AuthService {
         return null;
       }
 
+      console.info('[AuthService] Session restored from storage', {
+        userId: parsed.userId,
+        accessExpiresAt: parsed.accessExpiresAt,
+        refreshExpiresAt: parsed.refreshExpiresAt
+      });
+
       return parsed;
     } catch {
       return null;
@@ -185,6 +218,12 @@ export class AuthService {
     }
 
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
+
+    console.info('[AuthService] Session persisted', {
+      userId: session.userId,
+      accessExpiresAt: session.accessExpiresAt,
+      refreshExpiresAt: session.refreshExpiresAt
+    });
   }
 
   private clearSession(): void {
@@ -196,6 +235,8 @@ export class AuthService {
 
     localStorage.removeItem(STORAGE_SESSION_KEY);
     this.clearLegacyStorage();
+
+    console.info('[AuthService] Session cleared');
   }
 
   private isExpired(isoString: string | null | undefined): boolean {

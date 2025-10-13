@@ -112,6 +112,26 @@ function toIsoString(value) {
   }
 }
 
+function summarizeToken(token) {
+  if (!token || typeof token !== 'string') {
+    return token ?? null;
+  }
+
+  if (token.length <= 8) {
+    return token;
+  }
+
+  return `${token.slice(0, 4)}...${token.slice(-4)} (len=${token.length})`;
+}
+
+function logAuthEvent(event, details = {}) {
+  try {
+    console.log(`[Auth] ${event}`, JSON.stringify(details));
+  } catch (error) {
+    console.log(`[Auth] ${event}`, details);
+  }
+}
+
 function handleOracleError(error, res, defaultMessage = 'Error de base de datos') {
   console.error('[DB] Operation failed:', error);
   const message = error?.message || defaultMessage;
@@ -143,6 +163,12 @@ app.post('/auth/login', async (req, res) => {
   }
 
   try {
+    logAuthEvent('Login attempt received', {
+      email,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || null
+    });
+
     const result = await executeQuery(
       'BEGIN :result := fn_login(:correo, :contrasena); END;',
       {
@@ -155,6 +181,7 @@ app.post('/auth/login', async (req, res) => {
     const userId = result.outBinds?.result ?? null;
 
     if (!userId) {
+      logAuthEvent('Login rejected', { email, reason: 'Invalid credentials' });
       return res.status(401).json({ ok: false, error: 'Credenciales inválidas.' });
     }
     const sessionResult = await executeQuery(
@@ -187,6 +214,14 @@ app.post('/auth/login', async (req, res) => {
 
     const outBinds = sessionResult.outBinds ?? {};
 
+    logAuthEvent('Login successful', {
+      userId,
+      accessToken: summarizeToken(outBinds.accessToken ?? null),
+      refreshToken: summarizeToken(outBinds.refreshToken ?? null),
+      accessExpiresAt: toIsoString(outBinds.accessExpires),
+      refreshExpiresAt: toIsoString(outBinds.refreshExpires)
+    });
+
     res.json({
       ok: true,
       userId,
@@ -209,6 +244,11 @@ app.post('/auth/refresh', async (req, res) => {
   }
 
   try {
+    logAuthEvent('Refresh attempt received', {
+      refreshToken: summarizeToken(refreshToken),
+      ip: getClientIp(req)
+    });
+
     const result = await executeQuery(
       `BEGIN
          sp_refrescar_access(
@@ -228,8 +268,18 @@ app.post('/auth/refresh', async (req, res) => {
     const outBinds = result.outBinds ?? {};
 
     if (!outBinds.accessToken) {
+      logAuthEvent('Refresh rejected', {
+        refreshToken: summarizeToken(refreshToken),
+        reason: 'Stored procedure did not return a token'
+      });
       return res.status(401).json({ ok: false, error: 'No fue posible refrescar la sesión.' });
     }
+
+    logAuthEvent('Refresh successful', {
+      refreshToken: summarizeToken(refreshToken),
+      newAccessToken: summarizeToken(outBinds.accessToken),
+      accessExpiresAt: toIsoString(outBinds.accessExpires)
+    });
 
     res.json({
       ok: true,
@@ -238,6 +288,10 @@ app.post('/auth/refresh', async (req, res) => {
     });
   } catch (error) {
     if (error && typeof error.message === 'string' && error.message.includes('ORA-01403')) {
+      logAuthEvent('Refresh rejected', {
+        refreshToken: summarizeToken(refreshToken),
+        reason: 'ORA-01403: no data found'
+      });
       return res.status(401).json({ ok: false, error: 'El token de actualización no es válido.' });
     }
 
@@ -253,6 +307,11 @@ app.post('/auth/logout', async (req, res) => {
   }
 
   try {
+    logAuthEvent('Logout requested', {
+      accessToken: summarizeToken(accessToken ?? null),
+      refreshToken: summarizeToken(refreshToken ?? null)
+    });
+
     if (accessToken) {
       try {
         await executeQuery(
@@ -280,6 +339,11 @@ app.post('/auth/logout', async (req, res) => {
         }
       }
     }
+
+    logAuthEvent('Logout completed', {
+      accessToken: summarizeToken(accessToken ?? null),
+      refreshToken: summarizeToken(refreshToken ?? null)
+    });
 
     res.json({ ok: true });
   } catch (error) {
@@ -333,6 +397,11 @@ app.post('/auth/validate', async (req, res) => {
   }
 
   try {
+    logAuthEvent('Validate attempt received', {
+      accessToken: summarizeToken(accessToken),
+      ip: getClientIp(req)
+    });
+
     const result = await executeQuery(
       'BEGIN :es_valido := fn_validar_access(:token); END;',
       {
@@ -342,6 +411,11 @@ app.post('/auth/validate', async (req, res) => {
     );
 
     const isValid = (result.outBinds?.es_valido ?? 0) === 1;
+
+    logAuthEvent('Validate result', {
+      accessToken: summarizeToken(accessToken),
+      isValid
+    });
 
     res.json({ ok: isValid });
   } catch (error) {
