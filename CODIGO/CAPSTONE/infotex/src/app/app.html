@@ -14,20 +14,28 @@
       >About</a
     >
     <a class="nav-link text-light" routerLink="/welcome">Welcome</a>
-    <div *ngIf="isAuthenticated()" class="dropdown">
+    <div
+      *ngIf="isAuthenticated()"
+      class="dropdown profile-dropdown"
+      [class.show]="isDropdownOpen()"
+    >
       <button
         class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2 profile-button"
         type="button"
         id="profileDropdown"
-        data-bs-toggle="dropdown"
-        aria-expanded="false"
+        (click)="toggleDropdown($event)"
+        [attr.aria-expanded]="isDropdownOpen()"
       >
         <img src="profile.ico" alt="Perfil" width="25" height="25" class="profile-icon" />
         <span>Perfil</span>
       </button>
-      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+      <ul
+        class="dropdown-menu dropdown-menu-end"
+        [class.show]="isDropdownOpen()"
+        aria-labelledby="profileDropdown"
+      >
         <li>
-          <a class="dropdown-item" routerLink="/profile">Ver perfil</a>
+          <a class="dropdown-item" routerLink="/profile" (click)="closeDropdown()">Ver perfil</a>
         </li>
         <li>
           <button class="dropdown-item" type="button" (click)="logout()">Cerrar sesión</button>
