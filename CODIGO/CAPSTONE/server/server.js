@@ -138,6 +138,73 @@ function handleOracleError(error, res, defaultMessage = 'Error de base de datos'
   res.status(500).json({ ok: false, error: message });
 }
 
+function extractBearerToken(req) {
+  const authorization = req.headers?.authorization;
+
+  if (!authorization || typeof authorization !== 'string') {
+    return null;
+  }
+
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+async function isAccessTokenValid(accessToken) {
+  const result = await executeQuery(
+    'BEGIN :es_valido := fn_validar_access(:token); END;',
+    {
+      token: accessToken,
+      es_valido: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  return (result.outBinds?.es_valido ?? 0) === 1;
+}
+
+const PROFILE_FIELD_LABELS = {
+  NOMBRE_MOSTRAR: 'Nombre para mostrar',
+  TITULAR: 'Titular profesional',
+  BIOGRAFIA: 'Biografía (mínimo 80 caracteres)',
+  PAIS: 'País',
+  CIUDAD: 'Ciudad',
+  URL_AVATAR: 'Foto de perfil'
+};
+
+function computeProfileMissingFields(row) {
+  if (!row) {
+    return Object.values(PROFILE_FIELD_LABELS);
+  }
+
+  const missing = [];
+
+  if (!row.NOMBRE_MOSTRAR) {
+    missing.push(PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR);
+  }
+
+  if (!row.TITULAR) {
+    missing.push(PROFILE_FIELD_LABELS.TITULAR);
+  }
+
+  const biography = typeof row.BIOGRAFIA === 'string' ? row.BIOGRAFIA : null;
+  if (!biography || biography.trim().length < 80) {
+    missing.push(PROFILE_FIELD_LABELS.BIOGRAFIA);
+  }
+
+  if (!row.PAIS) {
+    missing.push(PROFILE_FIELD_LABELS.PAIS);
+  }
+
+  if (!row.CIUDAD) {
+    missing.push(PROFILE_FIELD_LABELS.CIUDAD);
+  }
+
+  if (!row.URL_AVATAR) {
+    missing.push(PROFILE_FIELD_LABELS.URL_AVATAR);
+  }
+
+  return missing;
+}
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
@@ -420,6 +487,76 @@ app.post('/auth/validate', async (req, res) => {
     res.json({ ok: isValid });
   } catch (error) {
     handleOracleError(error, res, 'No se pudo validar el token.');
+  }
+});
+
+app.get('/profile/status/:userId', async (req, res) => {
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    await executeQuery(
+      'BEGIN sp_recalcular_perfil_completo(p_id_usuario => :userId); END;',
+      { userId },
+      { autoCommit: true }
+    );
+
+    const result = await executeQuery(
+      `SELECT nombre_mostrar,
+              titular,
+              biografia,
+              pais,
+              ciudad,
+              url_avatar,
+              perfil_completo
+         FROM perfiles
+        WHERE id_usuario = :userId`,
+      { userId }
+    );
+
+    const row = result.rows?.[0] ?? null;
+    const missingFields = computeProfileMissingFields(row);
+
+    if (!row) {
+      return res.json({
+        ok: true,
+        profile: null,
+        isComplete: false,
+        missingFields
+      });
+    }
+
+    const isComplete = String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S';
+
+    res.json({
+      ok: true,
+      profile: {
+        displayName: row.NOMBRE_MOSTRAR ?? null,
+        headline: row.TITULAR ?? null,
+        biography: row.BIOGRAFIA ?? null,
+        country: row.PAIS ?? null,
+        city: row.CIUDAD ?? null,
+        avatarUrl: row.URL_AVATAR ?? null
+      },
+      isComplete,
+      missingFields
+    });
+  } catch (error) {
+    handleOracleError(error, res, 'No se pudo obtener el estado del perfil.');
   }
 });
 

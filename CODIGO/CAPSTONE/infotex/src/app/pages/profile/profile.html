@@ -1,0 +1,90 @@
+<div class="profile-page container py-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card bg-dark text-light border-secondary shadow">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="card-title h4 mb-0">Estado de tu perfil</h2>
+            <button
+              type="button"
+              class="btn btn-outline-light btn-sm"
+              (click)="retry()"
+              [disabled]="loading()"
+            >
+              <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="loading()"></span>
+              Actualizar
+            </button>
+          </div>
+
+          <div *ngIf="loading()" class="text-center py-4">
+            <div class="spinner-border text-light" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3 mb-0">Verificando la información de tu perfil...</p>
+          </div>
+
+          <ng-container *ngIf="!loading()">
+            <div *ngIf="errorMessage()" class="alert alert-danger" role="alert">
+              {{ errorMessage() }}
+            </div>
+
+            <ng-container *ngIf="!errorMessage()">
+              <div *ngIf="hasProfile(); else noProfile">
+                <div *ngIf="isComplete(); else incompleteAlert" class="alert alert-success" role="alert">
+                  ¡Tu perfil está completo! Excelente trabajo.
+                </div>
+
+                <ng-template #incompleteAlert>
+                  <div class="alert alert-warning" role="alert">
+                    Tu perfil aún no está completo. Completa los siguientes elementos para finalizarlo:
+                    <ul class="mb-0 mt-2">
+                      <li *ngFor="let item of missingFields()">{{ item }}</li>
+                    </ul>
+                  </div>
+                </ng-template>
+
+                <div class="profile-details">
+                  <h3 class="h5">Información registrada</h3>
+                  <dl class="row">
+                    <dt class="col-sm-4">Nombre para mostrar</dt>
+                    <dd class="col-sm-8">{{ profile()?.displayName || 'Sin registrar' }}</dd>
+
+                    <dt class="col-sm-4">Titular profesional</dt>
+                    <dd class="col-sm-8">{{ profile()?.headline || 'Sin registrar' }}</dd>
+
+                    <dt class="col-sm-4">Biografía</dt>
+                    <dd class="col-sm-8">
+                      <span *ngIf="profile()?.biography; else emptyBiography">{{ profile()?.biography }}</span>
+                      <ng-template #emptyBiography>Sin registrar</ng-template>
+                    </dd>
+
+                    <dt class="col-sm-4">País</dt>
+                    <dd class="col-sm-8">{{ profile()?.country || 'Sin registrar' }}</dd>
+
+                    <dt class="col-sm-4">Ciudad</dt>
+                    <dd class="col-sm-8">{{ profile()?.city || 'Sin registrar' }}</dd>
+
+                    <dt class="col-sm-4">Foto de perfil</dt>
+                    <dd class="col-sm-8">
+                      <ng-container *ngIf="profile()?.avatarUrl; else noAvatar">
+                        <a [href]="profile()?.avatarUrl || '#'" target="_blank" rel="noopener" class="text-decoration-underline">
+                          Ver imagen
+                        </a>
+                      </ng-container>
+                      <ng-template #noAvatar>Sin registrar</ng-template>
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+              <ng-template #noProfile>
+                <div class="alert alert-info" role="alert">
+                  Aún no has completado la información básica de tu perfil. Comienza a actualizar tus datos desde la sección correspondiente en la aplicación.
+                </div>
+              </ng-template>
+            </ng-container>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

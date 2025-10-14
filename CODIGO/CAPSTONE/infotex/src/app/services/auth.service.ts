@@ -1,7 +1,9 @@
 import { inject, Injectable, signal } from '@angular/core';
+import type { Signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, map } from 'rxjs/operators';
 import { Observable, of, throwError } from 'rxjs';
+
 
 const STORAGE_KEY = 'infotex_is_logged_in';
 const STORAGE_USER_KEY = 'infotex_user_id';
@@ -53,6 +55,10 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = (configuredApiUrl?.replace(/\/$/, '') || DEFAULT_API_URL).replace(/\/$/, '');
   private readonly session = signal<AuthSession | null>(this.restoreSession());
+
+  getSessionSignal(): Signal<AuthSession | null> {
+    return this.session.asReadonly();
+  }
 
   isAuthenticated(): boolean {
     const session = this.session();
@@ -147,6 +153,10 @@ export class AuthService {
 
   getAccessToken(): string | null {
     return this.session()?.accessToken ?? null;
+  }
+
+    getUserId(): number | null {
+    return this.session()?.userId ?? null;
   }
 
   private refreshAccessToken(refreshToken: string): Observable<void> {

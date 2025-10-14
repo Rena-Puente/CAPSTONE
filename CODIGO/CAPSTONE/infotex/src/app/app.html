@@ -1,9 +1,17 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top px-3">
   <a class="navbar-brand" routerLink="/home">InfoTex</a>
-  <div class="ms-auto">
-    <a class="nav-link d-inline text-light" routerLink="/home">Home</a>
-    <a class="nav-link d-inline text-light" routerLink="/about">About</a>
-    <a class="nav-link d-inline text-light" routerLink="/pages/welcome">Welcome</a>
+  <div class="ms-auto d-flex align-items-center gap-3">
+    <a class="nav-link text-light" routerLink="/home">Home</a>
+    <a class="nav-link text-light" routerLink="/about">About</a>
+    <a class="nav-link text-light" routerLink="/welcome">Welcome</a>
+    <a
+      *ngIf="isAuthenticated()"
+      class="btn btn-outline-light d-flex align-items-center gap-2 profile-button"
+      routerLink="/profile"
+    >
+      <img src="profile.ico" alt="Perfil" width="20" height="20" class="profile-icon" />
+      <span>Perfil</span>
+    </a>
   </div>
 </nav>
 

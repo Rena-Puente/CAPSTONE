@@ -1,0 +1,24 @@
+.profile-page {
+  min-height: calc(100vh - 120px);
+}
+
+.profile-details {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 1rem;
+}
+
+dl {
+  margin-bottom: 0;
+}
+
+dl > dt {
+  font-weight: 600;
+}
+
+dl > dd {
+  margin-bottom: 0.75rem;
+}
+
+dl > dd:last-of-type {
+  margin-bottom: 0;
+}

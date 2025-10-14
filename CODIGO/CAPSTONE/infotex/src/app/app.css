@@ -1,0 +1,11 @@
+.navbar {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.profile-button {
+  padding: 0.35rem 0.9rem;
+}
+
+.profile-icon {
+  filter: brightness(0) invert(1);
+}
