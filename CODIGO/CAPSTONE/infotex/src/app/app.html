@@ -1,8 +1,18 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top px-3">
-  <a class="navbar-brand" routerLink="/home">InfoTex</a>
+  <img src="infotex-navbar.png" routerLink="/home" width="95" height="56" class="profile-icon" />
   <div class="ms-auto d-flex align-items-center gap-3">
-    <a class="nav-link text-light" routerLink="/home">Home</a>
-    <a class="nav-link text-light" routerLink="/about">About</a>
+    <a
+      *ngIf="isAuthenticated()"
+      class="nav-link text-light"
+      routerLink="/home"
+      >Home</a
+    >
+    <a
+      *ngIf="isAuthenticated()"
+      class="nav-link text-light"
+      routerLink="/about"
+      >About</a
+    >
     <a class="nav-link text-light" routerLink="/welcome">Welcome</a>
     <div *ngIf="isAuthenticated()" class="dropdown">
       <button
@@ -12,7 +22,7 @@
         data-bs-toggle="dropdown"
         aria-expanded="false"
       >
-        <img src="profile.ico" alt="Perfil" width="20" height="20" class="profile-icon" />
+        <img src="profile.ico" alt="Perfil" width="25" height="25" class="profile-icon" />
         <span>Perfil</span>
       </button>
       <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
