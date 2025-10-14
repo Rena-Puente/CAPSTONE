@@ -280,13 +280,58 @@ app.post('/auth/login', async (req, res) => {
     );
 
     const outBinds = sessionResult.outBinds ?? {};
+     let isProfileComplete = null;
+
+    try {
+      await executeQuery(
+        'BEGIN sp_recalcular_perfil_completo(p_id_usuario => :userId); END;',
+        { userId },
+        { autoCommit: true }
+      );
+
+      const profileResult = await executeQuery(
+        `SELECT nombre_mostrar,
+                titular,
+                biografia,
+                pais,
+                ciudad,
+                url_avatar,
+                perfil_completo
+           FROM perfiles
+          WHERE id_usuario = :userId`,
+        { userId }
+      );
+
+      const profileRow = profileResult.rows?.[0] ?? null;
+      const missingFields = computeProfileMissingFields(profileRow);
+
+      if (!profileRow) {
+        isProfileComplete = false;
+      } else {
+        const flag = String(profileRow.PERFIL_COMPLETO ?? '').toUpperCase() === 'S';
+        isProfileComplete = flag && missingFields.length === 0;
+      }
+
+      console.info('[Auth] Profile status calculated during login', {
+        userId,
+        isProfileComplete,
+        missingFieldsCount: missingFields.length
+      });
+    } catch (profileError) {
+      console.error('[Auth] Failed to determine profile status during login', {
+        userId,
+        error: profileError?.message || profileError
+      });
+      isProfileComplete = null;
+    }
 
     logAuthEvent('Login successful', {
       userId,
       accessToken: summarizeToken(outBinds.accessToken ?? null),
       refreshToken: summarizeToken(outBinds.refreshToken ?? null),
       accessExpiresAt: toIsoString(outBinds.accessExpires),
-      refreshExpiresAt: toIsoString(outBinds.refreshExpires)
+      refreshExpiresAt: toIsoString(outBinds.refreshExpires),
+      isProfileComplete
     });
 
     res.json({
@@ -295,7 +340,8 @@ app.post('/auth/login', async (req, res) => {
       accessToken: outBinds.accessToken ?? null,
       refreshToken: outBinds.refreshToken ?? null,
       accessExpiresAt: toIsoString(outBinds.accessExpires),
-      refreshExpiresAt: toIsoString(outBinds.refreshExpires)
+      refreshExpiresAt: toIsoString(outBinds.refreshExpires),
+      isProfileComplete
     });
   } catch (error) {
     console.error('[Auth] Login failed:', error);

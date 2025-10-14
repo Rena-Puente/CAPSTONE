@@ -30,6 +30,7 @@ interface LoginResponse {
   refreshToken?: string | null;
   accessExpiresAt?: string | null;
   refreshExpiresAt?: string | null;
+  isProfileComplete?: boolean | null;
   error?: string;
 }
 
@@ -96,7 +97,7 @@ export class AuthService {
     );
   }
 
-  login(email: string, password: string): Observable<number> {
+   login(email: string, password: string): Observable<{ userId: number; isProfileComplete: boolean | null }> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password }).pipe(
       map((response) => {
         if (
@@ -122,9 +123,14 @@ export class AuthService {
           accessToken: summarizeToken(response.accessToken),
           refreshToken: summarizeToken(response.refreshToken),
           accessExpiresAt: response.accessExpiresAt ?? null,
-          refreshExpiresAt: response.refreshExpiresAt ?? null
+          refreshExpiresAt: response.refreshExpiresAt ?? null,
+          isProfileComplete: response.isProfileComplete ?? null
         });
-        return response.userId;
+        
+        return {
+          userId: response.userId,
+          isProfileComplete: response.isProfileComplete ?? null
+        };
       }),
       catchError((error) => {
         const message = error?.error?.error || error?.message || 'No se pudo iniciar sesión.';

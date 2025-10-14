@@ -57,11 +57,36 @@ export class Welcome {
     const { email, password } = this.loginForm.getRawValue();
 
     try {
-      await firstValueFrom(this.authService.login(email, password));
+            const { isProfileComplete } = await firstValueFrom(this.authService.login(email, password));
+
+      if (isProfileComplete === null) {
+        this.isMenuOpen.set(true);
+        this.errorMessage.set('No se pudo verificar el estado del perfil. Intenta nuevamente.');
+        return;
+      }
+
+      const destination = isProfileComplete ? '/home' : '/profile';
+      let navigated = false;
+
+      try {
+        navigated = await this.router.navigate([destination]);
+      } catch (navigationError) {
+        console.error('[Welcome] Navigation to destination failed', { destination, navigationError });
+        this.isMenuOpen.set(true);
+        this.errorMessage.set('No se pudo redirigir a la página solicitada.');
+        return;
+      }
+
+      if (!navigated) {
+        console.error('[Welcome] Navigation to destination was cancelled', { destination });
+        this.isMenuOpen.set(true);
+        this.errorMessage.set('No se pudo redirigir a la página solicitada.');
+        return;
+      }
       this.closeMenu();
-      await this.router.navigate(['/home']);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo iniciar sesión.';
+      this.isMenuOpen.set(true);
       this.errorMessage.set(message);
     } finally {
       this.loading.set(false);
