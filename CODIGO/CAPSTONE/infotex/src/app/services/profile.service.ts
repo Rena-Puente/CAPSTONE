@@ -19,6 +19,15 @@ export interface ProfileStatus {
   missingFields: string[];
 }
 
+export interface UpdateProfilePayload {
+  displayName: string;
+  headline: string;
+  biography: string;
+  country: string;
+  city: string;
+  avatarUrl: string;
+}
+
 interface ProfileStatusResponse {
   ok: boolean;
   profile: {
@@ -42,46 +51,98 @@ export class ProfileService {
   private readonly apiUrl = (configuredApiUrl?.replace(/\/$/, '') || DEFAULT_API_URL).replace(/\/$/, '');
 
   getProfileStatus(): Observable<ProfileStatus> {
-    const userId = this.authService.getUserId();
-    const accessToken = this.authService.getAccessToken();
+    const session = this.resolveSession();
 
-    if (!userId || !accessToken) {
+    if (!session) {
       return throwError(() => new Error('No hay una sesión activa.'));
     }
 
-    const headers = new HttpHeaders({ Authorization: `Bearer ${accessToken}` });
+    const { userId, headers } = session;
 
     return this.http
       .get<ProfileStatusResponse>(`${this.apiUrl}/profile/status/${userId}`, { headers })
       .pipe(
-        map((response) => {
-          if (!response?.ok) {
-            throw new Error('No fue posible obtener el estado del perfil.');
-          }
-
-          return {
-            displayName: response.profile?.displayName ?? null,
-            headline: response.profile?.headline ?? null,
-            biography: response.profile?.biography ?? null,
-            country: response.profile?.country ?? null,
-            city: response.profile?.city ?? null,
-            avatarUrl: response.profile?.avatarUrl ?? null,
-            isComplete: response.isComplete,
-            missingFields: response.missingFields ?? []
-          } satisfies ProfileStatus;
-        }),
-        catchError((error) => {
-          const message = error?.error?.error || error?.message || 'No fue posible consultar el perfil.';
-
-          console.error('[ProfileService] getProfileStatus failed', {
-            url: `${this.apiUrl}/profile/status/${userId}`,
-            status: error?.status ?? null,
-            message,
-            error
-          });
-
-          return throwError(() => new Error(message));
-        })
+        map((response) => this.toProfileStatus(response, 'No fue posible obtener el estado del perfil.')),
+        catchError((error) => this.handleRequestError('getProfileStatus', `/profile/status/${userId}`, error, 'No fue posible consultar el perfil.'))
       );
+  }
+
+  getProfileDetails(): Observable<ProfileStatus> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}`;
+
+    return this.http
+      .get<ProfileStatusResponse>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) => this.toProfileStatus(response, 'No fue posible obtener el perfil.')),
+        catchError((error) => this.handleRequestError('getProfileDetails', endpoint, error, 'No fue posible obtener el perfil.'))
+      );
+  }
+
+  updateProfile(payload: UpdateProfilePayload): Observable<ProfileStatus> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}`;
+
+    return this.http
+      .put<ProfileStatusResponse>(`${this.apiUrl}${endpoint}`, payload, { headers })
+      .pipe(
+        map((response) => this.toProfileStatus(response, 'No fue posible actualizar el perfil.')),
+        catchError((error) => this.handleRequestError('updateProfile', endpoint, error, 'No fue posible actualizar el perfil.'))
+      );
+  }
+
+  private resolveSession(): { userId: number; accessToken: string; headers: HttpHeaders } | null {
+    const userId = this.authService.getUserId();
+    const accessToken = this.authService.getAccessToken();
+
+    if (!userId || !accessToken) {
+      return null;
+    }
+
+    const headers = new HttpHeaders({ Authorization: `Bearer ${accessToken}` });
+
+    return { userId, accessToken, headers };
+  }
+
+  private toProfileStatus(response: ProfileStatusResponse | null | undefined, defaultMessage: string): ProfileStatus {
+    if (!response?.ok) {
+      throw new Error(defaultMessage);
+    }
+
+    return {
+      displayName: response.profile?.displayName ?? null,
+      headline: response.profile?.headline ?? null,
+      biography: response.profile?.biography ?? null,
+      country: response.profile?.country ?? null,
+      city: response.profile?.city ?? null,
+      avatarUrl: response.profile?.avatarUrl ?? null,
+      isComplete: Boolean(response.isComplete),
+      missingFields: Array.isArray(response.missingFields) ? response.missingFields : []
+    } satisfies ProfileStatus;
+  }
+
+  private handleRequestError(method: string, endpoint: string, error: unknown, fallbackMessage: string): Observable<never> {
+    const message = (error as any)?.error?.error || (error as any)?.message || fallbackMessage;
+
+    console.error(`[ProfileService] ${method} failed`, {
+      url: `${this.apiUrl}${endpoint}`,
+      status: (error as any)?.status ?? null,
+      message,
+      error
+    });
+
+    return throwError(() => new Error(message));
   }
 }
