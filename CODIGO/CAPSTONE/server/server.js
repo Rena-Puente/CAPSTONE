@@ -490,15 +490,34 @@ app.post('/auth/validate', async (req, res) => {
   }
 });
 
+app.options('/profile/status/:userId', cors());
+
 app.get('/profile/status/:userId', async (req, res) => {
+  const startedAt = Date.now();
   const accessToken = extractBearerToken(req);
   const userId = Number.parseInt(req.params.userId, 10);
 
+  console.info('[Profile] Status request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
   if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Profile] Status request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
     return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
   }
 
   if (!accessToken) {
+    console.warn('[Profile] Status request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
     return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
   }
 
@@ -506,8 +525,17 @@ app.get('/profile/status/:userId', async (req, res) => {
     const isValid = await isAccessTokenValid(accessToken);
 
     if (!isValid) {
+      console.warn('[Profile] Status request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
       return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
     }
+
+    console.info('[Profile] Status request authorized', {
+      userId,
+      elapsedMs: Date.now() - startedAt
+    });
 
     await executeQuery(
       'BEGIN sp_recalcular_perfil_completo(p_id_usuario => :userId); END;',
@@ -555,7 +583,21 @@ app.get('/profile/status/:userId', async (req, res) => {
       isComplete,
       missingFields
     });
+
+    console.info('[Profile] Status response sent', {
+      userId,
+      hasProfile: Boolean(row),
+      isComplete,
+      missingFieldsCount: missingFields.length,
+      elapsedMs: Date.now() - startedAt
+    });
   } catch (error) {
+    console.error('[Profile] Status request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
     handleOracleError(error, res, 'No se pudo obtener el estado del perfil.');
   }
 });

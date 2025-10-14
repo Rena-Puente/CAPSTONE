@@ -72,6 +72,14 @@ export class ProfileService {
         }),
         catchError((error) => {
           const message = error?.error?.error || error?.message || 'No fue posible consultar el perfil.';
+
+          console.error('[ProfileService] getProfileStatus failed', {
+            url: `${this.apiUrl}/profile/status/${userId}`,
+            status: error?.status ?? null,
+            message,
+            error
+          });
+
           return throwError(() => new Error(message));
         })
       );
