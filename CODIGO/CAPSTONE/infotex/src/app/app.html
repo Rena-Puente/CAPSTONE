@@ -4,14 +4,26 @@
     <a class="nav-link text-light" routerLink="/home">Home</a>
     <a class="nav-link text-light" routerLink="/about">About</a>
     <a class="nav-link text-light" routerLink="/welcome">Welcome</a>
-    <a
-      *ngIf="isAuthenticated()"
-      class="btn btn-outline-light d-flex align-items-center gap-2 profile-button"
-      routerLink="/profile"
-    >
-      <img src="profile.ico" alt="Perfil" width="20" height="20" class="profile-icon" />
-      <span>Perfil</span>
-    </a>
+    <div *ngIf="isAuthenticated()" class="dropdown">
+      <button
+        class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2 profile-button"
+        type="button"
+        id="profileDropdown"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        <img src="profile.ico" alt="Perfil" width="20" height="20" class="profile-icon" />
+        <span>Perfil</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+        <li>
+          <a class="dropdown-item" routerLink="/profile">Ver perfil</a>
+        </li>
+        <li>
+          <button class="dropdown-item" type="button" (click)="logout()">Cerrar sesión</button>
+        </li>
+      </ul>
+    </div>
   </div>
 </nav>
 
