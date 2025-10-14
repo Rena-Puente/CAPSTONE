@@ -55,10 +55,16 @@
                     type="text"
                     class="form-control"
                     formControlName="displayName"
-                    [class.is-invalid]="displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)"
+                    [class.is-invalid]="
+                      (displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)) ||
+                      fieldState().displayName.ok === false
+                    "
                   />
                   <div class="invalid-feedback" *ngIf="displayNameControl.hasError('required') && (displayNameControl.dirty || displayNameControl.touched)">
                     El nombre para mostrar es obligatorio.
+                  </div>
+                  <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
+                    {{ fieldState().displayName.error || 'El servidor reportó un problema con este campo.' }}
                   </div>
                 </div>
 
@@ -69,10 +75,16 @@
                     type="text"
                     class="form-control"
                     formControlName="headline"
-                    [class.is-invalid]="headlineControl.invalid && (headlineControl.dirty || headlineControl.touched)"
+                    [class.is-invalid]="
+                      (headlineControl.invalid && (headlineControl.dirty || headlineControl.touched)) ||
+                      fieldState().headline.ok === false
+                    "
                   />
                   <div class="invalid-feedback" *ngIf="headlineControl.hasError('required') && (headlineControl.dirty || headlineControl.touched)">
                     El titular profesional es obligatorio.
+                  </div>
+                  <div class="invalid-feedback" *ngIf="fieldState().headline.ok === false">
+                    {{ fieldState().headline.error || 'El servidor reportó un problema con este campo.' }}
                   </div>
                 </div>
 
@@ -83,7 +95,10 @@
                     class="form-control"
                     formControlName="biography"
                     rows="4"
-                    [class.is-invalid]="biographyControl.invalid && (biographyControl.dirty || biographyControl.touched)"
+                    [class.is-invalid]="
+                      (biographyControl.invalid && (biographyControl.dirty || biographyControl.touched)) ||
+                      fieldState().biography.ok === false
+                    "
                   ></textarea>
                   <div class="form-text text-light">Escribe al menos 80 caracteres sobre ti.</div>
                   <div class="invalid-feedback" *ngIf="biographyControl.hasError('required') && (biographyControl.dirty || biographyControl.touched)">
@@ -91,6 +106,9 @@
                   </div>
                   <div class="invalid-feedback" *ngIf="biographyControl.hasError('minTrimmedLength') && (biographyControl.dirty || biographyControl.touched)">
                     La biografía debe contener al menos 80 caracteres.
+                  </div>
+                  <div class="invalid-feedback" *ngIf="fieldState().biography.ok === false">
+                    {{ fieldState().biography.error || 'El servidor reportó un problema con este campo.' }}
                   </div>
                 </div>
 
@@ -102,10 +120,16 @@
                       type="text"
                       class="form-control"
                       formControlName="country"
-                      [class.is-invalid]="countryControl.invalid && (countryControl.dirty || countryControl.touched)"
+                      [class.is-invalid]="
+                        (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
+                        fieldState().country.ok === false
+                      "
                     />
                     <div class="invalid-feedback" *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
                       El país es obligatorio.
+                    </div>
+                    <div class="invalid-feedback" *ngIf="fieldState().country.ok === false">
+                      {{ fieldState().country.error || 'El servidor reportó un problema con este campo.' }}
                     </div>
                   </div>
 
@@ -116,10 +140,16 @@
                       type="text"
                       class="form-control"
                       formControlName="city"
-                      [class.is-invalid]="cityControl.invalid && (cityControl.dirty || cityControl.touched)"
+                      [class.is-invalid]="
+                        (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
+                        fieldState().city.ok === false
+                      "
                     />
                     <div class="invalid-feedback" *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
                       La ciudad es obligatoria.
+                    </div>
+                    <div class="invalid-feedback" *ngIf="fieldState().city.ok === false">
+                      {{ fieldState().city.error || 'El servidor reportó un problema con este campo.' }}
                     </div>
                   </div>
                 </div>
@@ -131,10 +161,16 @@
                     type="url"
                     class="form-control"
                     formControlName="avatarUrl"
-                    [class.is-invalid]="avatarUrlControl.invalid && (avatarUrlControl.dirty || avatarUrlControl.touched)"
+                    [class.is-invalid]="
+                      (avatarUrlControl.invalid && (avatarUrlControl.dirty || avatarUrlControl.touched)) ||
+                      fieldState().avatarUrl.ok === false
+                    "
                   />
                   <div class="invalid-feedback" *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
                     La URL de la foto de perfil es obligatoria.
+                  </div>
+                  <div class="invalid-feedback" *ngIf="fieldState().avatarUrl.ok === false">
+                    {{ fieldState().avatarUrl.error || 'El servidor reportó un problema con este campo.' }}
                   </div>
                 </div>
 

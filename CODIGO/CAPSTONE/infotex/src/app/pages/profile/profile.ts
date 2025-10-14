@@ -4,7 +4,13 @@ import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Va
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
-import { ProfileService, ProfileStatus, UpdateProfilePayload } from '../../services/profile.service';
+import {
+  PROFILE_FIELDS,
+  ProfileData,
+  ProfileField,
+  ProfileService,
+  UpdateProfilePayload
+} from '../../services/profile.service';
 
 function minTrimmedLengthValidator(minLength: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -16,6 +22,15 @@ function minTrimmedLengthValidator(minLength: number): ValidatorFn {
 
     return null;
   };
+}
+
+type FieldState = Record<ProfileField, { ok: boolean; error: string | null }>;
+
+function createEmptyFieldState(): FieldState {
+  return PROFILE_FIELDS.reduce((acc, field) => {
+    acc[field] = { ok: true, error: null };
+    return acc;
+  }, {} as FieldState);
 }
 
 @Component({
@@ -35,7 +50,8 @@ export class Profile implements OnInit {
   protected readonly loadError = signal<string | null>(null);
   protected readonly submitError = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
-  protected readonly profile = signal<ProfileStatus | null>(null);
+  protected readonly profile = signal<ProfileData | null>(null);
+  protected readonly fieldState = signal<FieldState>(createEmptyFieldState());
 
   protected readonly hasProfile = computed(() => this.profile() !== null);
   protected readonly isComplete = computed(() => this.profile()?.isComplete ?? false);
@@ -107,7 +123,15 @@ export class Profile implements OnInit {
     try {
       const updatedProfile = await firstValueFrom(this.profileService.updateProfile(payload));
       this.applyProfile(updatedProfile);
-      this.successMessage.set('Los cambios se guardaron correctamente.');
+
+      if (this.hasBackendErrors(updatedProfile)) {
+        this.profileForm.markAllAsTouched();
+        this.submitError.set(
+          updatedProfile.message || 'Corrige la información resaltada e inténtalo nuevamente.'
+        );
+      } else {
+        this.successMessage.set(updatedProfile.message || 'Los cambios se guardaron correctamente.');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo guardar el perfil.';
       this.submitError.set(message);
@@ -123,6 +147,7 @@ export class Profile implements OnInit {
     this.submitError.set(null);
     this.successMessage.set(null);
     this.profileForm.disable({ emitEvent: false });
+    this.resetBackendValidation();
 
     try {
       const isAuthenticated = await firstValueFrom(this.authService.ensureAuthenticated());
@@ -131,12 +156,13 @@ export class Profile implements OnInit {
         throw new Error('La sesión ha expirado. Vuelve a iniciar sesión.');
       }
 
-      const status = await firstValueFrom(this.profileService.getProfileDetails());
-      this.applyProfile(status);
+      const profile = await firstValueFrom(this.profileService.getProfile());
+      this.applyProfile(profile);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo consultar el perfil.';
       this.loadError.set(message);
       this.profile.set(null);
+      this.resetBackendValidation();
       this.profileForm.reset({
         displayName: '',
         headline: '',
@@ -150,8 +176,9 @@ export class Profile implements OnInit {
     }
   }
 
-  private applyProfile(status: ProfileStatus): void {
+  private applyProfile(status: ProfileData): void {
     this.profile.set(status);
+    this.applyBackendValidation(status);
     this.profileForm.reset({
       displayName: status.displayName ?? '',
       headline: status.headline ?? '',
@@ -163,5 +190,31 @@ export class Profile implements OnInit {
     this.profileForm.markAsPristine();
     this.profileForm.markAsUntouched();
     this.profileForm.enable({ emitEvent: false });
+  }
+
+  private resetBackendValidation(): void {
+    this.fieldState.set(createEmptyFieldState());
+  }
+
+  private applyBackendValidation(profile: ProfileData): void {
+    const next = createEmptyFieldState();
+
+    for (const field of PROFILE_FIELDS) {
+      const okKey = `ok_${field}` as const;
+      const errorKey = `error_${field}` as const;
+      next[field] = {
+        ok: profile[okKey] ?? true,
+        error: profile[errorKey] ?? null
+      };
+    }
+
+    this.fieldState.set(next);
+  }
+
+  private hasBackendErrors(profile: ProfileData): boolean {
+    return PROFILE_FIELDS.some((field) => {
+      const okKey = `ok_${field}` as const;
+      return profile[okKey] === false;
+    });
   }
 }

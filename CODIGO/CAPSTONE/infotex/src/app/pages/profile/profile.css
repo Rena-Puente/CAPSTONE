@@ -2,23 +2,19 @@
   min-height: calc(100vh - 120px);
 }
 
-.profile-details {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 1rem;
+.profile-form .form-label {
+  font-weight: 500;
 }
 
-dl {
-  margin-bottom: 0;
+.profile-form .form-text {
+  color: rgba(255, 255, 255, 0.75);
 }
 
-dl > dt {
-  font-weight: 600;
+.profile-form .invalid-feedback {
+  display: block;
 }
 
-dl > dd {
-  margin-bottom: 0.75rem;
-}
-
-dl > dd:last-of-type {
-  margin-bottom: 0;
+.profile-form .form-control:disabled {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
 }
