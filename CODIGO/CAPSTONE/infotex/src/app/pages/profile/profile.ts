@@ -53,6 +53,15 @@ export class Profile implements OnInit {
   protected readonly profile = signal<ProfileData | null>(null);
   protected readonly fieldState = signal<FieldState>(createEmptyFieldState());
 
+  protected readonly defaultAvatars = [
+    { label: 'Avatar 1', url: '/avatars/avatar1.png' },
+    { label: 'Avatar 2', url: '/avatars/avatar2.png' },
+    { label: 'Avatar 3', url: '/avatars/avatar3.png' },
+    { label: 'Avatar 4', url: '/avatars/avatar4.png' },
+    { label: 'Avatar 5', url: '/avatars/avatar5.png' },
+    { label: 'Avatar 6', url: '/avatars/avatar6.png' }
+  ];
+
   protected readonly hasProfile = computed(() => this.profile() !== null);
   protected readonly isComplete = computed(() => this.profile()?.isComplete ?? false);
   protected readonly missingFields = computed(() => this.profile()?.missingFields ?? []);
@@ -96,6 +105,20 @@ export class Profile implements OnInit {
 
   protected get avatarUrlControl() {
     return this.profileForm.controls.avatarUrl;
+  }
+
+  protected selectDefaultAvatar(url: string): void {
+    if (this.profileForm.disabled) {
+      return;
+    }
+
+    this.avatarUrlControl.setValue(url);
+    this.avatarUrlControl.markAsDirty();
+    this.avatarUrlControl.markAsTouched();
+  }
+
+  protected isDefaultAvatarSelected(url: string): boolean {
+    return this.avatarUrlControl.value === url;
   }
 
   protected async save(): Promise<void> {
