@@ -170,6 +170,185 @@ const PROFILE_FIELD_LABELS = {
   URL_AVATAR: 'Foto de perfil'
 };
 
+const PROFILE_FIELD_KEYS = ['displayName', 'headline', 'biography', 'country', 'city', 'avatarUrl'];
+
+const PROFILE_FIELD_METADATA = {
+  displayName: { column: 'NOMBRE_MOSTRAR', label: PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR },
+  headline: { column: 'TITULAR', label: PROFILE_FIELD_LABELS.TITULAR },
+  biography: { column: 'BIOGRAFIA', label: PROFILE_FIELD_LABELS.BIOGRAFIA },
+  country: { column: 'PAIS', label: PROFILE_FIELD_LABELS.PAIS },
+  city: { column: 'CIUDAD', label: PROFILE_FIELD_LABELS.CIUDAD },
+  avatarUrl: { column: 'URL_AVATAR', label: PROFILE_FIELD_LABELS.URL_AVATAR }
+};
+
+function createEmptyProfileValues() {
+  return PROFILE_FIELD_KEYS.reduce((acc, field) => {
+    acc[field] = null;
+    return acc;
+  }, {});
+}
+
+function createDefaultFieldStatuses(defaultOk = true) {
+  return PROFILE_FIELD_KEYS.reduce((acc, field) => {
+    acc[field] = { ok: defaultOk, error: null };
+    return acc;
+  }, {});
+}
+
+function mapRowToProfile(row) {
+  if (!row) {
+    return createEmptyProfileValues();
+  }
+
+  const profile = createEmptyProfileValues();
+
+  for (const field of PROFILE_FIELD_KEYS) {
+    const metadata = PROFILE_FIELD_METADATA[field];
+    const value = row[metadata.column];
+    if (typeof value === 'string') {
+      profile[field] = value.trim();
+    } else if (value === undefined || value === null) {
+      profile[field] = null;
+    } else {
+      profile[field] = value;
+    }
+  }
+
+  return profile;
+}
+
+function buildProfileEnvelope(values, statuses, options = {}) {
+  const baseValues = {
+    ...createEmptyProfileValues(),
+    ...(values || {})
+  };
+
+  const fieldStatuses = {
+    ...createDefaultFieldStatuses(true),
+    ...(statuses || {})
+  };
+
+  const flags = {};
+  const errors = {};
+
+  for (const field of PROFILE_FIELD_KEYS) {
+    const status = fieldStatuses[field] || { ok: true, error: null };
+    flags[`ok_${field}`] = Boolean(status.ok);
+    errors[`error_${field}`] = status.error ?? null;
+  }
+
+  const missingFields = Array.isArray(options.missingFields) ? options.missingFields : [];
+  const message = options.message ?? null;
+  const isComplete = Boolean(options.isComplete);
+
+  const data = {
+    ...baseValues,
+    ...flags,
+    ...errors,
+    isComplete,
+    missingFields,
+    message,
+    profile: baseValues
+  };
+
+  return {
+    ok: true,
+    data,
+    profile: baseValues,
+    validations: {
+      ...flags,
+      isComplete,
+      missingFields
+    },
+    errors: {
+      ...errors,
+      message
+    },
+    isComplete,
+    missingFields,
+    message
+  };
+}
+
+function sanitizeProfileInput(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  return String(value).trim();
+}
+
+function isValidUrl(value) {
+  if (!value || typeof value !== 'string') {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return Boolean(parsed.protocol) && Boolean(parsed.hostname);
+  } catch (error) {
+    return false;
+  }
+}
+
+function validateProfilePayload(payload = {}) {
+  const values = createEmptyProfileValues();
+
+  for (const field of PROFILE_FIELD_KEYS) {
+    values[field] = sanitizeProfileInput(payload[field]);
+  }
+
+  const statuses = createDefaultFieldStatuses(true);
+
+  if (!values.displayName) {
+    statuses.displayName = { ok: false, error: 'Ingresa tu nombre para mostrar.' };
+  }
+
+  if (!values.headline) {
+    statuses.headline = { ok: false, error: 'Ingresa tu titular profesional.' };
+  }
+
+  if (!values.biography || values.biography.length < 80) {
+    statuses.biography = {
+      ok: false,
+      error: 'La biografía debe tener al menos 80 caracteres.'
+    };
+  }
+
+  if (!values.country) {
+    statuses.country = { ok: false, error: 'Selecciona tu país.' };
+  }
+
+  if (!values.city) {
+    statuses.city = { ok: false, error: 'Ingresa tu ciudad.' };
+  }
+
+  if (!values.avatarUrl) {
+    statuses.avatarUrl = {
+      ok: false,
+      error: 'Proporciona un enlace para tu foto de perfil.'
+    };
+  } else if (!isValidUrl(values.avatarUrl)) {
+    statuses.avatarUrl = {
+      ok: false,
+      error: 'Ingresa un enlace válido (incluye https://) para tu foto de perfil.'
+    };
+  }
+
+  const missingFields = PROFILE_FIELD_KEYS.filter((field) => !statuses[field].ok).map((field) => {
+    const metadata = PROFILE_FIELD_METADATA[field];
+    return metadata ? metadata.label : field;
+  });
+
+  const isValid = missingFields.length === 0;
+
+  return { values, statuses, missingFields, isValid };
+}
+
 function computeProfileMissingFields(row) {
   if (!row) {
     return Object.values(PROFILE_FIELD_LABELS);
@@ -645,6 +824,257 @@ app.get('/profile/status/:userId', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo obtener el estado del perfil.');
+  }
+});
+
+app.options('/profile/:userId', cors());
+
+app.get('/profile/:userId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Profile] Detail request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Profile] Detail request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Profile] Detail request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Profile] Detail request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const result = await executeQuery(
+      `SELECT nombre_mostrar,
+              titular,
+              biografia,
+              pais,
+              ciudad,
+              url_avatar,
+              perfil_completo
+         FROM perfiles
+        WHERE id_usuario = :userId`,
+      { userId }
+    );
+
+    const row = result.rows?.[0] ?? null;
+    const profileValues = mapRowToProfile(row);
+    const missingFields = computeProfileMissingFields(row);
+    const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
+    const isComplete = isCompleteFlag && missingFields.length === 0;
+    const message = row ? null : 'Aún no has configurado tu perfil.';
+
+    const response = buildProfileEnvelope(profileValues, createDefaultFieldStatuses(true), {
+      isComplete,
+      missingFields,
+      message
+    });
+
+    console.info('[Profile] Detail response sent', {
+      userId,
+      hasProfile: Boolean(row),
+      isComplete,
+      missingFieldsCount: missingFields.length,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json(response);
+  } catch (error) {
+    console.error('[Profile] Detail request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo obtener el perfil.');
+  }
+});
+
+app.put('/profile/:userId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Profile] Update request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Profile] Update request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Profile] Update request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValidToken = await isAccessTokenValid(accessToken);
+
+    if (!isValidToken) {
+      console.warn('[Profile] Update request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const validation = validateProfilePayload(req.body || {});
+
+    if (!validation.isValid) {
+      console.warn('[Profile] Update request validation failed', {
+        userId,
+        missingFields: validation.missingFields,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      const response = buildProfileEnvelope(validation.values, validation.statuses, {
+        isComplete: false,
+        missingFields: validation.missingFields,
+        message: 'Corrige la información resaltada e inténtalo nuevamente.'
+      });
+
+      return res.json(response);
+    }
+
+    const dbPayload = {
+      displayName: validation.values.displayName || null,
+      headline: validation.values.headline || null,
+      biography: validation.values.biography || null,
+      country: validation.values.country || null,
+      city: validation.values.city || null,
+      avatarUrl: validation.values.avatarUrl || null
+    };
+
+    await executeQuery(
+      `MERGE INTO perfiles dest
+        USING (
+          SELECT :userId AS id_usuario,
+                 :displayName AS nombre_mostrar,
+                 :headline AS titular,
+                 :biography AS biografia,
+                 :country AS pais,
+                 :city AS ciudad,
+                 :avatarUrl AS url_avatar
+            FROM dual
+        ) src
+        ON (dest.id_usuario = src.id_usuario)
+      WHEN MATCHED THEN
+        UPDATE SET
+          dest.nombre_mostrar = src.nombre_mostrar,
+          dest.titular = src.titular,
+          dest.biografia = src.biografia,
+          dest.pais = src.pais,
+          dest.ciudad = src.ciudad,
+          dest.url_avatar = src.url_avatar
+      WHEN NOT MATCHED THEN
+        INSERT (
+          id_usuario,
+          nombre_mostrar,
+          titular,
+          biografia,
+          pais,
+          ciudad,
+          url_avatar
+        ) VALUES (
+          src.id_usuario,
+          src.nombre_mostrar,
+          src.titular,
+          src.biografia,
+          src.pais,
+          src.ciudad,
+          src.url_avatar
+        )`,
+      {
+        userId,
+        ...dbPayload
+      },
+      { autoCommit: true }
+    );
+
+    await executeQuery(
+      'BEGIN sp_recalcular_perfil_completo(p_id_usuario => :userId); END;',
+      { userId },
+      { autoCommit: true }
+    );
+
+    const result = await executeQuery(
+      `SELECT nombre_mostrar,
+              titular,
+              biografia,
+              pais,
+              ciudad,
+              url_avatar,
+              perfil_completo
+         FROM perfiles
+        WHERE id_usuario = :userId`,
+      { userId }
+    );
+
+    const row = result.rows?.[0] ?? null;
+    const profileValues = mapRowToProfile(row);
+    const missingFields = computeProfileMissingFields(row);
+    const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
+    const isComplete = isCompleteFlag && missingFields.length === 0;
+
+    const response = buildProfileEnvelope(profileValues, createDefaultFieldStatuses(true), {
+      isComplete,
+      missingFields,
+      message: 'Perfil actualizado correctamente.'
+    });
+
+    console.info('[Profile] Update successful', {
+      userId,
+      isComplete,
+      missingFieldsCount: missingFields.length,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json(response);
+  } catch (error) {
+    console.error('[Profile] Update failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo actualizar el perfil.');
   }
 });
 
