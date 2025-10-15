@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, NgIf } from '@angular/common';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
@@ -6,7 +6,7 @@ import { AuthService } from './services/auth.service';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule,RouterOutlet, RouterLink],
+  imports: [CommonModule,NgIf,RouterOutlet, RouterLink],
   templateUrl: './app.html',
   styleUrl: './app.css'
 })
