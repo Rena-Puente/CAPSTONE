@@ -123,12 +123,12 @@ export class ProfileService {
     const errors = this.toRecord(response.errors);
 
     const result: ProfileData = {
-      displayName: this.toNullableString(baseData.displayName),
-      headline: this.toNullableString(baseData.headline),
-      biography: this.toNullableString(baseData.biography),
-      country: this.toNullableString(baseData.country),
-      city: this.toNullableString(baseData.city),
-      avatarUrl: this.toNullableString(baseData.avatarUrl),
+      displayName: this.toNullableString(baseData['displayName']),
+      headline: this.toNullableString(baseData['headline']),
+      biography: this.toNullableString(baseData['biography']),
+      country: this.toNullableString(baseData['country']),
+      city: this.toNullableString(baseData['city']),
+      avatarUrl: this.toNullableString(baseData['avatarUrl']),
       ok_displayName: this.toBoolean(this.pickValidationFlag('displayName', baseData, validations, response), true),
       ok_headline: this.toBoolean(this.pickValidationFlag('headline', baseData, validations, response), true),
       ok_biography: this.toBoolean(this.pickValidationFlag('biography', baseData, validations, response), true),
@@ -142,14 +142,16 @@ export class ProfileService {
       error_city: this.pickValidationError('city', baseData, validations, errors, response),
       error_avatarUrl: this.pickValidationError('avatarUrl', baseData, validations, errors, response),
       isComplete: this.toBoolean(
-        response.isComplete ?? baseData.isComplete ?? validations.isComplete,
-        false
+        response['isComplete'] ?? baseData['isComplete'] ?? validations['isComplete'],        false
       ),
       missingFields: this.toStringArray(
-        response.missingFields ?? baseData.missingFields ?? validations.missingFields
+        response['missingFields'] ?? baseData['missingFields'] ?? validations['missingFields']
       ),
       message: this.toNullableString(
-        response.message ?? baseData.message ?? validations.message ?? errors.message
+          response['message'] ??
+          baseData['message'] ??
+          validations['message'] ??
+          errors['message']
       )
     } satisfies ProfileData;
 
@@ -167,7 +169,7 @@ export class ProfileService {
       ...data
     } as Record<string, unknown>;
 
-    delete merged.profile;
+    delete merged['profile'];
 
     return merged;
   }
