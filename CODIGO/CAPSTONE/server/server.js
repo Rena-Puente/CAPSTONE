@@ -37,7 +37,7 @@ function ensureEnv(value, name) {
 const resolvedWalletDir = path.resolve(__dirname, ensureEnv(DB_WALLET_DIR, 'DB_WALLET_DIR'));
 process.env.TNS_ADMIN = resolvedWalletDir;
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
-
+oracledb.fetchAsString = [oracledb.CLOB];
 async function initPool() {
   try {
     await oracledb.createPool({
