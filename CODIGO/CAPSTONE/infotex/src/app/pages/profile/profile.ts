@@ -54,14 +54,21 @@ export class Profile implements OnInit {
   protected readonly fieldState = signal<FieldState>(createEmptyFieldState());
   protected readonly editorOpen = signal(false);
   protected readonly avatarHasError = signal(false);
+  protected readonly avatarSelectorOpen = signal(false);
 
   protected readonly defaultAvatars = [
-    { label: 'Avatar 1', url: '/avatars/avatar1.png' },
-    { label: 'Avatar 2', url: '/avatars/avatar2.png' },
-    { label: 'Avatar 3', url: '/avatars/avatar3.png' },
-    { label: 'Avatar 4', url: '/avatars/avatar4.png' },
-    { label: 'Avatar 5', url: '/avatars/avatar5.png' },
-    { label: 'Avatar 6', url: '/avatars/avatar6.png' }
+    { label: 'Avatar 1', url: '/avatars/avatar1.svg' },
+    { label: 'Avatar 2', url: '/avatars/avatar2.svg' },
+    { label: 'Avatar 3', url: '/avatars/avatar3.svg' },
+    { label: 'Avatar 4', url: '/avatars/avatar4.svg' },
+    { label: 'Avatar 5', url: '/avatars/avatar5.svg' },
+    { label: 'Avatar 6', url: '/avatars/avatar6.svg' },
+    { label: 'Avatar 7', url: '/avatars/avatar7.svg' },
+    { label: 'Avatar 8', url: '/avatars/avatar8.svg' },
+    { label: 'Avatar 9', url: '/avatars/avatar9.svg' },
+    { label: 'Avatar 10', url: '/avatars/avatar10.svg' },
+    { label: 'Avatar 11', url: '/avatars/avatar11.svg' },
+    { label: 'Avatar 12', url: '/avatars/avatar12.svg' }
   ];
 
   protected readonly isComplete = computed(() => this.profile()?.isComplete ?? false);
@@ -148,6 +155,18 @@ export class Profile implements OnInit {
     return this.profileForm.controls.avatarUrl;
   }
 
+  protected openAvatarSelector(): void {
+    if (this.profileForm.disabled) {
+      return;
+    }
+
+    this.avatarSelectorOpen.set(true);
+  }
+
+  protected closeAvatarSelector(): void {
+    this.avatarSelectorOpen.set(false);
+  }
+
   protected selectDefaultAvatar(url: string): void {
     if (this.profileForm.disabled) {
       return;
@@ -156,6 +175,7 @@ export class Profile implements OnInit {
     this.avatarUrlControl.setValue(url);
     this.avatarUrlControl.markAsDirty();
     this.avatarUrlControl.markAsTouched();
+    this.closeAvatarSelector();
   }
 
   protected isDefaultAvatarSelected(url: string): boolean {
