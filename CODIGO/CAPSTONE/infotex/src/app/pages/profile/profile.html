@@ -1,17 +1,25 @@
 <div class="profile-page container py-4">
   <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-xxl-9 col-lg-10">
       <div class="card bg-dark text-light border-secondary shadow">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="card-title h4 mb-0">Configura tu perfil</h2>
-            <button type="button" class="btn btn-outline-light btn-sm" (click)="retry()" [disabled]="loading()">
-              <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="loading()"></span>
-              Actualizar
-            </button>
+        <div class="card-body p-4 p-lg-5">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+            <div>
+              <h2 class="card-title h4 mb-1">Tu perfil</h2>
+              <p class="mb-0 text-secondary">Revisa la información que has registrado.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" class="btn btn-outline-light btn-sm" (click)="retry()" [disabled]="loading()">
+                <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="loading()"></span>
+                Actualizar
+              </button>
+              <button type="button" class="btn btn-primary" (click)="openEditor()" [disabled]="loading()">
+                Editar perfil
+              </button>
+            </div>
           </div>
 
-          <div *ngIf="loading()" class="text-center py-4">
+          <div *ngIf="loading()" class="text-center py-5">
             <div class="spinner-border text-light" role="status">
               <span class="visually-hidden">Cargando...</span>
             </div>
@@ -32,7 +40,7 @@
                 {{ submitError() }}
               </div>
 
-              <ng-container *ngIf="hasProfile(); else noProfile">
+              <ng-container *ngIf="profile(); else noProfileData">
                 <div *ngIf="isComplete(); else incompleteAlert" class="alert alert-success" role="alert">
                   ¡Tu perfil está completo! Excelente trabajo.
                 </div>
@@ -45,176 +53,265 @@
                     </ul>
                   </div>
                 </ng-template>
-              </ng-container>
 
-              <form class="profile-form" [formGroup]="profileForm" (ngSubmit)="save()" novalidate>
-                <div class="mb-3">
-                  <label for="profileDisplayName" class="form-label">Nombre para mostrar</label>
-                  <input
-                    id="profileDisplayName"
-                    type="text"
-                    class="form-control"
-                    formControlName="displayName"
-                    [class.is-invalid]="
-                      (displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)) ||
-                      fieldState().displayName.ok === false
-                    "
-                  />
-                  <div class="invalid-feedback" *ngIf="displayNameControl.hasError('required') && (displayNameControl.dirty || displayNameControl.touched)">
-                    El nombre para mostrar es obligatorio.
-                  </div>
-                  <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
-                    {{ fieldState().displayName.error || 'El servidor reportó un problema con este campo.' }}
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <label for="profileHeadline" class="form-label">Titular profesional</label>
-                  <input
-                    id="profileHeadline"
-                    type="text"
-                    class="form-control"
-                    formControlName="headline"
-                    [class.is-invalid]="
-                      (headlineControl.invalid && (headlineControl.dirty || headlineControl.touched)) ||
-                      fieldState().headline.ok === false
-                    "
-                  />
-                  <div class="invalid-feedback" *ngIf="headlineControl.hasError('required') && (headlineControl.dirty || headlineControl.touched)">
-                    El titular profesional es obligatorio.
-                  </div>
-                  <div class="invalid-feedback" *ngIf="fieldState().headline.ok === false">
-                    {{ fieldState().headline.error || 'El servidor reportó un problema con este campo.' }}
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <label for="profileBiography" class="form-label">Biografía</label>
-                  <textarea
-                    id="profileBiography"
-                    class="form-control"
-                    formControlName="biography"
-                    rows="4"
-                    [class.is-invalid]="
-                      (biographyControl.invalid && (biographyControl.dirty || biographyControl.touched)) ||
-                      fieldState().biography.ok === false
-                    "
-                  ></textarea>
-                  <div class="form-text text-light">Escribe al menos 80 caracteres sobre ti.</div>
-                  <div class="invalid-feedback" *ngIf="biographyControl.hasError('required') && (biographyControl.dirty || biographyControl.touched)">
-                    La biografía es obligatoria.
-                  </div>
-                  <div class="invalid-feedback" *ngIf="biographyControl.hasError('minTrimmedLength') && (biographyControl.dirty || biographyControl.touched)">
-                    La biografía debe contener al menos 80 caracteres.
-                  </div>
-                  <div class="invalid-feedback" *ngIf="fieldState().biography.ok === false">
-                    {{ fieldState().biography.error || 'El servidor reportó un problema con este campo.' }}
-                  </div>
-                </div>
-
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <label for="profileCountry" class="form-label">País</label>
-                    <input
-                      id="profileCountry"
-                      type="text"
-                      class="form-control"
-                      formControlName="country"
-                      [class.is-invalid]="
-                        (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
-                        fieldState().country.ok === false
-                      "
-                    />
-                    <div class="invalid-feedback" *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
-                      El país es obligatorio.
+                <div class="profile-overview mt-4">
+                  <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
+                    <div class="profile-avatar-wrapper">
+                      <ng-container *ngIf="profile()?.avatarUrl && !avatarHasError(); else avatarPlaceholder">
+                        <img
+                          [src]="profile()?.avatarUrl ?? ''"
+                          alt="Foto de perfil"
+                          class="profile-avatar-img"
+                          (error)="handleAvatarError()"
+                        />
+                      </ng-container>
+                      <ng-template #avatarPlaceholder>
+                        <div class="profile-avatar-placeholder">
+                          <span>Sin foto</span>
+                        </div>
+                      </ng-template>
                     </div>
-                    <div class="invalid-feedback" *ngIf="fieldState().country.ok === false">
-                      {{ fieldState().country.error || 'El servidor reportó un problema con este campo.' }}
-                    </div>
-                  </div>
 
-                  <div class="col-md-6">
-                    <label for="profileCity" class="form-label">Ciudad</label>
-                    <input
-                      id="profileCity"
-                      type="text"
-                      class="form-control"
-                      formControlName="city"
-                      [class.is-invalid]="
-                        (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
-                        fieldState().city.ok === false
-                      "
-                    />
-                    <div class="invalid-feedback" *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
-                      La ciudad es obligatoria.
-                    </div>
-                    <div class="invalid-feedback" *ngIf="fieldState().city.ok === false">
-                      {{ fieldState().city.error || 'El servidor reportó un problema con este campo.' }}
-                    </div>
-                  </div>
-                </div>
+                    <div class="flex-grow-1 w-100">
+                      <h3
+                        class="h4 mb-1"
+                        [class.text-white]="!!profile()?.displayName"
+                        [class.text-secondary]="!profile()?.displayName"
+                      >
+                        {{ profile()?.displayName || 'Nombre no registrado' }}
+                      </h3>
+                      <p
+                        class="mb-3"
+                        [class.text-light]="!!profile()?.headline"
+                        [class.text-secondary]="!profile()?.headline"
+                      >
+                        {{ profile()?.headline || 'Titular no registrado' }}
+                      </p>
 
-                <div class="mb-4 mt-3">
-                  <label for="profileAvatarUrl" class="form-label">URL de la foto de perfil</label>
-                  <input
-                    id="profileAvatarUrl"
-                    type="url"
-                    class="form-control"
-                    formControlName="avatarUrl"
-                    [class.is-invalid]="
-                      (avatarUrlControl.invalid && (avatarUrlControl.dirty || avatarUrlControl.touched)) ||
-                      fieldState().avatarUrl.ok === false
-                    "
-                  />
-                  <div class="invalid-feedback" *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
-                    La URL de la foto de perfil es obligatoria.
-                  </div>
-                  <div class="invalid-feedback" *ngIf="fieldState().avatarUrl.ok === false">
-                    {{ fieldState().avatarUrl.error || 'El servidor reportó un problema con este campo.' }}
-                  </div>
-                  <div class="mt-3">
-                    <span class="form-label d-block mb-2">O selecciona una imagen predeterminada</span>
-                    <div class="row g-2">
-                      <div class="col-6 col-md-4 col-lg-3" *ngFor="let avatar of defaultAvatars">
-                        <button
-                          type="button"
-                          class="btn btn-outline-light w-100 avatar-option"
-                          [class.active]="isDefaultAvatarSelected(avatar.url)"
-                          (click)="selectDefaultAvatar(avatar.url)"
-                          [disabled]="profileForm.disabled"
-                        >
-                          <img
-                            [src]="avatar.url"
-                            [alt]="'Avatar predeterminado ' + avatar.label"
-                            class="img-fluid rounded mb-2"
-                          />
-                          <span>{{ avatar.label }}</span>
-                        </button>
+                      <div class="row row-cols-1 row-cols-sm-2 g-3 profile-details">
+                        <div class="col">
+                          <div class="profile-detail">
+                            <span class="profile-detail-label">País</span>
+                            <span class="profile-detail-value" [class.text-secondary]="!profile()?.country">
+                              {{ profile()?.country || 'Sin registrar' }}
+                            </span>
+                          </div>
+                        </div>
+                        <div class="col">
+                          <div class="profile-detail">
+                            <span class="profile-detail-label">Ciudad</span>
+                            <span class="profile-detail-value" [class.text-secondary]="!profile()?.city">
+                              {{ profile()?.city || 'Sin registrar' }}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div class="form-text text-light mt-2">
-                      Guarda tus imágenes en <code>public/avatars</code> y actualiza las rutas si es necesario.
-                    </div>
+                  </div>
+
+                  <div class="profile-biography mt-4">
+                    <span class="profile-detail-label d-block mb-2">Biografía</span>
+                    <p class="mb-0" [class.text-secondary]="!profile()?.biography">
+                      {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
+                    </p>
                   </div>
                 </div>
+              </ng-container>
 
-                <div class="d-flex justify-content-end">
-                  <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid || profileForm.disabled || saving()">
-                    <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="saving()"></span>
-                    Guardar cambios
-                  </button>
+              <ng-template #noProfileData>
+                <div class="alert alert-info" role="alert">
+                  Aún no hay información de perfil registrada. Selecciona «Editar perfil» para comenzar.
                 </div>
-              </form>
+              </ng-template>
             </ng-container>
-
-            <ng-template #noProfile>
-              <div class="alert alert-info" role="alert">
-                Aún no has completado la información básica de tu perfil. Utiliza el formulario para registrar tus datos y completar tu perfil.
-              </div>
-            </ng-template>
           </ng-container>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<ng-container *ngIf="editorOpen()">
+  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="profileEditorTitle">
+    <div class="profile-editor__backdrop" (click)="closeEditor()"></div>
+    <div class="profile-editor__panel" (click)="$event.stopPropagation()">
+      <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
+        <div>
+          <h2 id="profileEditorTitle" class="h5 mb-1 text-white">Editar perfil</h2>
+          <p class="mb-0 text-secondary">Actualiza y guarda tu información personal.</p>
+        </div>
+        <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="closeEditor()"></button>
+      </div>
+      <div class="profile-editor__body">
+        <div *ngIf="successMessage()" class="alert alert-success" role="alert">
+          {{ successMessage() }}
+        </div>
+        <div *ngIf="submitError()" class="alert alert-danger" role="alert">
+          {{ submitError() }}
+        </div>
+
+        <form class="profile-form" [formGroup]="profileForm" (ngSubmit)="save()" novalidate>
+          <div class="mb-3">
+            <label for="profileDisplayName" class="form-label">Nombre para mostrar</label>
+            <input
+              id="profileDisplayName"
+              type="text"
+              class="form-control"
+              formControlName="displayName"
+              [class.is-invalid]="
+                (displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)) ||
+                fieldState().displayName.ok === false
+              "
+            />
+            <div class="invalid-feedback" *ngIf="displayNameControl.hasError('required') && (displayNameControl.dirty || displayNameControl.touched)">
+              El nombre para mostrar es obligatorio.
+            </div>
+            <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
+              {{ fieldState().displayName.error || 'El servidor reportó un problema con este campo.' }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="profileHeadline" class="form-label">Titular profesional</label>
+            <input
+              id="profileHeadline"
+              type="text"
+              class="form-control"
+              formControlName="headline"
+              [class.is-invalid]="
+                (headlineControl.invalid && (headlineControl.dirty || headlineControl.touched)) ||
+                fieldState().headline.ok === false
+              "
+            />
+            <div class="invalid-feedback" *ngIf="headlineControl.hasError('required') && (headlineControl.dirty || headlineControl.touched)">
+              El titular profesional es obligatorio.
+            </div>
+            <div class="invalid-feedback" *ngIf="fieldState().headline.ok === false">
+              {{ fieldState().headline.error || 'El servidor reportó un problema con este campo.' }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="profileBiography" class="form-label">Biografía</label>
+            <textarea
+              id="profileBiography"
+              class="form-control"
+              formControlName="biography"
+              rows="4"
+              [class.is-invalid]="
+                (biographyControl.invalid && (biographyControl.dirty || biographyControl.touched)) ||
+                fieldState().biography.ok === false
+              "
+            ></textarea>
+            <div class="form-text text-light">Escribe al menos 80 caracteres sobre ti.</div>
+            <div class="invalid-feedback" *ngIf="biographyControl.hasError('required') && (biographyControl.dirty || biographyControl.touched)">
+              La biografía es obligatoria.
+            </div>
+            <div class="invalid-feedback" *ngIf="biographyControl.hasError('minTrimmedLength') && (biographyControl.dirty || biographyControl.touched)">
+              La biografía debe contener al menos 80 caracteres.
+            </div>
+            <div class="invalid-feedback" *ngIf="fieldState().biography.ok === false">
+              {{ fieldState().biography.error || 'El servidor reportó un problema con este campo.' }}
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="profileCountry" class="form-label">País</label>
+              <input
+                id="profileCountry"
+                type="text"
+                class="form-control"
+                formControlName="country"
+                [class.is-invalid]="
+                  (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
+                  fieldState().country.ok === false
+                "
+              />
+              <div class="invalid-feedback" *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
+                El país es obligatorio.
+              </div>
+              <div class="invalid-feedback" *ngIf="fieldState().country.ok === false">
+                {{ fieldState().country.error || 'El servidor reportó un problema con este campo.' }}
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <label for="profileCity" class="form-label">Ciudad</label>
+              <input
+                id="profileCity"
+                type="text"
+                class="form-control"
+                formControlName="city"
+                [class.is-invalid]="
+                  (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
+                  fieldState().city.ok === false
+                "
+              />
+              <div class="invalid-feedback" *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
+                La ciudad es obligatoria.
+              </div>
+              <div class="invalid-feedback" *ngIf="fieldState().city.ok === false">
+                {{ fieldState().city.error || 'El servidor reportó un problema con este campo.' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4 mt-3">
+            <label for="profileAvatarUrl" class="form-label">URL de la foto de perfil</label>
+            <input
+              id="profileAvatarUrl"
+              type="url"
+              class="form-control"
+              formControlName="avatarUrl"
+              [class.is-invalid]="
+                (avatarUrlControl.invalid && (avatarUrlControl.dirty || avatarUrlControl.touched)) ||
+                fieldState().avatarUrl.ok === false
+              "
+            />
+            <div class="invalid-feedback" *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
+              La URL de la foto de perfil es obligatoria.
+            </div>
+            <div class="invalid-feedback" *ngIf="fieldState().avatarUrl.ok === false">
+              {{ fieldState().avatarUrl.error || 'El servidor reportó un problema con este campo.' }}
+            </div>
+            <div class="mt-3">
+              <span class="form-label d-block mb-2">O selecciona una imagen predeterminada</span>
+              <div class="row g-2">
+                <div class="col-6 col-md-4" *ngFor="let avatar of defaultAvatars">
+                  <button
+                    type="button"
+                    class="btn btn-outline-light w-100 avatar-option"
+                    [class.active]="isDefaultAvatarSelected(avatar.url)"
+                    (click)="selectDefaultAvatar(avatar.url)"
+                    [disabled]="profileForm.disabled"
+                  >
+                    <img
+                      [src]="avatar.url"
+                      [alt]="'Avatar predeterminado ' + avatar.label"
+                      class="img-fluid rounded mb-2"
+                    />
+                    <span>{{ avatar.label }}</span>
+                  </button>
+                </div>
+              </div>
+              <div class="form-text text-light mt-2">
+                Guarda tus imágenes en <code>public/avatars</code> y actualiza las rutas si es necesario.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-light" (click)="closeEditor()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid || profileForm.disabled || saving()">
+              <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="saving()"></span>
+              Guardar cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</ng-container>

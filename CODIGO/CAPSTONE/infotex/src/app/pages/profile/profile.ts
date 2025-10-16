@@ -52,6 +52,8 @@ export class Profile implements OnInit {
   protected readonly successMessage = signal<string | null>(null);
   protected readonly profile = signal<ProfileData | null>(null);
   protected readonly fieldState = signal<FieldState>(createEmptyFieldState());
+  protected readonly editorOpen = signal(false);
+  protected readonly avatarHasError = signal(false);
 
   protected readonly defaultAvatars = [
     { label: 'Avatar 1', url: '/avatars/avatar1.png' },
@@ -62,7 +64,6 @@ export class Profile implements OnInit {
     { label: 'Avatar 6', url: '/avatars/avatar6.png' }
   ];
 
-  protected readonly hasProfile = computed(() => this.profile() !== null);
   protected readonly isComplete = computed(() => this.profile()?.isComplete ?? false);
   protected readonly missingFields = computed(() => this.profile()?.missingFields ?? []);
 
@@ -81,6 +82,46 @@ export class Profile implements OnInit {
 
   protected async retry(): Promise<void> {
     await this.loadProfile();
+  }
+
+  protected openEditor(): void {
+    if (this.loading()) {
+      return;
+    }
+
+    this.editorOpen.set(true);
+    this.profileForm.enable({ emitEvent: false });
+  }
+
+  protected closeEditor(): void {
+    if (!this.editorOpen()) {
+      return;
+    }
+
+    this.editorOpen.set(false);
+
+    const currentProfile = this.profile();
+
+    if (currentProfile) {
+      this.applyProfile(currentProfile);
+    } else {
+      this.profileForm.reset({
+        displayName: '',
+        headline: '',
+        biography: '',
+        country: '',
+        city: '',
+        avatarUrl: ''
+      });
+      this.profileForm.markAsPristine();
+      this.profileForm.markAsUntouched();
+    }
+
+    this.profileForm.disable({ emitEvent: false });
+  }
+
+  protected handleAvatarError(): void {
+    this.avatarHasError.set(true);
   }
 
   protected get displayNameControl() {
@@ -171,6 +212,7 @@ export class Profile implements OnInit {
     this.successMessage.set(null);
     this.profileForm.disable({ emitEvent: false });
     this.resetBackendValidation();
+    this.avatarHasError.set(false);
 
     try {
       const isAuthenticated = await firstValueFrom(this.authService.ensureAuthenticated());
@@ -194,6 +236,9 @@ export class Profile implements OnInit {
         city: '',
         avatarUrl: ''
       });
+      if (!this.editorOpen()) {
+        this.profileForm.disable({ emitEvent: false });
+      }
     } finally {
       this.loading.set(false);
     }
@@ -202,6 +247,7 @@ export class Profile implements OnInit {
   private applyProfile(status: ProfileData): void {
     this.profile.set(status);
     this.applyBackendValidation(status);
+    this.avatarHasError.set(false);
     this.profileForm.reset({
       displayName: status.displayName ?? '',
       headline: status.headline ?? '',
@@ -212,7 +258,11 @@ export class Profile implements OnInit {
     });
     this.profileForm.markAsPristine();
     this.profileForm.markAsUntouched();
-    this.profileForm.enable({ emitEvent: false });
+    if (this.editorOpen()) {
+      this.profileForm.enable({ emitEvent: false });
+    } else {
+      this.profileForm.disable({ emitEvent: false });
+    }
   }
 
   private resetBackendValidation(): void {
