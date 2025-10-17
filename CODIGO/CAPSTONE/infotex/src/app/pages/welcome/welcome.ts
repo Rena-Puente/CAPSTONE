@@ -57,7 +57,7 @@ export class Welcome {
     const { email, password } = this.loginForm.getRawValue();
 
     try {
-            const { isProfileComplete } = await firstValueFrom(this.authService.login(email, password));
+      const { isProfileComplete } = await firstValueFrom(this.authService.login(email, password));
 
       if (isProfileComplete === null) {
         this.isMenuOpen.set(true);

@@ -1,12 +1,86 @@
 <section class="welcome">
-  <div class="welcome__card">
-    <h1 class="welcome__title">Bienvenido a InfoTex</h1>
-    <p class="welcome__message">
-      Esta es la zona de invitados. Inicia sesión para acceder al contenido completo de la plataforma.
-    </p>
-    <button type="button" class="welcome__cta" (click)="openMenu()">Iniciar sesión</button>
+  <div class="welcome__container">
+    <div class="welcome__card">
+      <div class="welcome__chips" aria-hidden="true">
+        <span class="chip chip--success">Beta 2025</span>
+        <span class="chip chip--purple">Comunidad Dev</span>
+        <span class="chip chip--ghost">100% gratis</span>
+      </div>
+
+      <h1 class="welcome__title">Bienvenido a InfoTex</h1>
+      <p class="welcome__message">
+        Esta es la zona de invitados. Inicia sesión para acceder al contenido completo de la plataforma.
+      </p>
+
+      <div class="welcome__highlights" aria-hidden="true">
+        <div class="highlight">
+          <div class="highlight__value">5K+</div>
+          <div class="highlight__label">Desarrolladores</div>
+        </div>
+        <div class="highlight">
+          <div class="highlight__value">450+</div>
+          <div class="highlight__label">Proyectos</div>
+        </div>
+        <div class="highlight">
+          <div class="highlight__value">120+</div>
+          <div class="highlight__label">Empresas</div>
+        </div>
+      </div>
+
+      <button type="button" class="welcome__cta" (click)="openMenu()">
+        Iniciar sesión
+      </button>
+
+      <div class="welcome__subcta">
+        ¿Nuevo por aquí? <a routerLink="/register">Crea tu cuenta</a> en 30 segundos.
+      </div>
+
+      <div class="welcome__features" role="list" aria-label="Características principales">
+        <article class="feature" role="listitem">
+          <div class="feature__icon" aria-hidden="true">🧭</div>
+          <h3 class="feature__title">Matching transparente</h3>
+          <p class="feature__text">Perfiles verificados y ofertas claras. Menos entrevistas eternas, más contrataciones felices.</p>
+        </article>
+        <article class="feature" role="listitem">
+          <div class="feature__icon" aria-hidden="true">🧑‍🤝‍🧑</div>
+          <h3 class="feature__title">Comunidad & eventos</h3>
+          <p class="feature__text">Meetups y mentorías para crecer tu red—y tu repositorio de stickers.</p>
+        </article>
+        <article class="feature" role="listitem">
+          <div class="feature__icon" aria-hidden="true">📊</div>
+          <h3 class="feature__title">Datos para decidir</h3>
+          <p class="feature__text">Tendencias de skills y salarios para mover tu carrera con cabeza (y con datos).</p>
+        </article>
+      </div>
+
+      <div class="welcome__brands" aria-label="Empresas que confían en InfoTex">
+        <span class="brands__label">Confiado por equipos de</span>
+        <div class="brands__row" aria-hidden="true">
+          <div class="brand-skel"></div>
+          <div class="brand-skel"></div>
+          <div class="brand-skel"></div>
+          <div class="brand-skel"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner promocional (“publicidad” propia de la plataforma) -->
+    <aside class="promo-banner" role="complementary" aria-label="Promoción destacada">
+      <div class="promo-banner__content">
+        <span class="promo-banner__badge">Nuevo</span>
+        <h2 class="promo-banner__title">Hackweek InfoTex · Noviembre</h2>
+        <p class="promo-banner__text">
+          Súmate al desafío de 7 días, participa por mentorías y acceso prioritario a vacantes partner.
+        </p>
+      </div>
+      <div class="promo-banner__actions">
+        <button type="button" class="promo-banner__cta" (click)="openMenu()">Participar</button>
+        <a routerLink="/about" class="promo-banner__link">Más info</a>
+      </div>
+    </aside>
   </div>
 
+  <!-- Menú de login (sin cambios funcionales) -->
   <div class="login-menu" *ngIf="isMenuOpen()">
     <div class="login-menu__backdrop" (click)="closeMenu()" aria-hidden="true"></div>
     <div
@@ -39,8 +113,7 @@
           <span class="login-menu__error" *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
             El correo es obligatorio.
           </span>
-          <span class="login-menu__error" *ngIf="emailControl.hasError('email') && emailControl.touched">
-            Ingresa un correo electrónico válido.
+          <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
           </span>
         </div>
 
@@ -53,12 +126,14 @@
             autocomplete="current-password"
             [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)"
           />
-          <span class="login-menu__error" *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
-            La contraseña es obligatoria.
-          </span>
-          <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
-            Debe contener al menos 6 caracteres.
-          </span>
+              <span class="login-menu__error" *ngIf="emailControl.hasError('email') && emailControl.touched">
+                Ingresa un correo electrónico válido.
+              </span>
+
+              <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
+                Debe contener al menos 6 caracteres.
+              </span>
+
         </div>
 
         <div class="login-menu__options">
