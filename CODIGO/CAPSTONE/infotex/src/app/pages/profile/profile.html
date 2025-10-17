@@ -272,6 +272,12 @@
             <div class="invalid-feedback" *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
               La URL de la foto de perfil es obligatoria.
             </div>
+                        <div
+              class="invalid-feedback"
+              *ngIf="avatarUrlControl.hasError('invalidAvatarUrl') && (avatarUrlControl.dirty || avatarUrlControl.touched)"
+            >
+              Ingresa una URL válida (http/https) o una ruta que comience con <code>/</code>.
+            </div>
             <div class="invalid-feedback" *ngIf="fieldState().avatarUrl.ok === false">
               {{ fieldState().avatarUrl.error || 'El servidor reportó un problema con este campo.' }}
             </div>

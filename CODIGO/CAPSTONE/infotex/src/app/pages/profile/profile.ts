@@ -1,6 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../services/auth.service';
@@ -31,6 +38,34 @@ function createEmptyFieldState(): FieldState {
     acc[field] = { ok: true, error: null };
     return acc;
   }, {} as FieldState);
+}
+
+function avatarUrlValidator(): ValidatorFn {
+  const relativePathPattern = /^\/[\w\-./]+$/;
+
+  return (control: AbstractControl): ValidationErrors | null => {
+    const value = typeof control.value === 'string' ? control.value.trim() : '';
+
+    if (!value) {
+      return null;
+    }
+
+    if (relativePathPattern.test(value)) {
+      return null;
+    }
+
+    try {
+      const url = new URL(value);
+
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return null;
+      }
+    } catch (error) {
+      // Ignore parsing errors and fall through to the invalidAvatarUrl return value.
+    }
+
+    return { invalidAvatarUrl: true };
+  };
 }
 
 @Component({
@@ -80,7 +115,8 @@ export class Profile implements OnInit {
     biography: ['', [Validators.required, minTrimmedLengthValidator(80)]],
     country: ['', [Validators.required]],
     city: ['', [Validators.required]],
-    avatarUrl: ['', [Validators.required]]
+    avatarUrl: ['', [Validators.required, avatarUrlValidator()]]
+
   });
 
   async ngOnInit(): Promise<void> {

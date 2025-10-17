@@ -295,11 +295,30 @@ function isValidUrl(value) {
   }
 }
 
-function validateProfilePayload(payload = {}) {
+function hasMeaningfulValue(value) {
+  if (value === undefined || value === null) {
+    return false;
+  }
+
+  if (typeof value === 'string') {
+    return value.trim().length > 0;
+  }
+
+  return String(value).trim().length > 0;
+}
+
+function validateProfilePayload(payload = {}, currentProfile = null) {
   const values = createEmptyProfileValues();
 
   for (const field of PROFILE_FIELD_KEYS) {
-    values[field] = sanitizeProfileInput(payload[field]);
+        if (Object.prototype.hasOwnProperty.call(payload, field)) {
+      values[field] = sanitizeProfileInput(payload[field]);
+    } else if (currentProfile && hasMeaningfulValue(currentProfile[field])) {
+      const existingValue = currentProfile[field];
+      values[field] = typeof existingValue === 'string' ? existingValue : sanitizeProfileInput(existingValue);
+    } else {
+      values[field] = sanitizeProfileInput(payload[field]);
+    }
   }
 
   const statuses = createDefaultFieldStatuses(true);
@@ -955,7 +974,22 @@ app.put('/profile/:userId', async (req, res) => {
       return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
     }
 
-    const validation = validateProfilePayload(req.body || {});
+    const existingProfileResult = await executeQuery(
+      `SELECT nombre_mostrar,
+              titular,
+              biografia,
+              pais,
+              ciudad,
+              url_avatar
+         FROM perfiles
+        WHERE id_usuario = :userId`,
+      { userId }
+    );
+
+    const existingRow = existingProfileResult.rows?.[0] ?? null;
+    const existingProfileValues = existingRow ? mapRowToProfile(existingRow) : null;
+
+    const validation = validateProfilePayload(req.body || {}, existingProfileValues);
 
     if (!validation.isValid) {
       console.warn('[Profile] Update request validation failed', {
