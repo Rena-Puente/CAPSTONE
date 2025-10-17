@@ -11,9 +11,9 @@
       *ngIf="isAuthenticated()"
       class="nav-link text-light"
       routerLink="/about"
-      >About</a
+      >Nosotros</a
     >
-    <a class="nav-link text-light" routerLink="/welcome">Welcome</a>
+    <a *ngIf="!isAuthenticated()" class="nav-link text-light" routerLink="/welcome">Welcome</a>
     <div
       *ngIf="isAuthenticated()"
       class="dropdown profile-dropdown"
