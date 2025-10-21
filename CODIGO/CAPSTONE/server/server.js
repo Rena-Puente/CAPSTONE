@@ -112,6 +112,220 @@ function toIsoString(value) {
   }
 }
 
+function parseEducationDate(value, fieldLabel) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error(`La fecha de ${fieldLabel} no es válida.`);
+    }
+
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!trimmed) {
+      return null;
+    }
+
+    const normalized = /^\d{4}-\d{2}$/.test(trimmed) ? `${trimmed}-01` : trimmed;
+    const parsed = new Date(normalized);
+
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error(`La fecha de ${fieldLabel} no es válida.`);
+    }
+
+    return parsed;
+  }
+
+  throw new Error(`La fecha de ${fieldLabel} no es válida.`);
+}
+
+function normalizeEducationPayload(payload = {}) {
+  const institution = typeof payload.institution === 'string' ? payload.institution.trim() : '';
+
+  if (!institution) {
+    throw new Error('La institución es obligatoria.');
+  }
+
+  const degree = typeof payload.degree === 'string' ? payload.degree.trim() : '';
+  const fieldOfStudy = typeof payload.fieldOfStudy === 'string' ? payload.fieldOfStudy.trim() : '';
+  const description = typeof payload.description === 'string' ? payload.description.trim() : '';
+
+  const startDate = parseEducationDate(payload.startDate, 'inicio');
+  const endDate = parseEducationDate(payload.endDate, 'fin');
+
+  if (startDate && endDate && endDate.getTime() < startDate.getTime()) {
+    throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+  }
+
+  return {
+    institution,
+    degree: degree || null,
+    fieldOfStudy: fieldOfStudy || null,
+    startDate,
+    endDate,
+    description: description || null
+  };
+}
+
+async function fetchCursorRows(cursor) {
+  const rows = [];
+
+  if (!cursor) {
+    return rows;
+  }
+
+  try {
+    let batch;
+
+    do {
+      batch = await cursor.getRows(100);
+
+      if (!batch || batch.length === 0) {
+        break;
+      }
+
+      rows.push(...batch);
+    } while (batch.length === 100);
+  } finally {
+    try {
+      await cursor.close();
+    } catch (error) {
+      console.error('[DB] Failed to close cursor:', error);
+    }
+  }
+
+  return rows;
+}
+
+function toNullableTrimmedString(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  const stringValue = String(value).trim();
+  return stringValue.length > 0 ? stringValue : null;
+}
+
+function mapEducationRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  const idValue = Number(row.ID_EDUCACION ?? row.id_educacion ?? null);
+  const id = Number.isNaN(idValue) ? null : idValue;
+
+  return {
+    id,
+    institution: toNullableTrimmedString(row.INSTITUCION ?? row.institucion),
+    degree: toNullableTrimmedString(row.GRADO ?? row.grado),
+    fieldOfStudy: toNullableTrimmedString(row.AREA_ESTUDIO ?? row.area_estudio),
+    startDate: toIsoString(row.FECHA_INICIO ?? row.fecha_inicio),
+    endDate: toIsoString(row.FECHA_FIN ?? row.fecha_fin),
+    description: toNullableTrimmedString(row.DESCRIPCION ?? row.descripcion)
+  };
+}
+
+async function listEducation(userId) {
+  const result = await executeQuery(
+    'BEGIN sp_educacion_pkg.sp_listar_educacion(:userId, :items); END;',
+    {
+      userId,
+      items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+    }
+  );
+
+  const cursor = result.outBinds?.items || null;
+  const rows = await fetchCursorRows(cursor);
+
+  return rows
+    .map((row) => mapEducationRow(row))
+    .filter((entry) => entry && typeof entry.id === 'number');
+}
+
+async function getEducationEntry(userId, educationId) {
+  const result = await executeQuery(
+    `BEGIN sp_educacion_pkg.sp_obtener_educacion(
+       p_id_educacion => :educationId,
+       p_id_usuario => :userId,
+       o_institucion => :institution,
+       o_grado => :degree,
+       o_area_estudio => :fieldOfStudy,
+       o_fecha_inicio => :startDate,
+       o_fecha_fin => :endDate,
+       o_descripcion => :description,
+       o_existe => :exists
+     ); END;`,
+    {
+      educationId,
+      userId,
+      institution: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+      degree: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+      fieldOfStudy: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+      startDate: { dir: oracledb.BIND_OUT, type: oracledb.DATE },
+      endDate: { dir: oracledb.BIND_OUT, type: oracledb.DATE },
+      description: { dir: oracledb.BIND_OUT, type: oracledb.CLOB },
+      exists: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds || {};
+  const exists = Number(outBinds.exists ?? 0) === 1;
+
+  if (!exists) {
+    return null;
+  }
+
+  return {
+    id: educationId,
+    institution: toNullableTrimmedString(outBinds.institution),
+    degree: toNullableTrimmedString(outBinds.degree),
+    fieldOfStudy: toNullableTrimmedString(outBinds.fieldOfStudy),
+    startDate: toIsoString(outBinds.startDate),
+    endDate: toIsoString(outBinds.endDate),
+    description: toNullableTrimmedString(outBinds.description)
+  };
+}
+
+async function getEducationStatus(userId) {
+  const result = await executeQuery(
+    `BEGIN sp_educacion_pkg.sp_educacion_chk(
+       p_id_usuario => :userId,
+       o_tiene_educacion => :hasEducation,
+       o_total_registros => :totalRecords,
+       o_con_fechas_validas => :validDates
+     ); END;`,
+    {
+      userId,
+      hasEducation: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      totalRecords: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      validDates: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds || {};
+  const totalRecords = Number(outBinds.totalRecords ?? 0);
+  const validDates = Number(outBinds.validDates ?? 0);
+  const invalidDateCount = Math.max(totalRecords - validDates, 0);
+
+  return {
+    hasEducation: Number(outBinds.hasEducation ?? 0) === 1,
+    totalRecords,
+    validDateCount: validDates,
+    invalidDateCount
+  };
+}
+
 function summarizeToken(token) {
   if (!token || typeof token !== 'string') {
     return token ?? null;
@@ -169,6 +383,9 @@ const PROFILE_FIELD_LABELS = {
   CIUDAD: 'Ciudad',
   URL_AVATAR: 'Foto de perfil'
 };
+
+const EDUCATION_SECTION_LABEL = 'Historial educativo';
+const EDUCATION_DATES_NOTE = 'Historial educativo (revisa las fechas)';
 
 const PROFILE_FIELD_KEYS = ['displayName', 'headline', 'biography', 'country', 'city', 'avatarUrl'];
 
@@ -240,6 +457,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
   const missingFields = Array.isArray(options.missingFields) ? options.missingFields : [];
   const message = options.message ?? null;
   const isComplete = Boolean(options.isComplete);
+  const educationSummary = options.educationSummary ?? null;
 
   const data = {
     ...baseValues,
@@ -248,6 +466,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     isComplete,
     missingFields,
     message,
+    educationSummary,
     profile: baseValues
   };
 
@@ -266,7 +485,8 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     },
     isComplete,
     missingFields,
-    message
+    message,
+    educationSummary
   };
 }
 
@@ -368,9 +588,17 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
   return { values, statuses, missingFields, isValid };
 }
 
-function computeProfileMissingFields(row) {
+function computeProfileMissingFields(row, educationStatus = null) {
   if (!row) {
-    return Object.values(PROFILE_FIELD_LABELS);
+    const defaults = Object.values(PROFILE_FIELD_LABELS);
+    const missingEducation =
+      !educationStatus || !educationStatus.hasEducation
+        ? [EDUCATION_SECTION_LABEL]
+        : educationStatus.invalidDateCount > 0
+          ? [EDUCATION_DATES_NOTE]
+          : [];
+
+    return [...defaults, ...missingEducation];
   }
 
   const missing = [];
@@ -398,6 +626,12 @@ function computeProfileMissingFields(row) {
 
   if (!row.URL_AVATAR) {
     missing.push(PROFILE_FIELD_LABELS.URL_AVATAR);
+  }
+
+  if (!educationStatus || !educationStatus.hasEducation) {
+    missing.push(EDUCATION_SECTION_LABEL);
+  } else if (educationStatus.invalidDateCount > 0) {
+    missing.push(EDUCATION_DATES_NOTE);
   }
 
   return missing;
@@ -501,7 +735,8 @@ app.post('/auth/login', async (req, res) => {
       );
 
       const profileRow = profileResult.rows?.[0] ?? null;
-      const missingFields = computeProfileMissingFields(profileRow);
+      const educationStatus = await getEducationStatus(userId);
+      const missingFields = computeProfileMissingFields(profileRow, educationStatus);
 
       if (!profileRow) {
         isProfileComplete = false;
@@ -801,14 +1036,16 @@ app.get('/profile/status/:userId', async (req, res) => {
     );
 
     const row = result.rows?.[0] ?? null;
-    const missingFields = computeProfileMissingFields(row);
+    const educationSummary = await getEducationStatus(userId);
+    const missingFields = computeProfileMissingFields(row, educationSummary);
 
     if (!row) {
       return res.json({
         ok: true,
         profile: null,
         isComplete: false,
-        missingFields
+        missingFields,
+        educationSummary
       });
     }
 
@@ -825,7 +1062,8 @@ app.get('/profile/status/:userId', async (req, res) => {
         avatarUrl: row.URL_AVATAR ?? null
       },
       isComplete,
-      missingFields
+      missingFields,
+      educationSummary
     });
 
     console.info('[Profile] Status response sent', {
@@ -833,6 +1071,7 @@ app.get('/profile/status/:userId', async (req, res) => {
       hasProfile: Boolean(row),
       isComplete,
       missingFieldsCount: missingFields.length,
+      educationRecords: educationSummary?.totalRecords ?? 0,
       elapsedMs: Date.now() - startedAt
     });
   } catch (error) {
@@ -903,7 +1142,8 @@ app.get('/profile/:userId', async (req, res) => {
 
     const row = result.rows?.[0] ?? null;
     const profileValues = mapRowToProfile(row);
-    const missingFields = computeProfileMissingFields(row);
+    const educationSummary = await getEducationStatus(userId);
+    const missingFields = computeProfileMissingFields(row, educationSummary);
     const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
     const isComplete = isCompleteFlag && missingFields.length === 0;
     const message = row ? null : 'Aún no has configurado tu perfil.';
@@ -911,7 +1151,8 @@ app.get('/profile/:userId', async (req, res) => {
     const response = buildProfileEnvelope(profileValues, createDefaultFieldStatuses(true), {
       isComplete,
       missingFields,
-      message
+      message,
+      educationSummary
     });
 
     console.info('[Profile] Detail response sent', {
@@ -919,6 +1160,7 @@ app.get('/profile/:userId', async (req, res) => {
       hasProfile: Boolean(row),
       isComplete,
       missingFieldsCount: missingFields.length,
+      educationRecords: educationSummary?.totalRecords ?? 0,
       elapsedMs: Date.now() - startedAt
     });
 
@@ -931,6 +1173,378 @@ app.get('/profile/:userId', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo obtener el perfil.');
+  }
+});
+
+app.options('/profile/:userId/education', cors());
+app.options('/profile/:userId/education/:educationId', cors());
+
+app.get('/profile/:userId/education', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Education] List request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Education] List request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Education] List request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Education] List request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const [education, educationSummary] = await Promise.all([
+      listEducation(userId),
+      getEducationStatus(userId)
+    ]);
+
+    console.info('[Education] List response sent', {
+      userId,
+      count: education.length,
+      educationRecords: educationSummary.totalRecords,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, education, educationSummary });
+  } catch (error) {
+    console.error('[Education] List request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo obtener la información educativa.');
+  }
+});
+
+app.post('/profile/:userId/education', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Education] Create request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Education] Create request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Education] Create request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  let normalizedPayload;
+
+  try {
+    normalizedPayload = normalizeEducationPayload(req.body || {});
+  } catch (validationError) {
+    const message = validationError instanceof Error ? validationError.message : 'Los datos enviados no son válidos.';
+    return res.status(400).json({ ok: false, error: message });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Education] Create request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const result = await executeQuery(
+      `BEGIN sp_educacion_pkg.sp_crear_educacion(
+         p_id_usuario   => :userId,
+         p_institucion  => :institution,
+         p_grado        => :degree,
+         p_area_estudio => :fieldOfStudy,
+         p_fecha_inicio => :startDate,
+         p_fecha_fin    => :endDate,
+         p_descripcion  => :description,
+         o_id_educacion => :educationId
+       ); END;`,
+      {
+        userId,
+        institution: normalizedPayload.institution,
+        degree: normalizedPayload.degree,
+        fieldOfStudy: normalizedPayload.fieldOfStudy,
+        startDate: normalizedPayload.startDate,
+        endDate: normalizedPayload.endDate,
+        description: normalizedPayload.description,
+        educationId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      { autoCommit: true }
+    );
+
+    const newId = Number(result.outBinds?.educationId ?? 0);
+
+    if (!Number.isInteger(newId) || newId <= 0) {
+      throw new Error('No se pudo determinar el identificador de la educación creada.');
+    }
+
+    const [education, educationSummary] = await Promise.all([
+      getEducationEntry(userId, newId),
+      getEducationStatus(userId)
+    ]);
+
+    if (!education) {
+      throw new Error('La educación recién creada no pudo ser recuperada.');
+    }
+
+    console.info('[Education] Create successful', {
+      userId,
+      educationId: newId,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.status(201).json({ ok: true, education, educationSummary });
+  } catch (error) {
+    console.error('[Education] Create request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo crear el registro educativo.');
+  }
+});
+
+app.put('/profile/:userId/education/:educationId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+  const educationId = Number.parseInt(req.params.educationId, 10);
+
+  console.info('[Education] Update request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    educationId: Number.isNaN(educationId) ? req.params.educationId : educationId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Education] Update request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!Number.isInteger(educationId) || educationId <= 0) {
+    console.warn('[Education] Update request rejected: invalid education id', {
+      path: req.originalUrl,
+      educationId: req.params.educationId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de educación no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Education] Update request rejected: missing access token', {
+      path: req.originalUrl,
+      userId,
+      educationId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  let normalizedPayload;
+
+  try {
+    normalizedPayload = normalizeEducationPayload(req.body || {});
+  } catch (validationError) {
+    const message = validationError instanceof Error ? validationError.message : 'Los datos enviados no son válidos.';
+    return res.status(400).json({ ok: false, error: message });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Education] Update request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId,
+        educationId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    await executeQuery(
+      `BEGIN sp_educacion_pkg.sp_actualizar_educacion(
+         p_id_educacion => :educationId,
+         p_id_usuario   => :userId,
+         p_institucion  => :institution,
+         p_grado        => :degree,
+         p_area_estudio => :fieldOfStudy,
+         p_fecha_inicio => :startDate,
+         p_fecha_fin    => :endDate,
+         p_descripcion  => :description
+       ); END;`,
+      {
+        educationId,
+        userId,
+        institution: normalizedPayload.institution,
+        degree: normalizedPayload.degree,
+        fieldOfStudy: normalizedPayload.fieldOfStudy,
+        startDate: normalizedPayload.startDate,
+        endDate: normalizedPayload.endDate,
+        description: normalizedPayload.description
+      },
+      { autoCommit: true }
+    );
+
+    const [education, educationSummary] = await Promise.all([
+      getEducationEntry(userId, educationId),
+      getEducationStatus(userId)
+    ]);
+
+    if (!education) {
+      throw new Error('No se encontró el registro educativo actualizado.');
+    }
+
+    console.info('[Education] Update successful', {
+      userId,
+      educationId,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, education, educationSummary });
+  } catch (error) {
+    console.error('[Education] Update request failed', {
+      userId,
+      educationId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo actualizar el registro educativo.');
+  }
+});
+
+app.delete('/profile/:userId/education/:educationId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+  const educationId = Number.parseInt(req.params.educationId, 10);
+
+  console.info('[Education] Delete request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    educationId: Number.isNaN(educationId) ? req.params.educationId : educationId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Education] Delete request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!Number.isInteger(educationId) || educationId <= 0) {
+    console.warn('[Education] Delete request rejected: invalid education id', {
+      path: req.originalUrl,
+      educationId: req.params.educationId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de educación no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Education] Delete request rejected: missing access token', {
+      path: req.originalUrl,
+      userId,
+      educationId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Education] Delete request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId,
+        educationId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    await executeQuery(
+      `BEGIN sp_educacion_pkg.sp_eliminar_educacion(
+         p_id_educacion => :educationId,
+         p_id_usuario   => :userId
+       ); END;`,
+      {
+        educationId,
+        userId
+      },
+      { autoCommit: true }
+    );
+
+    const educationSummary = await getEducationStatus(userId);
+
+    console.info('[Education] Delete successful', {
+      userId,
+      educationId,
+      remainingRecords: educationSummary.totalRecords,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, educationSummary });
+  } catch (error) {
+    console.error('[Education] Delete request failed', {
+      userId,
+      educationId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo eliminar el registro educativo.');
   }
 });
 
@@ -1083,20 +1697,23 @@ app.put('/profile/:userId', async (req, res) => {
 
     const row = result.rows?.[0] ?? null;
     const profileValues = mapRowToProfile(row);
-    const missingFields = computeProfileMissingFields(row);
+    const educationSummary = await getEducationStatus(userId);
+    const missingFields = computeProfileMissingFields(row, educationSummary);
     const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
     const isComplete = isCompleteFlag && missingFields.length === 0;
 
     const response = buildProfileEnvelope(profileValues, createDefaultFieldStatuses(true), {
       isComplete,
       missingFields,
-      message: 'Perfil actualizado correctamente.'
+      message: 'Perfil actualizado correctamente.',
+      educationSummary
     });
 
     console.info('[Profile] Update successful', {
       userId,
       isComplete,
       missingFieldsCount: missingFields.length,
+      educationRecords: educationSummary?.totalRecords ?? 0,
       elapsedMs: Date.now() - startedAt
     });
 

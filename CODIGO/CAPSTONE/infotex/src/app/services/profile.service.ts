@@ -25,10 +25,37 @@ type ProfileValues = Record<ProfileField, string | null>;
 type ProfileValidationFlags = Record<ProfileOkFlag, boolean>;
 type ProfileValidationErrors = Record<ProfileErrorFlag, string | null>;
 
+export interface EducationSummary {
+  hasEducation: boolean;
+  totalRecords: number;
+  validDateCount: number;
+  invalidDateCount: number;
+}
+
+export interface EducationEntry {
+  id: number;
+  institution: string;
+  degree: string | null;
+  fieldOfStudy: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  description: string | null;
+}
+
+export interface EducationPayload {
+  institution: string;
+  degree?: string | null;
+  fieldOfStudy?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  description?: string | null;
+}
+
 export interface ProfileData extends ProfileValues, ProfileValidationFlags, ProfileValidationErrors {
   isComplete: boolean;
   missingFields: string[];
   message: string | null;
+  educationSummary: EducationSummary | null;
 }
 
 export interface UpdateProfilePayload {
@@ -51,6 +78,25 @@ interface ProfileResponseEnvelope {
   message?: unknown;
   error?: unknown;
   [key: string]: unknown;
+}
+
+interface EducationResponseEnvelope {
+  ok: boolean;
+  education?: unknown;
+  educationSummary?: unknown;
+  message?: unknown;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+interface EducationListResult {
+  education: EducationEntry[];
+  educationSummary: EducationSummary | null;
+}
+
+interface EducationMutationResult {
+  education: EducationEntry;
+  educationSummary: EducationSummary | null;
 }
 
 @Injectable({
@@ -94,6 +140,92 @@ export class ProfileService {
       .pipe(
         map((response) => this.normalizeProfileResponse(response, 'No fue posible actualizar el perfil.')),
         catchError((error) => this.handleRequestError('updateProfile', endpoint, error, 'No fue posible actualizar el perfil.'))
+      );
+  }
+
+  getEducation(): Observable<EducationListResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/education`;
+
+    return this.http
+      .get<EducationResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) => this.normalizeEducationListResponse(response, 'No fue posible obtener tu información educativa.')),
+        catchError((error) =>
+          this.handleRequestError('getEducation', endpoint, error, 'No fue posible obtener tu información educativa.')
+        )
+      );
+  }
+
+  createEducation(payload: EducationPayload): Observable<EducationMutationResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/education`;
+
+    return this.http
+      .post<EducationResponseEnvelope>(`${this.apiUrl}${endpoint}`, this.prepareEducationPayload(payload), { headers })
+      .pipe(
+        map((response) =>
+          this.normalizeEducationMutationResponse(response, 'No fue posible crear el registro educativo.')
+        ),
+        catchError((error) =>
+          this.handleRequestError('createEducation', endpoint, error, 'No fue posible crear el registro educativo.')
+        )
+      );
+  }
+
+  updateEducation(educationId: number, payload: EducationPayload): Observable<EducationMutationResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/education/${educationId}`;
+
+    return this.http
+      .put<EducationResponseEnvelope>(`${this.apiUrl}${endpoint}`, this.prepareEducationPayload(payload), { headers })
+      .pipe(
+        map((response) =>
+          this.normalizeEducationMutationResponse(response, 'No fue posible actualizar el registro educativo.')
+        ),
+        catchError((error) =>
+          this.handleRequestError('updateEducation', endpoint, error, 'No fue posible actualizar el registro educativo.')
+        )
+      );
+  }
+
+  deleteEducation(educationId: number): Observable<EducationSummary | null> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/education/${educationId}`;
+
+    return this.http
+      .delete<EducationResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) =>
+          this.normalizeEducationDeleteResponse(response, 'No fue posible eliminar el registro educativo.')
+        ),
+        catchError((error) =>
+          this.handleRequestError('deleteEducation', endpoint, error, 'No fue posible eliminar el registro educativo.')
+        )
       );
   }
 
@@ -142,16 +274,23 @@ export class ProfileService {
       error_city: this.pickValidationError('city', baseData, validations, errors, response),
       error_avatarUrl: this.pickValidationError('avatarUrl', baseData, validations, errors, response),
       isComplete: this.toBoolean(
-        response['isComplete'] ?? baseData['isComplete'] ?? validations['isComplete'],        false
+        response['isComplete'] ?? baseData['isComplete'] ?? validations['isComplete'],
+        false
       ),
       missingFields: this.toStringArray(
         response['missingFields'] ?? baseData['missingFields'] ?? validations['missingFields']
       ),
       message: this.toNullableString(
-          response['message'] ??
+        response['message'] ??
           baseData['message'] ??
           validations['message'] ??
           errors['message']
+      ),
+      educationSummary: this.toEducationSummary(
+        response['educationSummary'] ??
+          baseData['educationSummary'] ??
+          validations['educationSummary'] ??
+          errors['educationSummary']
       )
     } satisfies ProfileData;
 
@@ -262,6 +401,211 @@ export class ProfileService {
       .map((item) => this.toNullableString(item))
       .filter((item): item is string => item !== null && item.trim().length > 0)
       .map((item) => item.trim());
+  }
+
+  private prepareEducationPayload(payload: EducationPayload): Record<string, unknown> {
+    return {
+      institution: this.normalizeRequiredString(payload.institution),
+      degree: this.normalizeOptionalString(payload.degree),
+      fieldOfStudy: this.normalizeOptionalString(payload.fieldOfStudy),
+      startDate: this.normalizeDateInput(payload.startDate),
+      endDate: this.normalizeDateInput(payload.endDate),
+      description: this.normalizeOptionalString(payload.description)
+    } satisfies Record<string, unknown>;
+  }
+
+  private normalizeRequiredString(value: unknown): string {
+    const normalized = this.toNullableString(value);
+
+    if (!normalized) {
+      return '';
+    }
+
+    const trimmed = normalized.trim();
+    return trimmed.length > 0 ? trimmed : '';
+  }
+
+  private normalizeOptionalString(value: unknown): string | null {
+    const normalized = this.toNullableString(value);
+
+    if (!normalized) {
+      return null;
+    }
+
+    const trimmed = normalized.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private normalizeDateInput(value: unknown): string | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    const normalized = this.toNullableString(value);
+
+    if (!normalized) {
+      return null;
+    }
+
+    const trimmed = normalized.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private normalizeDateOutput(value: unknown): string | null {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    const normalized = this.toNullableString(value);
+
+    if (!normalized) {
+      return null;
+    }
+
+    const trimmed = normalized.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private normalizeEducationListResponse(
+    response: EducationResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): EducationListResult {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    const education = this.toEducationArray(
+      (response as any)?.education ?? (response as any)?.data?.education
+    );
+    const educationSummary = this.toEducationSummary(
+      response.educationSummary ?? (response as any)?.data?.educationSummary
+    );
+
+    return { education, educationSummary } satisfies EducationListResult;
+  }
+
+  private normalizeEducationMutationResponse(
+    response: EducationResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): EducationMutationResult {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    const education = this.toEducationEntry(
+      response.education ?? (response as any)?.data?.education
+    );
+
+    if (!education) {
+      throw new Error(defaultMessage);
+    }
+
+    const educationSummary = this.toEducationSummary(
+      response.educationSummary ?? (response as any)?.data?.educationSummary
+    );
+
+    return { education, educationSummary } satisfies EducationMutationResult;
+  }
+
+  private normalizeEducationDeleteResponse(
+    response: EducationResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): EducationSummary | null {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    return (
+      this.toEducationSummary(
+        response.educationSummary ?? (response as any)?.data?.educationSummary
+      ) ?? null
+    );
+  }
+
+  private toEducationArray(value: unknown): EducationEntry[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => this.toEducationEntry(item))
+      .filter((item): item is EducationEntry => item !== null);
+  }
+
+  private toEducationEntry(value: unknown): EducationEntry | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const idCandidate =
+      record['id'] ??
+      record['ID'] ??
+      record['educationId'] ??
+      record['ID_EDUCACION'];
+    const id = Number(idCandidate);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return null;
+    }
+
+    return {
+      id,
+      institution: this.normalizeRequiredString(record['institution'] ?? record['INSTITUCION']),
+      degree: this.normalizeOptionalString(record['degree'] ?? record['GRADO']),
+      fieldOfStudy: this.normalizeOptionalString(
+        record['fieldOfStudy'] ?? record['FIELD_OF_STUDY'] ?? record['AREA_ESTUDIO']
+      ),
+      startDate: this.normalizeDateOutput(
+        record['startDate'] ?? record['START_DATE'] ?? record['FECHA_INICIO']
+      ),
+      endDate: this.normalizeDateOutput(record['endDate'] ?? record['END_DATE'] ?? record['FECHA_FIN']),
+      description: this.normalizeOptionalString(record['description'] ?? record['DESCRIPCION'])
+    } satisfies EducationEntry;
+  }
+
+  private toEducationSummary(value: unknown): EducationSummary | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const totalRecordsRaw = Number(
+      record['totalRecords'] ?? record['TOTAL_RECORDS'] ?? record['o_total_registros'] ?? record['TOTAL']
+    );
+    const validDatesRaw = Number(
+      record['validDateCount'] ??
+        record['VALID_DATE_COUNT'] ??
+        record['o_con_fechas_validas'] ??
+        record['VALID_DATES']
+    );
+    const invalidDatesRaw = Number(
+      record['invalidDateCount'] ??
+        record['INVALID_DATE_COUNT'] ??
+        record['o_invalid_date_count'] ??
+        record['INVALID_DATES']
+    );
+    const hasEducation = this.toBoolean(
+      record['hasEducation'] ?? record['HAS_EDUCATION'] ?? record['o_tiene_educacion'],
+      false
+    );
+
+    const totalRecords = Number.isFinite(totalRecordsRaw) ? Math.max(Math.floor(totalRecordsRaw), 0) : 0;
+    const validDateCount = Number.isFinite(validDatesRaw) ? Math.max(Math.floor(validDatesRaw), 0) : 0;
+    const invalidDateCount = Number.isFinite(invalidDatesRaw)
+      ? Math.max(Math.floor(invalidDatesRaw), 0)
+      : Math.max(totalRecords - validDateCount, 0);
+
+    return {
+      hasEducation,
+      totalRecords,
+      validDateCount,
+      invalidDateCount
+    } satisfies EducationSummary;
   }
 
   private extractErrorMessage(

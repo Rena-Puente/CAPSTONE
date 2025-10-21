@@ -115,6 +115,181 @@
                       {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
                     </p>
                   </div>
+
+                  <div class="profile-education mt-4">
+                    <div
+                      class="profile-education__header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+                    >
+                      <div>
+                        <span class="profile-detail-label d-block mb-1">Educación</span>
+                        <p class="mb-0 text-secondary small">
+                          <ng-container *ngIf="educationSummary() as summary; else educationSummaryFallback">
+                            <ng-container *ngIf="summary.totalRecords > 0; else noEducationRecords">
+                              {{ summary.totalRecords === 1 ? '1 registro educativo' : summary.totalRecords + ' registros educativos' }}.
+                              <ng-container *ngIf="summary.invalidDateCount > 0">
+                                {{ summary.invalidDateCount === 1 ? 'Un registro' : summary.invalidDateCount + ' registros' }} requiere revisar las fechas.
+                              </ng-container>
+                            </ng-container>
+                            <ng-template #noEducationRecords>
+                              Aún no has agregado tu educación.
+                            </ng-template>
+                          </ng-container>
+                          <ng-template #educationSummaryFallback>
+                            Aún no has agregado tu educación.
+                          </ng-template>
+                        </p>
+                      </div>
+                      <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-outline-light" (click)="openEducationCreator()">
+                          Agregar educación
+                        </button>
+                      </div>
+                    </div>
+
+                    <div *ngIf="educationError()" class="alert alert-danger mt-3" role="alert">
+                      {{ educationError() }}
+                    </div>
+
+                    <div *ngIf="educationLoading()" class="text-secondary mt-3">
+                      Cargando educación...
+                    </div>
+
+                    <ng-container *ngIf="!educationLoading() && !educationError()">
+                      <div *ngIf="education().length > 0; else noEducationItems" class="education-list mt-3">
+                        <div
+                          class="education-item card bg-dark border-secondary mb-3"
+                          *ngFor="let item of education(); trackBy: trackEducationById"
+                        >
+                          <div
+                            class="education-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3"
+                          >
+                            <div>
+                              <h4 class="h6 mb-1 text-white">{{ item.institution }}</h4>
+                              <p class="mb-1 text-secondary" *ngIf="item.degree || item.fieldOfStudy">
+                                <ng-container *ngIf="item.degree">{{ item.degree }}</ng-container>
+                                <ng-container *ngIf="item.degree && item.fieldOfStudy"> · </ng-container>
+                                <ng-container *ngIf="item.fieldOfStudy">{{ item.fieldOfStudy }}</ng-container>
+                              </p>
+                              <p class="mb-0 text-secondary small">
+                                {{ item.startDate || 'Fecha de inicio no registrada' }} –
+                                {{ item.endDate || 'Actualidad' }}
+                              </p>
+                            </div>
+                            <div class="btn-group align-self-stretch">
+                              <button type="button" class="btn btn-sm btn-outline-light" (click)="editEducation(item)">
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-outline-danger"
+                                (click)="deleteEducation(item)"
+                                [disabled]="educationDeletingId() === item.id"
+                              >
+                                <span
+                                  *ngIf="educationDeletingId() === item.id"
+                                  class="spinner-border spinner-border-sm me-1"
+                                  role="status"
+                                  aria-hidden="true"
+                                ></span>
+                                Eliminar
+                              </button>
+                            </div>
+                          </div>
+                          <div class="education-item__description card-body pt-0">
+                            <p class="mb-0 text-light" *ngIf="item.description; else noEducationDescription">
+                              {{ item.description }}
+                            </p>
+                            <ng-template #noEducationDescription>
+                              <p class="mb-0 text-secondary">Sin descripción adicional.</p>
+                            </ng-template>
+                          </div>
+                        </div>
+                      </div>
+                      <ng-template #noEducationItems>
+                        <p class="text-secondary mt-3 mb-0">Aún no has agregado tu educación.</p>
+                      </ng-template>
+                    </ng-container>
+
+                    <div *ngIf="educationEditorOpen()" class="education-form card bg-dark border-secondary mt-4">
+                      <div class="card-body">
+                        <h3 class="h6 text-white mb-3">
+                          {{ editingEducationId() ? 'Editar educación' : 'Agregar educación' }}
+                        </h3>
+                        <div *ngIf="educationSubmitError()" class="alert alert-danger" role="alert">
+                          {{ educationSubmitError() }}
+                        </div>
+                        <form [formGroup]="educationForm" (ngSubmit)="saveEducation()" novalidate>
+                          <div class="row g-3">
+                            <div class="col-md-6">
+                              <label for="educationInstitution" class="form-label">Institución</label>
+                              <input
+                                id="educationInstitution"
+                                type="text"
+                                class="form-control"
+                                formControlName="institution"
+                                [class.is-invalid]="
+                                  educationForm.controls.institution.invalid &&
+                                  (educationForm.controls.institution.dirty || educationForm.controls.institution.touched)
+                                "
+                              />
+                              <div class="invalid-feedback">La institución es obligatoria.</div>
+                            </div>
+                            <div class="col-md-6">
+                              <label for="educationDegree" class="form-label">Grado o certificación</label>
+                              <input id="educationDegree" type="text" class="form-control" formControlName="degree" />
+                            </div>
+                            <div class="col-md-6">
+                              <label for="educationField" class="form-label">Área de estudio</label>
+                              <input id="educationField" type="text" class="form-control" formControlName="fieldOfStudy" />
+                            </div>
+                            <div class="col-md-3">
+                              <label for="educationStart" class="form-label">Fecha de inicio</label>
+                              <input id="educationStart" type="date" class="form-control" formControlName="startDate" />
+                            </div>
+                            <div class="col-md-3">
+                              <label for="educationEnd" class="form-label">Fecha de fin</label>
+                              <input id="educationEnd" type="date" class="form-control" formControlName="endDate" />
+                            </div>
+                            <div class="col-12">
+                              <label for="educationDescription" class="form-label">Descripción</label>
+                              <textarea
+                                id="educationDescription"
+                                class="form-control"
+                                rows="3"
+                                formControlName="description"
+                              ></textarea>
+                              <div class="form-text text-light">
+                                Describe tus logros, proyectos o actividades destacadas.
+                              </div>
+                            </div>
+                          </div>
+                          <div class="d-flex flex-wrap gap-2 mt-3">
+                            <button
+                              type="submit"
+                              class="btn btn-primary"
+                              [disabled]="educationForm.invalid || educationSaving()"
+                            >
+                              <span
+                                *ngIf="educationSaving()"
+                                class="spinner-border spinner-border-sm me-1"
+                                role="status"
+                                aria-hidden="true"
+                              ></span>
+                              {{ educationSaving() ? 'Guardando...' : 'Guardar' }}
+                            </button>
+                            <button
+                              type="button"
+                              class="btn btn-outline-light"
+                              (click)="cancelEducationEdit()"
+                              [disabled]="educationSaving()"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </ng-container>
 

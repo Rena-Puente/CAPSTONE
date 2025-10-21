@@ -89,6 +89,47 @@
   color: rgba(255, 255, 255, 0.65) !important;
 }
 
+.profile-education {
+  background-color: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+}
+
+.profile-education__header .btn {
+  white-space: nowrap;
+}
+
+.education-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.education-item {
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.education-item:hover {
+  border-color: rgba(13, 110, 253, 0.45);
+  transform: translateY(-2px);
+}
+
+.education-item__body {
+  padding-bottom: 0;
+}
+
+.education-item__description {
+  color: rgba(248, 249, 250, 0.85);
+}
+
+.education-form .form-label {
+  font-weight: 500;
+}
+
+.education-form .invalid-feedback {
+  display: block;
+}
+
 .profile-form .form-label {
   font-weight: 500;
 }
