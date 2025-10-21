@@ -16,7 +16,10 @@ import {
   ProfileData,
   ProfileField,
   ProfileService,
-  UpdateProfilePayload
+  UpdateProfilePayload,
+  EducationEntry,
+  EducationPayload,
+  EducationSummary
 } from '../../services/profile.service';
 
 function minTrimmedLengthValidator(minLength: number): ValidatorFn {
@@ -90,6 +93,15 @@ export class Profile implements OnInit {
   protected readonly editorOpen = signal(false);
   protected readonly avatarHasError = signal(false);
   protected readonly avatarSelectorOpen = signal(false);
+  protected readonly education = signal<EducationEntry[]>([]);
+  protected readonly educationSummary = signal<EducationSummary | null>(null);
+  protected readonly educationLoading = signal(false);
+  protected readonly educationError = signal<string | null>(null);
+  protected readonly educationEditorOpen = signal(false);
+  protected readonly educationSaving = signal(false);
+  protected readonly educationSubmitError = signal<string | null>(null);
+  protected readonly editingEducationId = signal<number | null>(null);
+  protected readonly educationDeletingId = signal<number | null>(null);
 
   protected readonly defaultAvatars = [
     { label: 'Avatar 1', url: '/avatars/avatar1.svg' },
@@ -119,8 +131,18 @@ export class Profile implements OnInit {
 
   });
 
+  protected readonly educationForm = this.fb.nonNullable.group({
+    institution: ['', [Validators.required]],
+    degree: [''],
+    fieldOfStudy: [''],
+    startDate: [''],
+    endDate: [''],
+    description: ['']
+  });
+
   async ngOnInit(): Promise<void> {
     await this.loadProfile();
+    await this.loadEducation();
   }
 
   protected async retry(): Promise<void> {
@@ -261,6 +283,125 @@ export class Profile implements OnInit {
     }
   }
 
+  protected trackEducationById(index: number, item: EducationEntry): number {
+    return item.id;
+  }
+
+  protected openEducationCreator(): void {
+    this.editingEducationId.set(null);
+    this.educationSubmitError.set(null);
+    this.resetEducationForm();
+    this.educationEditorOpen.set(true);
+    this.educationForm.markAsPristine();
+    this.educationForm.markAsUntouched();
+  }
+
+  protected editEducation(entry: EducationEntry): void {
+    this.educationSubmitError.set(null);
+    this.educationEditorOpen.set(true);
+    this.editingEducationId.set(entry.id);
+    this.educationForm.setValue({
+      institution: entry.institution ?? '',
+      degree: entry.degree ?? '',
+      fieldOfStudy: entry.fieldOfStudy ?? '',
+      startDate: entry.startDate ?? '',
+      endDate: entry.endDate ?? '',
+      description: entry.description ?? ''
+    });
+    this.educationForm.markAsPristine();
+    this.educationForm.markAsUntouched();
+  }
+
+  protected cancelEducationEdit(): void {
+    this.educationEditorOpen.set(false);
+    this.educationSubmitError.set(null);
+    this.editingEducationId.set(null);
+    this.resetEducationForm();
+  }
+
+  protected async saveEducation(): Promise<void> {
+    this.educationSubmitError.set(null);
+
+    if (this.educationForm.invalid) {
+      this.educationForm.markAllAsTouched();
+      return;
+    }
+
+    this.educationSaving.set(true);
+
+    const raw = this.educationForm.getRawValue();
+    const payload: EducationPayload = {
+      institution: raw.institution.trim(),
+      degree: raw.degree.trim() || null,
+      fieldOfStudy: raw.fieldOfStudy.trim() || null,
+      startDate: raw.startDate.trim() || null,
+      endDate: raw.endDate.trim() || null,
+      description: raw.description.trim() || null
+    };
+
+    const editingId = this.editingEducationId();
+
+    try {
+      if (editingId) {
+        const response = await firstValueFrom(this.profileService.updateEducation(editingId, payload));
+        this.educationSummary.set(response.educationSummary ?? null);
+        this.education.update((items) =>
+          this.sortEducationEntries(
+            items.map((item) => (item.id === editingId ? response.education : item))
+          )
+        );
+      } else {
+        const response = await firstValueFrom(this.profileService.createEducation(payload));
+        this.educationSummary.set(response.educationSummary ?? null);
+        this.education.update((items) =>
+          this.sortEducationEntries([
+            response.education,
+            ...items.filter((item) => item.id !== response.education.id)
+          ])
+        );
+      }
+
+      this.educationEditorOpen.set(false);
+      this.editingEducationId.set(null);
+      this.resetEducationForm();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo guardar la información educativa.';
+      this.educationSubmitError.set(message);
+    } finally {
+      this.educationSaving.set(false);
+    }
+  }
+
+  protected async deleteEducation(entry: EducationEntry): Promise<void> {
+    if (!entry || this.educationDeletingId() === entry.id) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `¿Deseas eliminar "${entry.institution}" de tu historial educativo?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.educationDeletingId.set(entry.id);
+    this.educationSubmitError.set(null);
+
+    try {
+      const summary = await firstValueFrom(this.profileService.deleteEducation(entry.id));
+      this.educationSummary.set(summary ?? null);
+      this.education.update((items) => items.filter((item) => item.id !== entry.id));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo eliminar el registro educativo.';
+      this.educationSubmitError.set(message);
+    } finally {
+      this.educationDeletingId.set(null);
+    }
+  }
+
   private async loadProfile(): Promise<void> {
     this.loading.set(true);
     this.loadError.set(null);
@@ -300,10 +441,34 @@ export class Profile implements OnInit {
     }
   }
 
+  private async loadEducation(): Promise<void> {
+    this.educationLoading.set(true);
+    this.educationError.set(null);
+
+    try {
+      const result = await firstValueFrom(this.profileService.getEducation());
+      this.education.set(this.sortEducationEntries(result.education));
+      this.educationSummary.set(result.educationSummary ?? null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo obtener la información educativa.';
+      this.educationError.set(message);
+      this.education.set([]);
+      this.educationSummary.set(null);
+    } finally {
+      this.educationLoading.set(false);
+    }
+  }
+
   private applyProfile(status: ProfileData): void {
     this.profile.set(status);
     this.applyBackendValidation(status);
     this.avatarHasError.set(false);
+    if (status.educationSummary) {
+      this.educationSummary.set(status.educationSummary);
+    }
     this.profileForm.reset({
       displayName: status.displayName ?? '',
       headline: status.headline ?? '',
@@ -319,6 +484,19 @@ export class Profile implements OnInit {
     } else {
       this.profileForm.disable({ emitEvent: false });
     }
+  }
+
+  private resetEducationForm(): void {
+    this.educationForm.reset({
+      institution: '',
+      degree: '',
+      fieldOfStudy: '',
+      startDate: '',
+      endDate: '',
+      description: ''
+    });
+    this.educationForm.markAsPristine();
+    this.educationForm.markAsUntouched();
   }
 
   private resetBackendValidation(): void {
@@ -345,5 +523,35 @@ export class Profile implements OnInit {
       const okKey = `ok_${field}` as const;
       return profile[okKey] === false;
     });
+  }
+
+  private sortEducationEntries(entries: EducationEntry[]): EducationEntry[] {
+    return [...entries].sort((a, b) => {
+      const aEnd = this.parseEducationDate(a.endDate);
+      const bEnd = this.parseEducationDate(b.endDate);
+
+      if (aEnd !== bEnd) {
+        return bEnd - aEnd;
+      }
+
+      const aStart = this.parseEducationDate(a.startDate);
+      const bStart = this.parseEducationDate(b.startDate);
+
+      return bStart - aStart;
+    });
+  }
+
+  private parseEducationDate(value: string | null | undefined): number {
+    if (!value) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return Number.NEGATIVE_INFINITY;
+    }
+
+    return parsed.getTime();
   }
 }
