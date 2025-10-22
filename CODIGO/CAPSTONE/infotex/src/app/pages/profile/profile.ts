@@ -313,6 +313,11 @@ export class Profile implements OnInit {
   }
 
   protected cancelEducationEdit(): void {
+        if (this.educationSaving()) {
+      return;
+    }
+
+
     this.educationEditorOpen.set(false);
     this.educationSubmitError.set(null);
     this.editingEducationId.set(null);

@@ -210,85 +210,7 @@
                       </ng-template>
                     </ng-container>
 
-                    <div *ngIf="educationEditorOpen()" class="education-form card bg-dark border-secondary mt-4">
-                      <div class="card-body">
-                        <h3 class="h6 text-white mb-3">
-                          {{ editingEducationId() ? 'Editar educación' : 'Agregar educación' }}
-                        </h3>
-                        <div *ngIf="educationSubmitError()" class="alert alert-danger" role="alert">
-                          {{ educationSubmitError() }}
-                        </div>
-                        <form [formGroup]="educationForm" (ngSubmit)="saveEducation()" novalidate>
-                          <div class="row g-3">
-                            <div class="col-md-6">
-                              <label for="educationInstitution" class="form-label">Institución</label>
-                              <input
-                                id="educationInstitution"
-                                type="text"
-                                class="form-control"
-                                formControlName="institution"
-                                [class.is-invalid]="
-                                  educationForm.controls.institution.invalid &&
-                                  (educationForm.controls.institution.dirty || educationForm.controls.institution.touched)
-                                "
-                              />
-                              <div class="invalid-feedback">La institución es obligatoria.</div>
-                            </div>
-                            <div class="col-md-6">
-                              <label for="educationDegree" class="form-label">Grado o certificación</label>
-                              <input id="educationDegree" type="text" class="form-control" formControlName="degree" />
-                            </div>
-                            <div class="col-md-6">
-                              <label for="educationField" class="form-label">Área de estudio</label>
-                              <input id="educationField" type="text" class="form-control" formControlName="fieldOfStudy" />
-                            </div>
-                            <div class="col-md-3">
-                              <label for="educationStart" class="form-label">Fecha de inicio</label>
-                              <input id="educationStart" type="date" class="form-control" formControlName="startDate" />
-                            </div>
-                            <div class="col-md-3">
-                              <label for="educationEnd" class="form-label">Fecha de fin</label>
-                              <input id="educationEnd" type="date" class="form-control" formControlName="endDate" />
-                            </div>
-                            <div class="col-12">
-                              <label for="educationDescription" class="form-label">Descripción</label>
-                              <textarea
-                                id="educationDescription"
-                                class="form-control"
-                                rows="3"
-                                formControlName="description"
-                              ></textarea>
-                              <div class="form-text text-light">
-                                Describe tus logros, proyectos o actividades destacadas.
-                              </div>
-                            </div>
-                          </div>
-                          <div class="d-flex flex-wrap gap-2 mt-3">
-                            <button
-                              type="submit"
-                              class="btn btn-primary"
-                              [disabled]="educationForm.invalid || educationSaving()"
-                            >
-                              <span
-                                *ngIf="educationSaving()"
-                                class="spinner-border spinner-border-sm me-1"
-                                role="status"
-                                aria-hidden="true"
-                              ></span>
-                              {{ educationSaving() ? 'Guardando...' : 'Guardar' }}
-                            </button>
-                            <button
-                              type="button"
-                              class="btn btn-outline-light"
-                              (click)="cancelEducationEdit()"
-                              [disabled]="educationSaving()"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    </div>
+ 
                   </div>
                 </div>
               </ng-container>
@@ -479,6 +401,109 @@
             <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid || profileForm.disabled || saving()">
               <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="saving()"></span>
               Guardar cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</ng-container>
+<ng-container *ngIf="educationEditorOpen()">
+  <div
+    class="profile-editor"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="educationEditorTitle"
+  >
+    <div class="profile-editor__backdrop" (click)="cancelEducationEdit()"></div>
+    <div class="profile-editor__panel" (click)="$event.stopPropagation()">
+      <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
+        <div>
+          <h2 id="educationEditorTitle" class="h5 mb-1 text-white">
+            {{ editingEducationId() ? 'Editar educación' : 'Agregar educación' }}
+          </h2>
+          <p class="mb-0 text-secondary">
+            Mantén actualizado tu historial académico para mostrar tu formación.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          aria-label="Cerrar"
+          (click)="cancelEducationEdit()"
+          [disabled]="educationSaving()"
+        ></button>
+      </div>
+      <div class="profile-editor__body">
+        <div *ngIf="educationSubmitError()" class="alert alert-danger" role="alert">
+          {{ educationSubmitError() }}
+        </div>
+        <form class="education-form" [formGroup]="educationForm" (ngSubmit)="saveEducation()" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="educationInstitution" class="form-label">Institución</label>
+              <input
+                id="educationInstitution"
+                type="text"
+                class="form-control"
+                formControlName="institution"
+                [class.is-invalid]="
+                  educationForm.controls.institution.invalid &&
+                  (educationForm.controls.institution.dirty || educationForm.controls.institution.touched)
+                "
+              />
+              <div class="invalid-feedback">La institución es obligatoria.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="educationDegree" class="form-label">Grado o certificación</label>
+              <input id="educationDegree" type="text" class="form-control" formControlName="degree" />
+            </div>
+            <div class="col-md-6">
+              <label for="educationField" class="form-label">Área de estudio</label>
+              <input id="educationField" type="text" class="form-control" formControlName="fieldOfStudy" />
+            </div>
+            <div class="col-md-3">
+              <label for="educationStart" class="form-label">Fecha de inicio</label>
+              <input id="educationStart" type="date" class="form-control" formControlName="startDate" />
+            </div>
+            <div class="col-md-3">
+              <label for="educationEnd" class="form-label">Fecha de fin</label>
+              <input id="educationEnd" type="date" class="form-control" formControlName="endDate" />
+            </div>
+            <div class="col-12">
+              <label for="educationDescription" class="form-label">Descripción</label>
+              <textarea
+                id="educationDescription"
+                class="form-control"
+                rows="3"
+                formControlName="description"
+              ></textarea>
+              <div class="form-text text-light">
+                Describe tus logros, proyectos o actividades destacadas.
+              </div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button
+              type="button"
+              class="btn btn-outline-light"
+              (click)="cancelEducationEdit()"
+              [disabled]="educationSaving()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="educationForm.invalid || educationSaving()"
+            >
+              <span
+                *ngIf="educationSaving()"
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              {{ educationSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
         </form>
