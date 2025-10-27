@@ -237,20 +237,31 @@ function mapEducationRow(row) {
 }
 
 async function listEducation(userId) {
-  const result = await executeQuery(
-    'BEGIN sp_educacion_pkg.sp_listar_educacion(:userId, :items); END;',
-    {
-      userId,
-      items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+  let connection;
+  try {
+    connection = await oracledb.getConnection();
+    const result = await connection.execute(
+      'BEGIN sp_educacion_pkg.sp_listar_educacion(:userId, :items); END;',
+      {
+        userId,
+        items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.items || null;
+    const rows = await fetchCursorRows(cursor);
+      return rows
+      .map((row) => mapEducationRow(row))
+      .filter((entry) => entry && typeof entry.id === 'number');
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (error) {
+        console.error('[DB] Error releasing connection after listing education:', error);
+      }
     }
-  );
-
-  const cursor = result.outBinds?.items || null;
-  const rows = await fetchCursorRows(cursor);
-
-  return rows
-    .map((row) => mapEducationRow(row))
-    .filter((entry) => entry && typeof entry.id === 'number');
+  }
 }
 
 async function getEducationEntry(userId, educationId) {
