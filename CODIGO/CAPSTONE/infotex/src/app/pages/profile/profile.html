@@ -315,16 +315,17 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="profileCountry" class="form-label">País</label>
-              <input
+              <select
                 id="profileCountry"
-                type="text"
-                class="form-control"
+                class="form-select"
                 formControlName="country"
                 [class.is-invalid]="
                   (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
                   fieldState().country.ok === false
                 "
-              />
+              >
+                <option [value]="defaultCountry">{{ defaultCountry }}</option>
+              </select>
               <div class="invalid-feedback" *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
                 El país es obligatorio.
               </div>
@@ -335,16 +336,25 @@
 
             <div class="col-md-6">
               <label for="profileCity" class="form-label">Ciudad</label>
-              <input
+              <select
                 id="profileCity"
-                type="text"
-                class="form-control"
+                class="form-select"
                 formControlName="city"
                 [class.is-invalid]="
                   (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
                   fieldState().city.ok === false
                 "
-              />
+              >
+                <option value="" disabled [selected]="!cityControl.value">Selecciona una ciudad</option>
+                <option
+                  *ngFor="let option of cityOptions(); trackBy: trackCityOption"
+                  [value]="option"
+                >
+                  {{ option }}
+                </option>
+              </select>
+              <div class="form-text text-light" *ngIf="citiesLoading()">Cargando ciudades...</div>
+              <div class="form-text text-warning" *ngIf="citiesError()">{{ citiesError() }}</div>
               <div class="invalid-feedback" *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
                 La ciudad es obligatoria.
               </div>

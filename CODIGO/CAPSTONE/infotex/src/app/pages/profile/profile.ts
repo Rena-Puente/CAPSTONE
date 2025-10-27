@@ -21,6 +21,7 @@ import {
   EducationPayload,
   EducationSummary
 } from '../../services/profile.service';
+import { CityService } from '../../services/city.service';
 
 function minTrimmedLengthValidator(minLength: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -42,6 +43,8 @@ function createEmptyFieldState(): FieldState {
     return acc;
   }, {} as FieldState);
 }
+
+const DEFAULT_COUNTRY = 'Chile';
 
 function avatarUrlValidator(): ValidatorFn {
   const relativePathPattern = /^\/[\w\-./]+$/;
@@ -82,6 +85,7 @@ export class Profile implements OnInit {
   private readonly profileService = inject(ProfileService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
+  private readonly cityService = inject(CityService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -102,6 +106,9 @@ export class Profile implements OnInit {
   protected readonly educationSubmitError = signal<string | null>(null);
   protected readonly editingEducationId = signal<number | null>(null);
   protected readonly educationDeletingId = signal<number | null>(null);
+  protected readonly cityOptions = signal<string[]>([]);
+  protected readonly citiesLoading = signal(false);
+  protected readonly citiesError = signal<string | null>(null);
 
   protected readonly defaultAvatars = [
     { label: 'Avatar 1', url: '/avatars/avatar1.svg' },
@@ -120,12 +127,13 @@ export class Profile implements OnInit {
 
   protected readonly isComplete = computed(() => this.profile()?.isComplete ?? false);
   protected readonly missingFields = computed(() => this.profile()?.missingFields ?? []);
+  protected readonly defaultCountry = DEFAULT_COUNTRY;
 
   protected readonly profileForm = this.fb.nonNullable.group({
     displayName: ['', [Validators.required]],
     headline: ['', [Validators.required]],
     biography: ['', [Validators.required, minTrimmedLengthValidator(80)]],
-    country: ['', [Validators.required]],
+    country: [DEFAULT_COUNTRY, [Validators.required]],
     city: ['', [Validators.required]],
     avatarUrl: ['', [Validators.required, avatarUrlValidator()]]
 
@@ -141,6 +149,7 @@ export class Profile implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    await this.loadCities();
     await this.loadProfile();
     await this.loadEducation();
   }
@@ -174,7 +183,7 @@ export class Profile implements OnInit {
         displayName: '',
         headline: '',
         biography: '',
-        country: '',
+        country: DEFAULT_COUNTRY,
         city: '',
         avatarUrl: ''
       });
@@ -285,6 +294,10 @@ export class Profile implements OnInit {
 
   protected trackEducationById(index: number, item: EducationEntry): number {
     return item.id;
+  }
+
+  protected trackCityOption(index: number, option: string): string {
+    return option;
   }
 
   protected openEducationCreator(): void {
@@ -407,6 +420,24 @@ export class Profile implements OnInit {
     }
   }
 
+  private async loadCities(): Promise<void> {
+    this.citiesLoading.set(true);
+    this.citiesError.set(null);
+
+    try {
+      const cities = await firstValueFrom(this.cityService.getCities());
+      this.cityOptions.set(cities);
+      this.normalizeCity(this.cityControl.value);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo cargar el listado de ciudades.';
+      this.citiesError.set(message);
+      this.cityOptions.set([]);
+    } finally {
+      this.citiesLoading.set(false);
+    }
+  }
+
   private async loadProfile(): Promise<void> {
     this.loading.set(true);
     this.loadError.set(null);
@@ -434,7 +465,7 @@ export class Profile implements OnInit {
         displayName: '',
         headline: '',
         biography: '',
-        country: '',
+        country: DEFAULT_COUNTRY,
         city: '',
         avatarUrl: ''
       });
@@ -478,8 +509,8 @@ export class Profile implements OnInit {
       displayName: status.displayName ?? '',
       headline: status.headline ?? '',
       biography: status.biography ?? '',
-      country: status.country ?? '',
-      city: status.city ?? '',
+      country: status.country?.trim() || DEFAULT_COUNTRY,
+      city: this.normalizeCity(status.city),
       avatarUrl: status.avatarUrl ?? ''
     });
     this.profileForm.markAsPristine();
@@ -521,6 +552,36 @@ export class Profile implements OnInit {
     }
 
     this.fieldState.set(next);
+  }
+
+  private normalizeCity(value: string | null | undefined): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const normalized = value.trim();
+    this.ensureCityInOptions(normalized);
+    return normalized;
+  }
+
+  private ensureCityInOptions(city: string): void {
+    if (!city) {
+      return;
+    }
+
+    const options = this.cityOptions();
+    const exists = options.some(
+      (option) => option.localeCompare(city, 'es', { sensitivity: 'accent' }) === 0
+    );
+
+    if (exists) {
+      return;
+    }
+
+    const updated = [...options, city].sort((a, b) =>
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
+    );
+    this.cityOptions.set(updated);
   }
 
   private hasBackendErrors(profile: ProfileData): boolean {
