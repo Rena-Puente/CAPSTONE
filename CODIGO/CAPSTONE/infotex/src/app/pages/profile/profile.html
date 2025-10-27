@@ -3,18 +3,21 @@
     <div class="col-xxl-9 col-lg-10">
       <div class="card bg-dark text-light border-secondary shadow">
         <div class="card-body p-4 p-lg-5">
-          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3 mb-4">
+          <div class="profile-header mb-4">
             <div>
               <h2 class="card-title h4 mb-1">Tu perfil</h2>
               <p class="mb-0 text-secondary">Revisa la información que has registrado.</p>
             </div>
-            <div class="d-flex flex-wrap gap-2">
-              <button type="button" class="btn btn-outline-light btn-sm" (click)="retry()" [disabled]="loading()">
-                <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="loading()"></span>
-                Actualizar
-              </button>
-              <button type="button" class="btn btn-primary" (click)="openEditor()" [disabled]="loading()">
-                Editar perfil
+            <div class="profile-header__actions">
+              <button
+                type="button"
+                class="icon-button icon-button--ghost"
+                (click)="retry()"
+                [disabled]="loading()"
+                aria-label="Actualizar información del perfil"
+              >
+                <span class="spinner-border spinner-border-sm" role="status" *ngIf="loading()"></span>
+                <i class="bi bi-arrow-clockwise" *ngIf="!loading()"></i>
               </button>
             </div>
           </div>
@@ -54,75 +57,114 @@
                   </div>
                 </ng-template>
 
-                <div class="profile-overview mt-4">
-                  <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
-                    <div class="profile-avatar-wrapper">
-                      <ng-container *ngIf="profile()?.avatarUrl && !avatarHasError(); else avatarPlaceholder">
-                        <img
-                          [src]="profile()?.avatarUrl ?? ''"
-                          alt="Foto de perfil"
-                          class="profile-avatar-img"
-                          (error)="handleAvatarError()"
-                        />
-                      </ng-container>
-                      <ng-template #avatarPlaceholder>
-                        <div class="profile-avatar-placeholder">
-                          <span>Sin foto</span>
-                        </div>
-                      </ng-template>
+                <div class="profile-grid mt-4">
+                  <section class="profile-section profile-section--overview">
+                    <div class="profile-section__header">
+                      <div>
+                        <span class="profile-section__eyebrow">Resumen</span>
+                        <h3 class="profile-section__title mb-0">Información general</h3>
+                      </div>
+                      <div class="profile-section__actions">
+                        <button
+                          type="button"
+                          class="icon-button icon-button--primary"
+                          (click)="openEditor()"
+                          aria-label="Editar información general"
+                        >
+                          <i class="bi bi-pencil-square"></i>
+                        </button>
+                      </div>
                     </div>
 
-                    <div class="flex-grow-1 w-100">
-                      <h3
-                        class="h4 mb-1"
-                        [class.text-white]="!!profile()?.displayName"
-                        [class.text-secondary]="!profile()?.displayName"
-                      >
-                        {{ profile()?.displayName || 'Nombre no registrado' }}
-                      </h3>
-                      <p
-                        class="mb-3"
-                        [class.text-light]="!!profile()?.headline"
-                        [class.text-secondary]="!profile()?.headline"
-                      >
-                        {{ profile()?.headline || 'Titular no registrado' }}
-                      </p>
-
-                      <div class="row row-cols-1 row-cols-sm-2 g-3 profile-details">
-                        <div class="col">
-                          <div class="profile-detail">
-                            <span class="profile-detail-label">País</span>
-                            <span class="profile-detail-value" [class.text-secondary]="!profile()?.country">
-                              {{ profile()?.country || 'Sin registrar' }}
-                            </span>
-                          </div>
+                    <div class="profile-section__body">
+                      <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
+                        <div class="profile-avatar-wrapper">
+                          <ng-container *ngIf="profile()?.avatarUrl && !avatarHasError(); else avatarPlaceholder">
+                            <img
+                              [src]="profile()?.avatarUrl ?? ''"
+                              alt="Foto de perfil"
+                              class="profile-avatar-img"
+                              (error)="handleAvatarError()"
+                            />
+                          </ng-container>
+                          <ng-template #avatarPlaceholder>
+                            <div class="profile-avatar-placeholder">
+                              <span>Sin foto</span>
+                            </div>
+                          </ng-template>
                         </div>
-                        <div class="col">
-                          <div class="profile-detail">
-                            <span class="profile-detail-label">Ciudad</span>
-                            <span class="profile-detail-value" [class.text-secondary]="!profile()?.city">
-                              {{ profile()?.city || 'Sin registrar' }}
-                            </span>
+
+                        <div class="flex-grow-1 w-100">
+                          <h3
+                            class="h4 mb-1"
+                            [class.text-white]="!!profile()?.displayName"
+                            [class.text-secondary]="!profile()?.displayName"
+                          >
+                            {{ profile()?.displayName || 'Nombre no registrado' }}
+                          </h3>
+                          <p
+                            class="mb-3"
+                            [class.text-light]="!!profile()?.headline"
+                            [class.text-secondary]="!profile()?.headline"
+                          >
+                            {{ profile()?.headline || 'Titular no registrado' }}
+                          </p>
+
+                          <div class="row row-cols-1 row-cols-sm-2 g-3 profile-details">
+                            <div class="col">
+                              <div class="profile-detail">
+                                <span class="profile-detail-label">País</span>
+                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.country">
+                                  {{ profile()?.country || 'Sin registrar' }}
+                                </span>
+                              </div>
+                            </div>
+                            <div class="col">
+                              <div class="profile-detail">
+                                <span class="profile-detail-label">Ciudad</span>
+                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.city">
+                                  {{ profile()?.city || 'Sin registrar' }}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <div class="profile-biography mt-4">
-                    <span class="profile-detail-label d-block mb-2">Biografía</span>
-                    <p class="mb-0" [class.text-secondary]="!profile()?.biography">
-                      {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
-                    </p>
-                  </div>
-
-                  <div class="profile-education mt-4">
-                    <div
-                      class="profile-education__header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
-                    >
+                  <section class="profile-section profile-section--biography">
+                    <div class="profile-section__header">
                       <div>
-                        <span class="profile-detail-label d-block mb-1">Educación</span>
-                        <p class="mb-0 text-secondary small">
+                        <span class="profile-section__eyebrow">Historia</span>
+                        <h3 class="profile-section__title mb-0">Biografía</h3>
+                        <p class="profile-section__subtitle text-secondary mb-0">Comparte quién eres y tu experiencia.</p>
+                      </div>
+                      <div class="profile-section__actions">
+                        <button
+                          type="button"
+                          class="icon-button icon-button--primary"
+                          (click)="openEditor()"
+                          aria-label="Editar biografía"
+                        >
+                          <i class="bi bi-pencil-square"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="profile-section__body">
+                      <p class="mb-0" [class.text-secondary]="!profile()?.biography">
+                        {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
+                      </p>
+                    </div>
+                  </section>
+
+                  <section class="profile-section profile-section--education">
+                    <div class="profile-section__header">
+                      <div>
+                        <span class="profile-section__eyebrow">Formación</span>
+                        <h3 class="profile-section__title mb-1">Educación</h3>
+                        <p class="profile-section__subtitle text-secondary mb-0">
                           <ng-container *ngIf="educationSummary() as summary; else educationSummaryFallback">
                             <ng-container *ngIf="summary.totalRecords > 0; else noEducationRecords">
                               {{ summary.totalRecords === 1 ? '1 registro educativo' : summary.totalRecords + ' registros educativos' }}.
@@ -139,79 +181,84 @@
                           </ng-template>
                         </p>
                       </div>
-                      <div class="d-flex flex-wrap gap-2">
-                        <button type="button" class="btn btn-outline-light" (click)="openEducationCreator()">
-                          Agregar educación
+                      <div class="profile-section__actions">
+                        <button
+                          type="button"
+                          class="icon-button icon-button--primary"
+                          (click)="openEducationCreator()"
+                          aria-label="Agregar educación"
+                        >
+                          <i class="bi bi-pencil-square"></i>
                         </button>
                       </div>
                     </div>
 
-                    <div *ngIf="educationError()" class="alert alert-danger mt-3" role="alert">
-                      {{ educationError() }}
-                    </div>
+                    <div class="profile-section__body">
+                      <div *ngIf="educationError()" class="alert alert-danger" role="alert">
+                        {{ educationError() }}
+                      </div>
 
-                    <div *ngIf="educationLoading()" class="text-secondary mt-3">
-                      Cargando educación...
-                    </div>
+                      <div *ngIf="educationLoading()" class="text-secondary">
+                        Cargando educación...
+                      </div>
 
-                    <ng-container *ngIf="!educationLoading() && !educationError()">
-                      <div *ngIf="education().length > 0; else noEducationItems" class="education-list mt-3">
-                        <div
-                          class="education-item card bg-dark border-secondary mb-3"
-                          *ngFor="let item of education(); trackBy: trackEducationById"
-                        >
+                      <ng-container *ngIf="!educationLoading() && !educationError()">
+                        <div *ngIf="education().length > 0; else noEducationItems" class="education-list mt-3">
                           <div
-                            class="education-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3"
+                            class="education-item card bg-dark border-secondary mb-3"
+                            *ngFor="let item of education(); trackBy: trackEducationById"
                           >
-                            <div>
-                              <h4 class="h6 mb-1 text-white">{{ item.institution }}</h4>
-                              <p class="mb-1 text-secondary" *ngIf="item.degree || item.fieldOfStudy">
-                                <ng-container *ngIf="item.degree">{{ item.degree }}</ng-container>
-                                <ng-container *ngIf="item.degree && item.fieldOfStudy"> · </ng-container>
-                                <ng-container *ngIf="item.fieldOfStudy">{{ item.fieldOfStudy }}</ng-container>
-                              </p>
-                              <p class="mb-0 text-secondary small">
-                                {{ item.startDate || 'Fecha de inicio no registrada' }} –
-                                {{ item.endDate || 'Actualidad' }}
-                              </p>
+                            <div
+                              class="education-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3"
+                            >
+                              <div>
+                                <h4 class="h6 mb-1 text-white">{{ item.institution }}</h4>
+                                <p class="mb-1 text-secondary" *ngIf="item.degree || item.fieldOfStudy">
+                                  <ng-container *ngIf="item.degree">{{ item.degree }}</ng-container>
+                                  <ng-container *ngIf="item.degree && item.fieldOfStudy"> · </ng-container>
+                                  <ng-container *ngIf="item.fieldOfStudy">{{ item.fieldOfStudy }}</ng-container>
+                                </p>
+                                <p class="mb-0 text-secondary small">
+                                  {{ item.startDate || 'Fecha de inicio no registrada' }} –
+                                  {{ item.endDate || 'Actualidad' }}
+                                </p>
+                              </div>
+                              <div class="btn-group align-self-stretch">
+                                <button type="button" class="btn btn-sm btn-outline-light" (click)="editEducation(item)">
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  class="btn btn-sm btn-outline-danger"
+                                  (click)="deleteEducation(item)"
+                                  [disabled]="educationDeletingId() === item.id"
+                                >
+                                  <span
+                                    *ngIf="educationDeletingId() === item.id"
+                                    class="spinner-border spinner-border-sm me-1"
+                                    role="status"
+                                    aria-hidden="true"
+                                  ></span>
+                                  Eliminar
+                                </button>
+                              </div>
                             </div>
-                            <div class="btn-group align-self-stretch">
-                              <button type="button" class="btn btn-sm btn-outline-light" (click)="editEducation(item)">
-                                Editar
-                              </button>
-                              <button
-                                type="button"
-                                class="btn btn-sm btn-outline-danger"
-                                (click)="deleteEducation(item)"
-                                [disabled]="educationDeletingId() === item.id"
-                              >
-                                <span
-                                  *ngIf="educationDeletingId() === item.id"
-                                  class="spinner-border spinner-border-sm me-1"
-                                  role="status"
-                                  aria-hidden="true"
-                                ></span>
-                                Eliminar
-                              </button>
+                            <div class="education-item__description card-body pt-0">
+                              <p class="mb-0 text-light" *ngIf="item.description; else noEducationDescription">
+                                {{ item.description }}
+                              </p>
+                              <ng-template #noEducationDescription>
+                                <p class="mb-0 text-secondary">Sin descripción adicional.</p>
+                              </ng-template>
                             </div>
-                          </div>
-                          <div class="education-item__description card-body pt-0">
-                            <p class="mb-0 text-light" *ngIf="item.description; else noEducationDescription">
-                              {{ item.description }}
-                            </p>
-                            <ng-template #noEducationDescription>
-                              <p class="mb-0 text-secondary">Sin descripción adicional.</p>
-                            </ng-template>
                           </div>
                         </div>
-                      </div>
-                      <ng-template #noEducationItems>
-                        <p class="text-secondary mt-3 mb-0">Aún no has agregado tu educación.</p>
-                      </ng-template>
-                    </ng-container>
-
- 
-                  </div>
+                        <ng-template #noEducationItems>
+                          <p class="text-secondary mt-3 mb-0">Aún no has agregado tu educación.</p>
+                        </ng-template>
+                      </ng-container>
+                    </div>
+                  </section>
                 </div>
               </ng-container>
 
