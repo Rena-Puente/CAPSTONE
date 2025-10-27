@@ -1,0 +1,90 @@
+{
+  "Arica y Parinacota": {
+    "Arica": "Arica",
+    "Parinacota": "Putre"
+  },
+  "Tarapacá": {
+    "Iquique": "Iquique",
+    "El Tamarugal": "Pozo Almonte"
+  },
+  "Antofagasta": {
+    "Antofagasta": "Antofagasta",
+    "El Loa": "Calama",
+    "Tocopilla": "Tocopilla"
+  },
+  "Atacama": {
+    "Copiapó": "Copiapó",
+    "Chañaral": "Chañaral",
+    "Huasco": "Vallenar"
+  },
+  "Coquimbo": {
+    "Elqui": "La Serena",
+    "Choapa": "Illapel",
+    "Limarí": "Ovalle"
+  },
+  "Valparaíso": {
+    "Valparaíso": "Valparaíso",
+    "Marga Marga": "Quilpué",
+    "San Felipe de Aconcagua": "San Felipe",
+    "Los Andes": "Los Andes",
+    "Petorca": "La Ligua",
+    "Quillota": "Quillota",
+    "San Antonio": "San Antonio",
+    "Isla de Pascua": "Hanga Roa"
+  },
+  "Metropolitana de Santiago": {
+    "Santiago": "Santiago",
+    "Chacabuco": "Colina",
+    "Cordillera": "Puente Alto",
+    "Maipo": "San Bernardo",
+    "Talagante": "Talagante",
+    "Melipilla": "Melipilla"
+  },
+  "O’Higgins": {
+    "Cachapoal": "Rancagua",
+    "Colchagua": "San Fernando",
+    "Cardenal Caro": "Pichilemu"
+  },
+  "Maule": {
+    "Talca": "Talca",
+    "Curicó": "Curicó",
+    "Linares": "Linares",
+    "Cauquenes": "Cauquenes"
+  },
+  "Ñuble": {
+    "Diguillín": "Chillán",
+    "Itata": "Quirihue",
+    "Punilla": "San Carlos"
+  },
+  "Biobío": {
+    "Concepción": "Concepción",
+    "Arauco": "Lebu",
+    "Biobío": "Los Ángeles"
+  },
+  "La Araucanía": {
+    "Cautín": "Temuco",
+    "Malleco": "Angol"
+  },
+  "Los Ríos": {
+    "Valdivia": "Valdivia",
+    "Ranco": "La Unión"
+  },
+  "Los Lagos": {
+    "Llanquihue": "Puerto Montt",
+    "Osorno": "Osorno",
+    "Chiloé": "Castro",
+    "Palena": "Chaitén"
+  },
+  "Aysén": {
+    "Coyhaique": "Coyhaique",
+    "Aysén": "Puerto Aysén",
+    "General Carrera": "Chile Chico",
+    "Capitán Prat": "Cochrane"
+  },
+  "Magallanes": {
+    "Magallanes": "Punta Arenas",
+    "Antártica Chilena": "Puerto Williams",
+    "Tierra del Fuego": "Porvenir",
+    "Última Esperanza": "Puerto Natales"
+  }
+}
