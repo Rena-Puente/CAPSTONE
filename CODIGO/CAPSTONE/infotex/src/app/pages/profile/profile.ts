@@ -620,4 +620,15 @@ export class Profile implements OnInit {
 
     return parsed.getTime();
   }
+  
+  currentYear = new Date().getFullYear();
+years: number[] = [];
+
+constructor() {
+  for (let i = 0; i <= 10; i++) {
+    this.years.push(this.currentYear - i);
+  }
 }
+
+}
+
