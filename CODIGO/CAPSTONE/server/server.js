@@ -259,9 +259,29 @@ async function listEducation(userId) {
 
     const cursor = result.outBinds?.items || null;
     const rows = await fetchCursorRows(cursor);
-      return rows
+    const previewRows = rows.slice(0, 3).map((row, index) => ({
+      index,
+      keys: Object.keys(row || {}),
+      values: row
+    }));
+
+    console.info('[Education] listEducation rows fetched', {
+      userId,
+      rowCount: rows.length,
+      preview: previewRows
+    });
+
+    const mappedEntries = rows
       .map((row) => mapEducationRow(row))
       .filter((entry) => entry && typeof entry.id === 'number');
+
+    console.info('[Education] listEducation mapped entries', {
+      userId,
+      mappedCount: mappedEntries.length,
+      preview: mappedEntries.slice(0, 3)
+    });
+
+    return mappedEntries;
   } finally {
     if (connection) {
       try {
@@ -303,10 +323,14 @@ async function getEducationEntry(userId, educationId) {
   const exists = Number(outBinds.exists ?? 0) === 1;
 
   if (!exists) {
+    console.info('[Education] getEducationEntry: entry not found', {
+      userId,
+      educationId
+    });
     return null;
   }
 
-  return {
+  const entry = {
     id: educationId,
     institution: toNullableTrimmedString(outBinds.institution),
     degree: toNullableTrimmedString(outBinds.degree),
@@ -315,6 +339,14 @@ async function getEducationEntry(userId, educationId) {
     endDate: toIsoString(outBinds.endDate),
     description: toNullableTrimmedString(outBinds.description)
   };
+
+  console.info('[Education] getEducationEntry: entry retrieved', {
+    userId,
+    educationId,
+    entry
+  });
+
+  return entry;
 }
 
 async function getEducationStatus(userId) {
@@ -338,12 +370,19 @@ async function getEducationStatus(userId) {
   const validDates = Number(outBinds.validDates ?? 0);
   const invalidDateCount = Math.max(totalRecords - validDates, 0);
 
-  return {
+  const summary = {
     hasEducation: Number(outBinds.hasEducation ?? 0) === 1,
     totalRecords,
     validDateCount: validDates,
     invalidDateCount
   };
+
+  console.info('[Education] getEducationStatus result', {
+    userId,
+    summary
+  });
+
+  return summary;
 }
 
 function summarizeToken(token) {
