@@ -190,7 +190,9 @@ async function fetchCursorRows(cursor) {
         break;
       }
 
-      rows.push(...batch);
+        for (const row of batch) {
+        rows.push(await normalizeCursorRow(row));
+      }
     } while (batch.length === 100);
   } finally {
     try {
@@ -201,6 +203,56 @@ async function fetchCursorRows(cursor) {
   }
 
   return rows;
+}
+async function normalizeCursorRow(row) {
+  if (!row || typeof row !== 'object') {
+    return row;
+  }
+
+  const entries = await Promise.all(
+    Object.entries(row).map(async ([key, value]) => [key, await resolveLobValue(value)])
+  );
+
+  return Object.fromEntries(entries);
+}
+
+async function resolveLobValue(value) {
+  if (value === undefined || value === null) {
+    return value;
+  }
+
+  if (typeof value !== 'object') {
+    return value;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  const constructorName = value.constructor ? value.constructor.name : '';
+  const isLikelyLob = constructorName === 'Lob' || value.iLob === true;
+  const hasLobMethods = typeof value.getData === 'function' && typeof value.close === 'function';
+  const hasLobType = value.type === oracledb.CLOB || value.type === oracledb.BLOB;
+
+  const isLob = hasLobMethods && (isLikelyLob || hasLobType);
+
+  if (!isLob) {
+    return value;
+  }
+
+  try {
+    const data = await value.getData();
+    return data;
+  } catch (error) {
+    console.error('[DB] Failed to read LOB value from cursor:', error);
+    return null;
+  } finally {
+    try {
+      await value.close();
+    } catch (closeError) {
+      console.error('[DB] Failed to close LOB after reading from cursor:', closeError);
+    }
+  }
 }
 
 function toNullableTrimmedString(value) {
@@ -314,7 +366,7 @@ async function getEducationEntry(userId, educationId) {
       fieldOfStudy: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
       startDate: { dir: oracledb.BIND_OUT, type: oracledb.DATE },
       endDate: { dir: oracledb.BIND_OUT, type: oracledb.DATE },
-      description: { dir: oracledb.BIND_OUT, type: oracledb.CLOB },
+      description: { dir: oracledb.BIND_OUT, type: oracledb.STRING },
       exists: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     }
   );
