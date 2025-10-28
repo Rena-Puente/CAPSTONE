@@ -367,7 +367,88 @@ export class ProfileService {
       return trimmed.length > 0 ? trimmed : '';
     }
 
-    return String(value);
+      if (ArrayBuffer.isView(value)) {
+      const decoded = this.decodeByteSequence(value as ArrayBufferView);
+      return decoded ?? '';
+    }
+
+    if (value instanceof ArrayBuffer) {
+      const decoded = this.decodeByteSequence(new Uint8Array(value));
+      return decoded ?? '';
+    }
+
+    if (this.isSerializedBuffer(value)) {
+      const decoded = this.decodeByteSequence((value as { data: ArrayLike<number> }).data);
+      return decoded ?? '';
+    }
+
+    if (typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+
+      const textCandidate = typeof record['text'] === 'string' ? record['text'].trim() : null;
+      if (textCandidate && textCandidate.length > 0) {
+        return textCandidate;
+      }
+
+      const valueCandidate = typeof record['value'] === 'string' ? record['value'].trim() : null;
+      if (valueCandidate && valueCandidate.length > 0) {
+        return valueCandidate;
+      }
+
+      const customToString = record['toString'];
+      if (typeof customToString === 'function' && customToString !== Object.prototype.toString) {
+        try {
+          const result = customToString.call(value);
+          if (typeof result === 'string') {
+            const trimmed = result.trim();
+            if (trimmed.length > 0 && trimmed !== '[object Object]') {
+              return trimmed;
+            }
+          }
+        } catch (error) {
+          console.warn('[ProfileService] Failed to stringify object value', error);
+        }
+      }
+    }
+
+    const fallback = String(value).trim();
+    return fallback === '[object Object]' ? '' : fallback;
+  }
+
+  private decodeByteSequence(
+    value: ArrayBufferView | ArrayLike<number> | null | undefined
+  ): string | null {
+    if (!value) {
+      return null;
+    }
+
+    try {
+      let bytes: Uint8Array;
+
+      if (value instanceof Uint8Array) {
+        bytes = value;
+      } else if (ArrayBuffer.isView(value)) {
+        bytes = new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+      } else {
+        bytes = Uint8Array.from(value);
+      }
+
+      const decoded = new TextDecoder().decode(bytes);
+      const trimmed = decoded.trim();
+      return trimmed.length > 0 ? trimmed : '';
+    } catch (error) {
+      console.warn('[ProfileService] Failed to decode byte sequence', error);
+      return null;
+    }
+  }
+
+  private isSerializedBuffer(value: unknown): value is { type: string; data: ArrayLike<number> } {
+    return (
+      !!value &&
+      typeof value === 'object' &&
+      (value as { type?: unknown }).type === 'Buffer' &&
+      Array.isArray((value as { data?: unknown }).data)
+    );
   }
 
   private toBoolean(value: unknown, defaultValue = false): boolean {
