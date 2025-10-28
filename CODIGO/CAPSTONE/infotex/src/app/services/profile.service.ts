@@ -364,7 +364,12 @@ export class ProfileService {
 
     if (typeof value === 'string') {
       const trimmed = value.trim();
-      return trimmed.length > 0 ? trimmed : '';
+      
+      if (!trimmed || trimmed === '[object Object]') {
+        return '';
+      }
+
+      return trimmed;
     }
 
       if (ArrayBuffer.isView(value)) {

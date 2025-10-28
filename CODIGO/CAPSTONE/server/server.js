@@ -210,11 +210,20 @@ function toNullableTrimmedString(value) {
 
   if (typeof value === 'string') {
     const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
+    
+    if (!trimmed || trimmed === '[object Object]') {
+      return null;
+    }
+
+    return trimmed;
   }
 
   const stringValue = String(value).trim();
-  return stringValue.length > 0 ? stringValue : null;
+    if (!stringValue || stringValue === '[object Object]') {
+    return null;
+  }
+
+  return stringValue;
 }
 
 function mapEducationRow(row) {

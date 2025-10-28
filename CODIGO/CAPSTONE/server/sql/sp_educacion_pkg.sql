@@ -172,8 +172,7 @@ CREATE OR REPLACE PACKAGE BODY sp_educacion_pkg AS
         o_area_estudio := '';
         o_fecha_inicio := NULL;
         o_fecha_fin := NULL;
-        DBMS_LOB.CREATETEMPORARY(o_descripcion, TRUE);
-        DBMS_LOB.TRIM(o_descripcion, 0);
+        o_descripcion := '';
         o_existe := 0;
     END;
   END sp_obtener_educacion;
