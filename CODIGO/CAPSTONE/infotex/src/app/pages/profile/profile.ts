@@ -21,7 +21,8 @@ import {
   EducationPayload,
   EducationSummary
 } from '../../services/profile.service';
-import { CityService } from '../../services/city.service';
+
+import { ProfileFieldsService } from '../../services/profilefields.service';
 
 function minTrimmedLengthValidator(minLength: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
@@ -85,7 +86,7 @@ export class Profile implements OnInit {
   private readonly profileService = inject(ProfileService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
-  private readonly cityService = inject(CityService);
+  private readonly PFService = inject(ProfileFieldsService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -425,7 +426,7 @@ export class Profile implements OnInit {
     this.citiesError.set(null);
 
     try {
-      const cities = await firstValueFrom(this.cityService.getCities());
+      const cities = await firstValueFrom(this.PFService.getCities());
       this.cityOptions.set(cities);
       this.normalizeCity(this.cityControl.value);
     } catch (error) {
