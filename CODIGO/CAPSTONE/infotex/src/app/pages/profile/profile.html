@@ -71,7 +71,7 @@
                           (click)="openEditor()"
                           aria-label="Editar información general"
                         >
-                          <i class="bi bi-pencil-square"></i>
+                          <i class="bi bi-pencil-square" width="40" height="40"></i>
                         </button>
                       </div>
                     </div>
@@ -219,28 +219,8 @@
                                   <ng-container *ngIf="item.fieldOfStudy">{{ item.fieldOfStudy }}</ng-container>
                                 </p>
                                 <p class="mb-0 text-secondary small">
-                                  {{ item.startDate || 'Fecha de inicio no registrada' }} –
-                                  {{ item.endDate || 'Actualidad' }}
+                                  {{ item.startDate | date:'yyyy' }} – {{ item.endDate | date:'yyyy' }}
                                 </p>
-                              </div>
-                              <div class="btn-group align-self-stretch">
-                                <button type="button" class="btn btn-sm btn-outline-light" (click)="editEducation(item)">
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  class="btn btn-sm btn-outline-danger"
-                                  (click)="deleteEducation(item)"
-                                  [disabled]="educationDeletingId() === item.id"
-                                >
-                                  <span
-                                    *ngIf="educationDeletingId() === item.id"
-                                    class="spinner-border spinner-border-sm me-1"
-                                    role="status"
-                                    aria-hidden="true"
-                                  ></span>
-                                  Eliminar
-                                </button>
                               </div>
                             </div>
                             <div class="education-item__description card-body pt-0">

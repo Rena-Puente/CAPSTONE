@@ -7,7 +7,7 @@ CREATE OR REPLACE PACKAGE sp_educacion_pkg AS
     p_area_estudio  IN  VARCHAR2,
     p_fecha_inicio  IN  DATE,
     p_fecha_fin     IN  DATE,
-    p_descripcion   IN  CLOB,
+    p_descripcion   IN  VARCHAR2,
     o_id_educacion  OUT NUMBER
   );
 
@@ -20,7 +20,7 @@ CREATE OR REPLACE PACKAGE sp_educacion_pkg AS
     p_area_estudio  IN VARCHAR2,
     p_fecha_inicio  IN DATE,
     p_fecha_fin     IN DATE,
-    p_descripcion   IN CLOB
+    p_descripcion   IN VARCHAR2
   );
 
   -- Eliminar
@@ -38,7 +38,7 @@ CREATE OR REPLACE PACKAGE sp_educacion_pkg AS
     o_area_estudio OUT VARCHAR2,
     o_fecha_inicio OUT DATE,
     o_fecha_fin    OUT DATE,
-    o_descripcion  OUT CLOB,
+    o_descripcion  OUT VARCHAR2,
     o_existe       OUT NUMBER
   );
 
@@ -76,7 +76,7 @@ CREATE OR REPLACE PACKAGE BODY sp_educacion_pkg AS
     p_area_estudio  IN  VARCHAR2,
     p_fecha_inicio  IN  DATE,
     p_fecha_fin     IN  DATE,
-    p_descripcion   IN  CLOB,
+    p_descripcion   IN  VARCHAR2,
     o_id_educacion  OUT NUMBER
   ) IS
   BEGIN
@@ -105,7 +105,7 @@ CREATE OR REPLACE PACKAGE BODY sp_educacion_pkg AS
     p_area_estudio  IN VARCHAR2,
     p_fecha_inicio  IN DATE,
     p_fecha_fin     IN DATE,
-    p_descripcion   IN CLOB
+    p_descripcion   IN VARCHAR2
   ) IS
   BEGIN
     IF p_institucion IS NULL OR TRIM(p_institucion) = '' THEN
@@ -151,7 +151,7 @@ CREATE OR REPLACE PACKAGE BODY sp_educacion_pkg AS
     o_area_estudio OUT VARCHAR2,
     o_fecha_inicio OUT DATE,
     o_fecha_fin    OUT DATE,
-    o_descripcion  OUT CLOB,
+    o_descripcion  OUT VARCHAR2,
     o_existe       OUT NUMBER
   ) IS
   BEGIN
