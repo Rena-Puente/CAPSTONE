@@ -104,10 +104,10 @@
                           </h3>
                           <p
                             class="mb-3"
-                            [class.text-light]="!!profile()?.headline"
-                            [class.text-secondary]="!profile()?.headline"
+                            [class.text-light]="!!profile()?.career"
+                            [class.text-secondary]="!profile()?.career"
                           >
-                            {{ profile()?.headline || 'Titular no registrado' }}
+                            {{ profile()?.career || 'Carrera no registrada' }}
                           </p>
 
                           <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 profile-details">
@@ -304,22 +304,39 @@
           </div>
 
           <div class="mb-3">
-            <label for="profileHeadline" class="form-label">Titular profesional</label>
-            <input
-              id="profileHeadline"
-              type="text"
-              class="form-control"
-              formControlName="headline"
+            <label for="profileCareer" class="form-label">Carrera</label>
+            <select
+              id="profileCareer"
+              class="form-select"
+              formControlName="career"
+              aria-label="Selecciona tu carrera"
               [class.is-invalid]="
-                (headlineControl.invalid && (headlineControl.dirty || headlineControl.touched)) ||
-                fieldState().headline.ok === false
+                (careerControl.invalid && (careerControl.dirty || careerControl.touched)) ||
+                fieldState().career.ok === false
               "
-            />
-            <div class="invalid-feedback" *ngIf="headlineControl.hasError('required') && (headlineControl.dirty || headlineControl.touched)">
-              El titular profesional es obligatorio.
+            >
+              <option value="" disabled [selected]="!careerControl.value">Selecciona una carrera</option>
+              <ng-container *ngFor="let group of careerCategoryOptions(); trackBy: trackCareerCategory">
+                <optgroup [label]="group.name">
+                  <option
+                    *ngFor="let option of group.options; trackBy: trackCareerOption"
+                    [value]="option"
+                  >
+                    {{ option }}
+                  </option>
+                </optgroup>
+              </ng-container>
+            </select>
+            <div class="form-text text-light" *ngIf="careersLoading()">Cargando carreras...</div>
+            <div class="form-text text-warning" *ngIf="careersError()">{{ careersError() }}</div>
+            <div
+              class="invalid-feedback"
+              *ngIf="careerControl.hasError('required') && (careerControl.dirty || careerControl.touched)"
+            >
+              La carrera es obligatoria.
             </div>
-            <div class="invalid-feedback" *ngIf="fieldState().headline.ok === false">
-              {{ fieldState().headline.error || 'El servidor reportó un problema con este campo.' }}
+            <div class="invalid-feedback" *ngIf="fieldState().career.ok === false">
+              {{ fieldState().career.error || 'El servidor reportó un problema con este campo.' }}
             </div>
           </div>
 
@@ -410,44 +427,6 @@
               </div>
             </div>
 
-            <div class="col-12 col-lg-4">
-              <div class="form-floating">
-                <select
-                  id="profileCareer"
-                  class="form-select"
-                  formControlName="career"
-                  aria-label="Selecciona tu carrera"
-                  [class.is-invalid]="
-                    (careerControl.invalid && (careerControl.dirty || careerControl.touched)) ||
-                    fieldState().career.ok === false
-                  "
-                >
-                  <option value="" disabled [selected]="!careerControl.value">Selecciona una carrera</option>
-                  <ng-container *ngFor="let group of careerCategoryOptions(); trackBy: trackCareerCategory">
-                    <optgroup [label]="group.name">
-                      <option
-                        *ngFor="let option of group.options; trackBy: trackCareerOption"
-                        [value]="option"
-                      >
-                        {{ option }}
-                      </option>
-                    </optgroup>
-                  </ng-container>
-                </select>
-                <label for="profileCareer">Carrera</label>
-              </div>
-              <div class="form-text text-light" *ngIf="careersLoading()">Cargando carreras...</div>
-              <div class="form-text text-warning" *ngIf="careersError()">{{ careersError() }}</div>
-              <div
-                class="invalid-feedback"
-                *ngIf="careerControl.hasError('required') && (careerControl.dirty || careerControl.touched)"
-              >
-                La carrera es obligatoria.
-              </div>
-              <div class="invalid-feedback" *ngIf="fieldState().career.ok === false">
-                {{ fieldState().career.error || 'El servidor reportó un problema con este campo.' }}
-              </div>
-            </div>
           </div>
 
           <div class="mb-4 mt-3">
