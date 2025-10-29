@@ -110,7 +110,7 @@
                             {{ profile()?.headline || 'Titular no registrado' }}
                           </p>
 
-                          <div class="row row-cols-1 row-cols-sm-2 g-3 profile-details">
+                          <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 profile-details">
                             <div class="col">
                               <div class="profile-detail">
                                 <span class="profile-detail-label">País</span>
@@ -124,6 +124,14 @@
                                 <span class="profile-detail-label">Ciudad</span>
                                 <span class="profile-detail-value" [class.text-secondary]="!profile()?.city">
                                   {{ profile()?.city || 'Sin registrar' }}
+                                </span>
+                              </div>
+                            </div>
+                            <div class="col">
+                              <div class="profile-detail">
+                                <span class="profile-detail-label">Carrera</span>
+                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.career">
+                                  {{ profile()?.career || 'Sin registrar' }}
                                 </span>
                               </div>
                             </div>
@@ -340,20 +348,26 @@
           </div>
 
           <div class="row g-3">
-            <div class="col-md-6">
-              <label for="profileCountry" class="form-label">País</label>
-              <select
-                id="profileCountry"
-                class="form-select"
-                formControlName="country"
-                [class.is-invalid]="
-                  (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
-                  fieldState().country.ok === false
-                "
+            <div class="col-md-6 col-lg-4">
+              <div class="form-floating">
+                <select
+                  id="profileCountry"
+                  class="form-select"
+                  formControlName="country"
+                  aria-label="Selecciona tu país"
+                  [class.is-invalid]="
+                    (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
+                    fieldState().country.ok === false
+                  "
+                >
+                  <option [value]="defaultCountry">{{ defaultCountry }}</option>
+                </select>
+                <label for="profileCountry">País</label>
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)"
               >
-                <option [value]="defaultCountry">{{ defaultCountry }}</option>
-              </select>
-              <div class="invalid-feedback" *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
                 El país es obligatorio.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().country.ok === false">
@@ -361,32 +375,77 @@
               </div>
             </div>
 
-            <div class="col-md-6">
-              <label for="profileCity" class="form-label">Ciudad</label>
-              <select
-                id="profileCity"
-                class="form-select"
-                formControlName="city"
-                [class.is-invalid]="
-                  (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
-                  fieldState().city.ok === false
-                "
-              >
-                <option value="" disabled [selected]="!cityControl.value">Selecciona una ciudad</option>
-                <option
-                  *ngFor="let option of cityOptions(); trackBy: trackCityOption"
-                  [value]="option"
+            <div class="col-md-6 col-lg-4">
+              <div class="form-floating">
+                <select
+                  id="profileCity"
+                  class="form-select"
+                  formControlName="city"
+                  aria-label="Selecciona tu ciudad"
+                  [class.is-invalid]="
+                    (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
+                    fieldState().city.ok === false
+                  "
                 >
-                  {{ option }}
-                </option>
-              </select>
+                  <option value="" disabled [selected]="!cityControl.value">Selecciona una ciudad</option>
+                  <option
+                    *ngFor="let option of cityOptions(); trackBy: trackCityOption"
+                    [value]="option"
+                  >
+                    {{ option }}
+                  </option>
+                </select>
+                <label for="profileCity">Ciudad</label>
+              </div>
               <div class="form-text text-light" *ngIf="citiesLoading()">Cargando ciudades...</div>
               <div class="form-text text-warning" *ngIf="citiesError()">{{ citiesError() }}</div>
-              <div class="invalid-feedback" *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
+              <div
+                class="invalid-feedback"
+                *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)"
+              >
                 La ciudad es obligatoria.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().city.ok === false">
                 {{ fieldState().city.error || 'El servidor reportó un problema con este campo.' }}
+              </div>
+            </div>
+
+            <div class="col-12 col-lg-4">
+              <div class="form-floating">
+                <select
+                  id="profileCareer"
+                  class="form-select"
+                  formControlName="career"
+                  aria-label="Selecciona tu carrera"
+                  [class.is-invalid]="
+                    (careerControl.invalid && (careerControl.dirty || careerControl.touched)) ||
+                    fieldState().career.ok === false
+                  "
+                >
+                  <option value="" disabled [selected]="!careerControl.value">Selecciona una carrera</option>
+                  <ng-container *ngFor="let group of careerCategoryOptions(); trackBy: trackCareerCategory">
+                    <optgroup [label]="group.name">
+                      <option
+                        *ngFor="let option of group.options; trackBy: trackCareerOption"
+                        [value]="option"
+                      >
+                        {{ option }}
+                      </option>
+                    </optgroup>
+                  </ng-container>
+                </select>
+                <label for="profileCareer">Carrera</label>
+              </div>
+              <div class="form-text text-light" *ngIf="careersLoading()">Cargando carreras...</div>
+              <div class="form-text text-warning" *ngIf="careersError()">{{ careersError() }}</div>
+              <div
+                class="invalid-feedback"
+                *ngIf="careerControl.hasError('required') && (careerControl.dirty || careerControl.touched)"
+              >
+                La carrera es obligatoria.
+              </div>
+              <div class="invalid-feedback" *ngIf="fieldState().career.ok === false">
+                {{ fieldState().career.error || 'El servidor reportó un problema con este campo.' }}
               </div>
             </div>
           </div>

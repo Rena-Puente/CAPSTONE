@@ -46,6 +46,9 @@ function createEmptyFieldState(): FieldState {
 }
 
 const DEFAULT_COUNTRY = 'Chile';
+const FALLBACK_CAREER_CATEGORY = 'Otras carreras';
+
+type CareerOptionGroup = { name: string; options: readonly string[] };
 
 function avatarUrlValidator(): ValidatorFn {
   const relativePathPattern = /^\/[\w\-./]+$/;
@@ -110,6 +113,18 @@ export class Profile implements OnInit {
   protected readonly cityOptions = signal<string[]>([]);
   protected readonly citiesLoading = signal(false);
   protected readonly citiesError = signal<string | null>(null);
+  protected readonly careerOptionsByCategory = signal<Record<string, string[]>>({});
+  protected readonly careerCategories = signal<string[]>([]);
+  protected readonly careerCategoryOptions = computed<CareerOptionGroup[]>(() =>
+    this.careerCategories()
+      .map((category) => ({
+        name: category,
+        options: this.careerOptionsByCategory()[category] ?? []
+      }))
+      .filter((group) => group.options.length > 0)
+  );
+  protected readonly careersLoading = signal(false);
+  protected readonly careersError = signal<string | null>(null);
 
   protected readonly defaultAvatars = [
     { label: 'Avatar 1', url: '/avatars/avatar1.svg' },
@@ -136,6 +151,7 @@ export class Profile implements OnInit {
     biography: ['', [Validators.required, minTrimmedLengthValidator(80)]],
     country: [DEFAULT_COUNTRY, [Validators.required]],
     city: ['', [Validators.required]],
+    career: ['', [Validators.required]],
     avatarUrl: ['', [Validators.required, avatarUrlValidator()]]
 
   });
@@ -150,7 +166,7 @@ export class Profile implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    await this.loadCities();
+    await Promise.all([this.loadCities(), this.loadCareers()]);
     await this.loadProfile();
     await this.loadEducation();
   }
@@ -186,6 +202,7 @@ export class Profile implements OnInit {
         biography: '',
         country: DEFAULT_COUNTRY,
         city: '',
+        career: '',
         avatarUrl: ''
       });
       this.profileForm.markAsPristine();
@@ -217,6 +234,10 @@ export class Profile implements OnInit {
 
   protected get cityControl() {
     return this.profileForm.controls.city;
+  }
+
+  protected get careerControl() {
+    return this.profileForm.controls.career;
   }
 
   protected get avatarUrlControl() {
@@ -269,6 +290,7 @@ export class Profile implements OnInit {
       biography: rawValue.biography.trim(),
       country: rawValue.country.trim(),
       city: rawValue.city.trim(),
+      career: rawValue.career.trim(),
       avatarUrl: rawValue.avatarUrl.trim()
     };
 
@@ -298,6 +320,14 @@ export class Profile implements OnInit {
   }
 
   protected trackCityOption(index: number, option: string): string {
+    return option;
+  }
+
+  protected trackCareerCategory(index: number, group: CareerOptionGroup): string {
+    return group.name;
+  }
+
+  protected trackCareerOption(index: number, option: string): string {
     return option;
   }
 
@@ -439,6 +469,35 @@ export class Profile implements OnInit {
     }
   }
 
+  private async loadCareers(): Promise<void> {
+    this.careersLoading.set(true);
+    this.careersError.set(null);
+
+    try {
+      const map = await firstValueFrom(this.PFService.getCareerMap());
+      const sortedCategories = Object.keys(map).sort((a, b) =>
+        a.localeCompare(b, 'es', { sensitivity: 'base' })
+      );
+      const orderedMap: Record<string, string[]> = {};
+
+      for (const category of sortedCategories) {
+        orderedMap[category] = [...(map[category] ?? [])];
+      }
+
+      this.careerOptionsByCategory.set(orderedMap);
+      this.careerCategories.set(sortedCategories);
+      this.normalizeCareer(this.careerControl.value);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo cargar el listado de carreras.';
+      this.careersError.set(message);
+      this.careerOptionsByCategory.set({});
+      this.careerCategories.set([]);
+    } finally {
+      this.careersLoading.set(false);
+    }
+  }
+
   private async loadProfile(): Promise<void> {
     this.loading.set(true);
     this.loadError.set(null);
@@ -468,6 +527,7 @@ export class Profile implements OnInit {
         biography: '',
         country: DEFAULT_COUNTRY,
         city: '',
+        career: '',
         avatarUrl: ''
       });
       if (!this.editorOpen()) {
@@ -512,6 +572,7 @@ export class Profile implements OnInit {
       biography: status.biography ?? '',
       country: status.country?.trim() || DEFAULT_COUNTRY,
       city: this.normalizeCity(status.city),
+      career: this.normalizeCareer(status.career),
       avatarUrl: status.avatarUrl ?? ''
     });
     this.profileForm.markAsPristine();
@@ -565,6 +626,16 @@ export class Profile implements OnInit {
     return normalized;
   }
 
+  private normalizeCareer(value: string | null | undefined): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const normalized = value.trim();
+    this.ensureCareerInOptions(normalized);
+    return normalized;
+  }
+
   private ensureCityInOptions(city: string): void {
     if (!city) {
       return;
@@ -583,6 +654,49 @@ export class Profile implements OnInit {
       a.localeCompare(b, 'es', { sensitivity: 'base' })
     );
     this.cityOptions.set(updated);
+  }
+
+  private ensureCareerInOptions(career: string): void {
+    if (!career) {
+      return;
+    }
+
+    const normalized = career.trim();
+
+    if (!normalized) {
+      return;
+    }
+
+    const map = this.careerOptionsByCategory();
+
+    const exists = Object.values(map).some((options) =>
+      options.some(
+        (option) => option.localeCompare(normalized, 'es', { sensitivity: 'accent' }) === 0
+      )
+    );
+
+    if (exists) {
+      return;
+    }
+
+    const updatedMap: Record<string, string[]> = { ...map };
+    const fallbackOptions = updatedMap[FALLBACK_CAREER_CATEGORY]
+      ? [...updatedMap[FALLBACK_CAREER_CATEGORY]]
+      : [];
+
+    fallbackOptions.push(normalized);
+    fallbackOptions.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    updatedMap[FALLBACK_CAREER_CATEGORY] = fallbackOptions;
+
+    const updatedCategories = new Set(this.careerCategories());
+    updatedCategories.add(FALLBACK_CAREER_CATEGORY);
+
+    const sortedCategories = Array.from(updatedCategories).sort((a, b) =>
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
+    );
+
+    this.careerOptionsByCategory.set(updatedMap);
+    this.careerCategories.set(sortedCategories);
   }
 
   private hasBackendErrors(profile: ProfileData): boolean {
