@@ -8,7 +8,14 @@ import { AuthService } from './auth.service';
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
 
-export type ProfileField = 'displayName' | 'headline' | 'biography' | 'country' | 'city' | 'avatarUrl';
+export type ProfileField =
+  | 'displayName'
+  | 'headline'
+  | 'biography'
+  | 'country'
+  | 'city'
+  | 'career'
+  | 'avatarUrl';
 export type ProfileOkFlag = `ok_${ProfileField}`;
 export type ProfileErrorFlag = `error_${ProfileField}`;
 
@@ -18,6 +25,7 @@ export const PROFILE_FIELDS: readonly ProfileField[] = [
   'biography',
   'country',
   'city',
+  'career',
   'avatarUrl'
 ] as const;
 
@@ -64,6 +72,7 @@ export interface UpdateProfilePayload {
   biography: string;
   country: string;
   city: string;
+  career: string;
   avatarUrl: string;
 }
 
@@ -260,18 +269,21 @@ export class ProfileService {
       biography: this.toNullableString(baseData['biography']),
       country: this.toNullableString(baseData['country']),
       city: this.toNullableString(baseData['city']),
+      career: this.toNullableString(baseData['career']),
       avatarUrl: this.toNullableString(baseData['avatarUrl']),
       ok_displayName: this.toBoolean(this.pickValidationFlag('displayName', baseData, validations, response), true),
       ok_headline: this.toBoolean(this.pickValidationFlag('headline', baseData, validations, response), true),
       ok_biography: this.toBoolean(this.pickValidationFlag('biography', baseData, validations, response), true),
       ok_country: this.toBoolean(this.pickValidationFlag('country', baseData, validations, response), true),
       ok_city: this.toBoolean(this.pickValidationFlag('city', baseData, validations, response), true),
+      ok_career: this.toBoolean(this.pickValidationFlag('career', baseData, validations, response), true),
       ok_avatarUrl: this.toBoolean(this.pickValidationFlag('avatarUrl', baseData, validations, response), true),
       error_displayName: this.pickValidationError('displayName', baseData, validations, errors, response),
       error_headline: this.pickValidationError('headline', baseData, validations, errors, response),
       error_biography: this.pickValidationError('biography', baseData, validations, errors, response),
       error_country: this.pickValidationError('country', baseData, validations, errors, response),
       error_city: this.pickValidationError('city', baseData, validations, errors, response),
+      error_career: this.pickValidationError('career', baseData, validations, errors, response),
       error_avatarUrl: this.pickValidationError('avatarUrl', baseData, validations, errors, response),
       isComplete: this.toBoolean(
         response['isComplete'] ?? baseData['isComplete'] ?? validations['isComplete'],

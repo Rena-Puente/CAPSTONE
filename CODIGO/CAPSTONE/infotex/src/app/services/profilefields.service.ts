@@ -107,6 +107,10 @@ export class ProfileFieldsService {
     return this.careersMap$.pipe(map((m) => Object.keys(m)));
   }
 
+  getCareerMap(): Observable<Record<string, string[]>> {
+    return this.careersMap$;
+  }
+
   getCareersByCategory(category: string): Observable<string[]> {
     const wanted = (category ?? '').trim();
     return this.careersMap$.pipe(map((m) => m[wanted] ?? []));
