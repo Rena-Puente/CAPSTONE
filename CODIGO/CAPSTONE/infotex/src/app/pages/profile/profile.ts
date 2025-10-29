@@ -147,7 +147,6 @@ export class Profile implements OnInit {
 
   protected readonly profileForm = this.fb.nonNullable.group({
     displayName: ['', [Validators.required]],
-    headline: ['', [Validators.required]],
     biography: ['', [Validators.required, minTrimmedLengthValidator(80)]],
     country: [DEFAULT_COUNTRY, [Validators.required]],
     city: ['', [Validators.required]],
@@ -198,7 +197,6 @@ export class Profile implements OnInit {
     } else {
       this.profileForm.reset({
         displayName: '',
-        headline: '',
         biography: '',
         country: DEFAULT_COUNTRY,
         city: '',
@@ -218,10 +216,6 @@ export class Profile implements OnInit {
 
   protected get displayNameControl() {
     return this.profileForm.controls.displayName;
-  }
-
-  protected get headlineControl() {
-    return this.profileForm.controls.headline;
   }
 
   protected get biographyControl() {
@@ -286,7 +280,6 @@ export class Profile implements OnInit {
     const rawValue = this.profileForm.getRawValue();
     const payload: UpdateProfilePayload = {
       displayName: rawValue.displayName.trim(),
-      headline: rawValue.headline.trim(),
       biography: rawValue.biography.trim(),
       country: rawValue.country.trim(),
       city: rawValue.city.trim(),
@@ -523,7 +516,6 @@ export class Profile implements OnInit {
       this.resetBackendValidation();
       this.profileForm.reset({
         displayName: '',
-        headline: '',
         biography: '',
         country: DEFAULT_COUNTRY,
         city: '',
@@ -568,7 +560,6 @@ export class Profile implements OnInit {
     }
     this.profileForm.reset({
       displayName: status.displayName ?? '',
-      headline: status.headline ?? '',
       biography: status.biography ?? '',
       country: status.country?.trim() || DEFAULT_COUNTRY,
       city: this.normalizeCity(status.city),

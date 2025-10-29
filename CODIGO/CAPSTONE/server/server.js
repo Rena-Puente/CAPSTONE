@@ -488,7 +488,7 @@ async function isAccessTokenValid(accessToken) {
 
 const PROFILE_FIELD_LABELS = {
   NOMBRE_MOSTRAR: 'Nombre para mostrar',
-  TITULAR: 'Titular profesional',
+  CARRERA: 'Carrera',
   BIOGRAFIA: 'Biografía (mínimo 80 caracteres)',
   PAIS: 'País',
   CIUDAD: 'Ciudad',
@@ -498,11 +498,11 @@ const PROFILE_FIELD_LABELS = {
 const EDUCATION_SECTION_LABEL = 'Historial educativo';
 const EDUCATION_DATES_NOTE = 'Historial educativo (revisa las fechas)';
 
-const PROFILE_FIELD_KEYS = ['displayName', 'headline', 'biography', 'country', 'city', 'avatarUrl'];
+const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'city', 'avatarUrl'];
 
 const PROFILE_FIELD_METADATA = {
   displayName: { column: 'NOMBRE_MOSTRAR', label: PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR },
-  headline: { column: 'TITULAR', label: PROFILE_FIELD_LABELS.TITULAR },
+  career: { column: 'CARRERA', label: PROFILE_FIELD_LABELS.CARRERA },
   biography: { column: 'BIOGRAFIA', label: PROFILE_FIELD_LABELS.BIOGRAFIA },
   country: { column: 'PAIS', label: PROFILE_FIELD_LABELS.PAIS },
   city: { column: 'CIUDAD', label: PROFILE_FIELD_LABELS.CIUDAD },
@@ -658,15 +658,15 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
     statuses.displayName = { ok: false, error: 'Ingresa tu nombre para mostrar.' };
   }
 
-  if (!values.headline) {
-    statuses.headline = { ok: false, error: 'Ingresa tu titular profesional.' };
-  }
-
   if (!values.biography || values.biography.length < 80) {
     statuses.biography = {
       ok: false,
       error: 'La biografía debe tener al menos 80 caracteres.'
     };
+  }
+
+  if (!values.career) {
+    statuses.career = { ok: false, error: 'Selecciona tu carrera.' };
   }
 
   if (!values.country) {
@@ -718,8 +718,8 @@ function computeProfileMissingFields(row, educationStatus = null) {
     missing.push(PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR);
   }
 
-  if (!row.TITULAR) {
-    missing.push(PROFILE_FIELD_LABELS.TITULAR);
+  if (!row.CARRERA) {
+    missing.push(PROFILE_FIELD_LABELS.CARRERA);
   }
 
   const biography = typeof row.BIOGRAFIA === 'string' ? row.BIOGRAFIA : null;
@@ -834,7 +834,7 @@ app.post('/auth/login', async (req, res) => {
 
       const profileResult = await executeQuery(
         `SELECT nombre_mostrar,
-                titular,
+                carrera,
                 biografia,
                 pais,
                 ciudad,
@@ -1135,7 +1135,7 @@ app.get('/profile/status/:userId', async (req, res) => {
 
     const result = await executeQuery(
       `SELECT nombre_mostrar,
-              titular,
+              carrera,
               biografia,
               pais,
               ciudad,
@@ -1166,7 +1166,7 @@ app.get('/profile/status/:userId', async (req, res) => {
       ok: true,
       profile: {
         displayName: row.NOMBRE_MOSTRAR ?? null,
-        headline: row.TITULAR ?? null,
+        career: row.CARRERA ?? null,
         biography: row.BIOGRAFIA ?? null,
         country: row.PAIS ?? null,
         city: row.CIUDAD ?? null,
@@ -1240,7 +1240,7 @@ app.get('/profile/:userId', async (req, res) => {
 
     const result = await executeQuery(
       `SELECT nombre_mostrar,
-              titular,
+              carrera,
               biografia,
               pais,
               ciudad,
@@ -1701,7 +1701,7 @@ app.put('/profile/:userId', async (req, res) => {
 
     const existingProfileResult = await executeQuery(
       `SELECT nombre_mostrar,
-              titular,
+              carrera,
               biografia,
               pais,
               ciudad,
@@ -1734,7 +1734,7 @@ app.put('/profile/:userId', async (req, res) => {
 
     const dbPayload = {
       displayName: validation.values.displayName || null,
-      headline: validation.values.headline || null,
+      career: validation.values.career || null,
       biography: validation.values.biography || null,
       country: validation.values.country || null,
       city: validation.values.city || null,
@@ -1746,7 +1746,7 @@ app.put('/profile/:userId', async (req, res) => {
         USING (
           SELECT :userId AS id_usuario,
                  :displayName AS nombre_mostrar,
-                 :headline AS titular,
+                 :career AS carrera,
                  :biography AS biografia,
                  :country AS pais,
                  :city AS ciudad,
@@ -1757,7 +1757,7 @@ app.put('/profile/:userId', async (req, res) => {
       WHEN MATCHED THEN
         UPDATE SET
           dest.nombre_mostrar = src.nombre_mostrar,
-          dest.titular = src.titular,
+          dest.carrera = src.carrera,
           dest.biografia = src.biografia,
           dest.pais = src.pais,
           dest.ciudad = src.ciudad,
@@ -1766,7 +1766,7 @@ app.put('/profile/:userId', async (req, res) => {
         INSERT (
           id_usuario,
           nombre_mostrar,
-          titular,
+          carrera,
           biografia,
           pais,
           ciudad,
@@ -1774,7 +1774,7 @@ app.put('/profile/:userId', async (req, res) => {
         ) VALUES (
           src.id_usuario,
           src.nombre_mostrar,
-          src.titular,
+          src.carrera,
           src.biografia,
           src.pais,
           src.ciudad,
@@ -1795,7 +1795,7 @@ app.put('/profile/:userId', async (req, res) => {
 
     const result = await executeQuery(
       `SELECT nombre_mostrar,
-              titular,
+              carrera,
               biografia,
               pais,
               ciudad,
