@@ -1,5 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnInit,
+  ViewChild,
+  computed,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -50,6 +60,9 @@ const FALLBACK_CAREER_CATEGORY = 'Otras carreras';
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
+type AlertContent = { text: string } | { html: string };
+type AlertType = 'success' | 'warning' | 'danger';
+
 function avatarUrlValidator(): ValidatorFn {
   const relativePathPattern = /^\/[\w\-./]+$/;
 
@@ -85,11 +98,17 @@ function avatarUrlValidator(): ValidatorFn {
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
-export class Profile implements OnInit {
+export class Profile implements OnInit, AfterViewInit {
   private readonly profileService = inject(ProfileService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly PFService = inject(ProfileFieldsService);
+
+  @ViewChild('alertPlaceholder', { static: true })
+  private alertPlaceholderRef?: ElementRef<HTMLDivElement>;
+
+  private readonly activeAlerts = new Map<string, HTMLElement>();
+  private alertEffectsInitialized = false;
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -164,10 +183,15 @@ export class Profile implements OnInit {
     description: ['']
   });
 
+  ngAfterViewInit(): void {
+    this.initializeAlertEffects();
+  }
+
   async ngOnInit(): Promise<void> {
     await Promise.all([this.loadCities(), this.loadCareers()]);
     await this.loadProfile();
     await this.loadEducation();
+    this.initializeAlertEffects();
   }
 
   protected async retry(): Promise<void> {
@@ -181,6 +205,138 @@ export class Profile implements OnInit {
 
     this.editorOpen.set(true);
     this.profileForm.enable({ emitEvent: false });
+  }
+
+  private initializeAlertEffects(): void {
+    if (this.alertEffectsInitialized) {
+      return;
+    }
+
+    if (!this.alertPlaceholderRef?.nativeElement) {
+      return;
+    }
+
+    this.alertEffectsInitialized = true;
+
+    effect(() => {
+      this.updateAlert('load-error', this.loadError(), 'danger');
+    });
+
+    effect(() => {
+      this.updateAlert('submit-error', this.submitError(), 'danger');
+    });
+
+    effect(() => {
+      this.updateAlert('success-message', this.successMessage(), 'success');
+    });
+
+    effect(() => {
+      const profile = this.profile();
+
+      if (!profile) {
+        this.dismissAlert('profile-status');
+        return;
+      }
+
+      if (profile.isComplete) {
+        this.updateAlert('profile-status', { text: '¡Tu perfil está completo! Excelente trabajo.' }, 'success');
+        return;
+      }
+
+      const missing = this.missingFields();
+      const listItems = missing
+        .map((item) => `<li>${this.escapeHtml(item)}</li>`)
+        .join('');
+      const messageHtml = [
+        'Tu perfil aún no está completo. Completa los siguientes elementos para finalizarlo:',
+        listItems ? `<ul class="mb-0 mt-2">${listItems}</ul>` : ''
+      ]
+        .filter(Boolean)
+        .join('');
+
+      this.updateAlert('profile-status', { html: messageHtml }, 'warning');
+    });
+  }
+
+  private updateAlert(key: string, content: string | AlertContent | null, type: AlertType): void {
+    if (!this.alertPlaceholderRef?.nativeElement) {
+      return;
+    }
+
+    if (content === null || content === undefined || (typeof content === 'string' && content.trim() === '')) {
+      this.dismissAlert(key);
+      return;
+    }
+
+    const placeholder = this.alertPlaceholderRef.nativeElement;
+    const existing = this.activeAlerts.get(key);
+
+    if (existing) {
+      existing.remove();
+      this.activeAlerts.delete(key);
+    }
+
+    const resolvedContent: AlertContent = typeof content === 'string' ? { text: content } : content;
+    const messageMarkup = 'text' in resolvedContent ? this.escapeHtml(resolvedContent.text) : resolvedContent.html;
+
+    if (!messageMarkup || messageMarkup.trim() === '') {
+      this.dismissAlert(key);
+      return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = [
+      `<div class="alert alert-${type} alert-dismissible fade show" role="alert" data-alert-key="${key}">`,
+      `  <div>${messageMarkup}</div>`,
+      '  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>',
+      '</div>'
+    ].join('');
+
+    const alertElement = wrapper.firstElementChild as HTMLElement | null;
+
+    if (!alertElement) {
+      return;
+    }
+
+    alertElement.addEventListener('closed.bs.alert', () => {
+      this.activeAlerts.delete(key);
+    });
+
+    placeholder.append(alertElement);
+    this.activeAlerts.set(key, alertElement);
+  }
+
+  private dismissAlert(key: string): void {
+    const element = this.activeAlerts.get(key);
+
+    if (!element) {
+      return;
+    }
+
+    this.activeAlerts.delete(key);
+
+    if (element.parentElement) {
+      element.parentElement.removeChild(element);
+    }
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>'"]/g, (char) => {
+      switch (char) {
+        case '&':
+          return '&amp;';
+        case '<':
+          return '&lt;';
+        case '>':
+          return '&gt;';
+        case '"':
+          return '&quot;';
+        case "'":
+          return '&#39;';
+        default:
+          return char;
+      }
+    });
   }
 
   protected closeEditor(): void {
