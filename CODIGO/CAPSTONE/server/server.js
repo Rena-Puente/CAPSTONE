@@ -488,7 +488,7 @@ async function isAccessTokenValid(accessToken) {
 
 const PROFILE_FIELD_LABELS = {
   NOMBRE_MOSTRAR: 'Nombre para mostrar',
-  CARRERA: 'Carrera',
+  TITULAR: 'Carrera',
   BIOGRAFIA: 'Biografía (mínimo 80 caracteres)',
   PAIS: 'País',
   CIUDAD: 'Ciudad',
@@ -502,7 +502,7 @@ const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'ci
 
 const PROFILE_FIELD_METADATA = {
   displayName: { column: 'NOMBRE_MOSTRAR', label: PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR },
-  career: { column: 'CARRERA', label: PROFILE_FIELD_LABELS.CARRERA },
+  career: { column: 'TITULAR', label: PROFILE_FIELD_LABELS.TITULAR },
   biography: { column: 'BIOGRAFIA', label: PROFILE_FIELD_LABELS.BIOGRAFIA },
   country: { column: 'PAIS', label: PROFILE_FIELD_LABELS.PAIS },
   city: { column: 'CIUDAD', label: PROFILE_FIELD_LABELS.CIUDAD },
@@ -718,8 +718,8 @@ function computeProfileMissingFields(row, educationStatus = null) {
     missing.push(PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR);
   }
 
-  if (!row.CARRERA) {
-    missing.push(PROFILE_FIELD_LABELS.CARRERA);
+  if (!row.TITULAR) {
+    missing.push(PROFILE_FIELD_LABELS.TITULAR);
   }
 
   const biography = typeof row.BIOGRAFIA === 'string' ? row.BIOGRAFIA : null;
@@ -834,7 +834,7 @@ app.post('/auth/login', async (req, res) => {
 
       const profileResult = await executeQuery(
         `SELECT nombre_mostrar,
-                carrera,
+                titular,
                 biografia,
                 pais,
                 ciudad,
@@ -1135,7 +1135,7 @@ app.get('/profile/status/:userId', async (req, res) => {
 
     const result = await executeQuery(
       `SELECT nombre_mostrar,
-              carrera,
+              titular,
               biografia,
               pais,
               ciudad,
@@ -1166,7 +1166,7 @@ app.get('/profile/status/:userId', async (req, res) => {
       ok: true,
       profile: {
         displayName: row.NOMBRE_MOSTRAR ?? null,
-        career: row.CARRERA ?? null,
+        career: row.TITULAR ?? null,
         biography: row.BIOGRAFIA ?? null,
         country: row.PAIS ?? null,
         city: row.CIUDAD ?? null,
@@ -1240,7 +1240,7 @@ app.get('/profile/:userId', async (req, res) => {
 
     const result = await executeQuery(
       `SELECT nombre_mostrar,
-              carrera,
+              titular,
               biografia,
               pais,
               ciudad,
@@ -1701,7 +1701,7 @@ app.put('/profile/:userId', async (req, res) => {
 
     const existingProfileResult = await executeQuery(
       `SELECT nombre_mostrar,
-              carrera,
+              titular,
               biografia,
               pais,
               ciudad,
@@ -1746,7 +1746,7 @@ app.put('/profile/:userId', async (req, res) => {
         USING (
           SELECT :userId AS id_usuario,
                  :displayName AS nombre_mostrar,
-                 :career AS carrera,
+                 :career AS titular,
                  :biography AS biografia,
                  :country AS pais,
                  :city AS ciudad,
@@ -1757,7 +1757,7 @@ app.put('/profile/:userId', async (req, res) => {
       WHEN MATCHED THEN
         UPDATE SET
           dest.nombre_mostrar = src.nombre_mostrar,
-          dest.carrera = src.carrera,
+          dest.titular = src.titular,
           dest.biografia = src.biografia,
           dest.pais = src.pais,
           dest.ciudad = src.ciudad,
@@ -1766,7 +1766,7 @@ app.put('/profile/:userId', async (req, res) => {
         INSERT (
           id_usuario,
           nombre_mostrar,
-          carrera,
+          titular,
           biografia,
           pais,
           ciudad,
@@ -1774,7 +1774,7 @@ app.put('/profile/:userId', async (req, res) => {
         ) VALUES (
           src.id_usuario,
           src.nombre_mostrar,
-          src.carrera,
+          src.titular,
           src.biografia,
           src.pais,
           src.ciudad,
@@ -1795,7 +1795,7 @@ app.put('/profile/:userId', async (req, res) => {
 
     const result = await executeQuery(
       `SELECT nombre_mostrar,
-              carrera,
+              titular,
               biografia,
               pais,
               ciudad,
