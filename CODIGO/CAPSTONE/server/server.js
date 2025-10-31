@@ -201,6 +201,63 @@ function normalizeExperiencePayload(payload = {}) {
   };
 }
 
+function normalizeSkillPayload(payload = {}, options = {}) {
+  const { requireId = false, allowName = true, overrideSkillId = null } = options;
+
+  const rawSkillId = overrideSkillId ?? payload.skillId ?? payload.id ?? null;
+  const numericSkillId = Number(rawSkillId);
+  const skillId = Number.isInteger(numericSkillId) && numericSkillId > 0 ? numericSkillId : null;
+
+  const skillNameRaw = typeof payload.skillName === 'string' ? payload.skillName : payload.name;
+  const skillName = typeof skillNameRaw === 'string' ? skillNameRaw.trim() : '';
+
+  if ((requireId || !allowName) && !skillId) {
+    throw new Error('El identificador de la habilidad es obligatorio.');
+  }
+
+  if (!skillId && !skillName) {
+    throw new Error('Debes indicar una habilidad.');
+  }
+
+  const levelRaw = payload.level ?? payload.nivel;
+  const level =
+    levelRaw === undefined || levelRaw === null || levelRaw === ''
+      ? null
+      : Number(levelRaw);
+
+  if (level !== null && (!Number.isFinite(level) || level < 1 || level > 5)) {
+    throw new Error('El nivel debe estar entre 1 y 5.');
+  }
+
+  const yearsRaw = payload.yearsExperience ?? payload.aniosExperiencia ?? payload.anios_experiencia;
+  const years =
+    yearsRaw === undefined || yearsRaw === null || yearsRaw === '' ? null : Number(yearsRaw);
+
+  if (years !== null && (!Number.isFinite(years) || years < 0)) {
+    throw new Error('Los años de experiencia deben ser un número mayor o igual a 0.');
+  }
+
+  const endorsementsRaw =
+    payload.endorsementCount ?? payload.cantidadRespaldo ?? payload.cantidad_respaldo;
+  const endorsements =
+    endorsementsRaw === undefined || endorsementsRaw === null || endorsementsRaw === ''
+      ? null
+      : Number(endorsementsRaw);
+
+  if (endorsements !== null && (!Number.isFinite(endorsements) || endorsements < 0)) {
+    throw new Error('La cantidad de respaldos debe ser un número mayor o igual a 0.');
+  }
+
+  return {
+    skillId,
+    skillName: allowName ? skillName : '',
+    level: level === null ? null : Number(level.toFixed(2)),
+    yearsExperience: years === null ? null : Number(years.toFixed(2)),
+    endorsementCount:
+      endorsements === null ? null : Math.max(Math.floor(Number(endorsements.toFixed(0))), 0)
+  };
+}
+
 async function fetchCursorRows(cursor) {
   const rows = [];
 
@@ -344,6 +401,42 @@ function mapExperienceRow(row) {
   };
 }
 
+function mapSkillRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  const idValue = Number(row.ID_HABILIDAD ?? row.id_habilidad ?? row.SKILL_ID ?? row.id ?? null);
+  const skillId = Number.isNaN(idValue) || idValue <= 0 ? null : idValue;
+
+  if (!skillId) {
+    return null;
+  }
+
+  const levelValue = Number(row.NIVEL ?? row.nivel ?? row.LEVEL);
+  const normalizedLevel = Number.isFinite(levelValue) ? levelValue : null;
+
+  const yearsValue = Number(
+    row.ANIOS_EXPERIENCIA ?? row.anios_experiencia ?? row.YEARS_EXPERIENCE ?? row.yearsExperience
+  );
+  const normalizedYears = Number.isFinite(yearsValue) ? yearsValue : null;
+
+  const endorsementsValue = Number(
+    row.CANTIDAD_RESPALDO ?? row.cantidad_respaldo ?? row.ENDORSEMENT_COUNT ?? row.endorsementCount
+  );
+  const endorsementCount = Number.isFinite(endorsementsValue) ? Math.max(endorsementsValue, 0) : 0;
+
+  return {
+    id: skillId,
+    skillId,
+    name: toNullableTrimmedString(row.NOMBRE ?? row.nombre ?? row.SKILL_NAME),
+    category: toNullableTrimmedString(row.CATEGORIA ?? row.categoria ?? row.CATEGORY),
+    level: normalizedLevel,
+    yearsExperience: normalizedYears,
+    endorsementCount
+  };
+}
+
 async function listEducation(userId) {
   let connection;
   try {
@@ -438,6 +531,101 @@ async function listExperience(userId) {
       }
     }
   }
+}
+
+async function listSkills(userId) {
+  let connection;
+  try {
+    connection = await oracledb.getConnection();
+    const result = await connection.execute(
+      'BEGIN sp_usuario_habilidades_pkg.sp_listar_habilidades_usuario(:userId, :items); END;',
+      {
+        userId,
+        items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.items || null;
+    const rows = await fetchCursorRows(cursor);
+
+    const mappedEntries = rows
+      .map((row) => mapSkillRow(row))
+      .filter((entry) => entry && typeof entry.skillId === 'number');
+
+    console.info('[Skills] listSkills mapped entries', {
+      userId,
+      mappedCount: mappedEntries.length,
+      preview: mappedEntries.slice(0, 3)
+    });
+
+    return mappedEntries;
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (error) {
+        console.error('[DB] Error releasing connection after listing skills:', error);
+      }
+    }
+  }
+}
+
+async function getSkillEntry(userId, skillId) {
+  const result = await executeQuery(
+    `BEGIN sp_usuario_habilidades_pkg.sp_obtener_habilidad_usuario(
+         p_id_usuario        => :userId,
+         p_id_habilidad      => :skillId,
+         o_nivel             => :level,
+         o_anios_experiencia => :yearsExperience,
+         o_cantidad_respaldo => :endorsementCount,
+         o_existe            => :exists
+       ); END;`,
+    {
+      userId,
+      skillId,
+      level: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      yearsExperience: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      endorsementCount: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      exists: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds || {};
+  const exists = Number(outBinds.exists ?? 0) === 1;
+
+  if (!exists) {
+    console.info('[Skills] getSkillEntry: entry not found', {
+      userId,
+      skillId
+    });
+    return null;
+  }
+
+  const details = await executeQuery(
+    `SELECT h.nombre, h.categoria
+       FROM habilidades h
+      WHERE h.id_habilidad = :skillId`,
+    { skillId }
+  );
+
+  const row = details.rows?.[0] ?? {};
+
+  const entry = mapSkillRow({
+    ID_HABILIDAD: skillId,
+    NOMBRE: row.NOMBRE ?? row.nombre,
+    CATEGORIA: row.CATEGORIA ?? row.categoria,
+    NIVEL: outBinds.level,
+    ANIOS_EXPERIENCIA: outBinds.yearsExperience,
+    CANTIDAD_RESPALDO: outBinds.endorsementCount
+  });
+
+  console.info('[Skills] getSkillEntry: entry retrieved', {
+    userId,
+    skillId,
+    entry
+  });
+
+  return entry;
 }
 
 async function getEducationEntry(userId, educationId) {
@@ -627,6 +815,45 @@ async function getExperienceStatus(userId) {
   return summary;
 }
 
+async function getSkillStatus(userId) {
+  const result = await executeQuery(
+    `BEGIN sp_usuario_habilidades_pkg.sp_usuario_habilidades_chk(
+         p_id_usuario        => :userId,
+         o_total_habilidades => :totalSkills,
+         o_promedio_nivel    => :averageLevel,
+         o_max_nivel         => :maxLevel,
+         o_min_nivel         => :minLevel
+       ); END;`,
+    {
+      userId,
+      totalSkills: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      averageLevel: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      maxLevel: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      minLevel: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds || {};
+
+  const averageRaw = Number(outBinds.averageLevel ?? outBinds.AVERAGELEVEL);
+  const maxRaw = Number(outBinds.maxLevel ?? outBinds.MAXLEVEL);
+  const minRaw = Number(outBinds.minLevel ?? outBinds.MINLEVEL);
+
+  const summary = {
+    totalSkills: Math.max(Number(outBinds.totalSkills ?? outBinds.TOTALSKILLS ?? 0), 0),
+    averageLevel: Number.isFinite(averageRaw) ? averageRaw : null,
+    maxLevel: Number.isFinite(maxRaw) ? maxRaw : null,
+    minLevel: Number.isFinite(minRaw) ? minRaw : null
+  };
+
+  console.info('[Skills] getSkillStatus result', {
+    userId,
+    summary
+  });
+
+  return summary;
+}
+
 function summarizeToken(token) {
   if (!token || typeof token !== 'string') {
     return token ?? null;
@@ -689,6 +916,7 @@ const EDUCATION_SECTION_LABEL = 'Historial educativo';
 const EDUCATION_DATES_NOTE = 'Historial educativo (revisa las fechas)';
 const EXPERIENCE_SECTION_LABEL = 'Experiencia laboral';
 const EXPERIENCE_DATES_NOTE = 'Experiencia laboral (revisa las fechas)';
+const SKILLS_SECTION_LABEL = 'Habilidades profesionales';
 
 const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'city', 'avatarUrl'];
 
@@ -762,6 +990,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
   const isComplete = Boolean(options.isComplete);
   const educationSummary = options.educationSummary ?? null;
   const experienceSummary = options.experienceSummary ?? null;
+  const skillsSummary = options.skillsSummary ?? null;
 
   const data = {
     ...baseValues,
@@ -772,6 +1001,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     message,
     educationSummary,
     experienceSummary,
+    skillsSummary,
     profile: baseValues
   };
 
@@ -792,7 +1022,8 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     missingFields,
     message,
     educationSummary,
-    experienceSummary
+    experienceSummary,
+    skillsSummary
   };
 }
 
@@ -894,7 +1125,12 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
   return { values, statuses, missingFields, isValid };
 }
 
-function computeProfileMissingFields(row, educationStatus = null, experienceStatus = null) {
+function computeProfileMissingFields(
+  row,
+  educationStatus = null,
+  experienceStatus = null,
+  skillsStatus = null
+) {
   if (!row) {
     const defaults = Object.values(PROFILE_FIELD_LABELS);
     const missingEducation =
@@ -909,8 +1145,10 @@ function computeProfileMissingFields(row, educationStatus = null, experienceStat
         : experienceStatus.invalidDateCount > 0
           ? [EXPERIENCE_DATES_NOTE]
           : [];
+    const missingSkills =
+      !skillsStatus || (skillsStatus.totalSkills ?? 0) <= 0 ? [SKILLS_SECTION_LABEL] : [];
 
-    return [...defaults, ...missingEducation, ...missingExperience];
+    return [...defaults, ...missingEducation, ...missingExperience, ...missingSkills];
   }
 
   const missing = [];
@@ -950,6 +1188,10 @@ function computeProfileMissingFields(row, educationStatus = null, experienceStat
     missing.push(EXPERIENCE_SECTION_LABEL);
   } else if (experienceStatus.invalidDateCount > 0) {
     missing.push(EXPERIENCE_DATES_NOTE);
+  }
+
+  if (!skillsStatus || (skillsStatus.totalSkills ?? 0) <= 0) {
+    missing.push(SKILLS_SECTION_LABEL);
   }
 
   return missing;
@@ -1053,11 +1295,17 @@ app.post('/auth/login', async (req, res) => {
       );
 
       const profileRow = profileResult.rows?.[0] ?? null;
-      const [educationStatus, experienceStatus] = await Promise.all([
+      const [educationStatus, experienceStatus, skillsStatus] = await Promise.all([
         getEducationStatus(userId),
-        getExperienceStatus(userId)
+        getExperienceStatus(userId),
+        getSkillStatus(userId)
       ]);
-      const missingFields = computeProfileMissingFields(profileRow, educationStatus, experienceStatus);
+      const missingFields = computeProfileMissingFields(
+        profileRow,
+        educationStatus,
+        experienceStatus,
+        skillsStatus
+      );
 
       if (!profileRow) {
         isProfileComplete = false;
@@ -1069,7 +1317,10 @@ app.post('/auth/login', async (req, res) => {
       console.info('[Auth] Profile status calculated during login', {
         userId,
         isProfileComplete,
-        missingFieldsCount: missingFields.length
+        missingFieldsCount: missingFields.length,
+        educationRecords: educationStatus?.totalRecords ?? 0,
+        experienceRecords: experienceStatus?.totalRecords ?? 0,
+        skillsRecords: skillsStatus?.totalSkills ?? 0
       });
     } catch (profileError) {
       console.error('[Auth] Failed to determine profile status during login', {
@@ -1357,11 +1608,17 @@ app.get('/profile/status/:userId', async (req, res) => {
     );
 
     const row = result.rows?.[0] ?? null;
-    const [educationSummary, experienceSummary] = await Promise.all([
+    const [educationSummary, experienceSummary, skillsSummary] = await Promise.all([
       getEducationStatus(userId),
-      getExperienceStatus(userId)
+      getExperienceStatus(userId),
+      getSkillStatus(userId)
     ]);
-    const missingFields = computeProfileMissingFields(row, educationSummary, experienceSummary);
+    const missingFields = computeProfileMissingFields(
+      row,
+      educationSummary,
+      experienceSummary,
+      skillsSummary
+    );
 
     if (!row) {
       return res.json({
@@ -1370,7 +1627,8 @@ app.get('/profile/status/:userId', async (req, res) => {
         isComplete: false,
         missingFields,
         educationSummary,
-        experienceSummary
+        experienceSummary,
+        skillsSummary
       });
     }
 
@@ -1389,7 +1647,8 @@ app.get('/profile/status/:userId', async (req, res) => {
       isComplete,
       missingFields,
       educationSummary,
-      experienceSummary
+      experienceSummary,
+      skillsSummary
     });
 
     console.info('[Profile] Status response sent', {
@@ -1399,6 +1658,7 @@ app.get('/profile/status/:userId', async (req, res) => {
       missingFieldsCount: missingFields.length,
       educationRecords: educationSummary?.totalRecords ?? 0,
       experienceRecords: experienceSummary?.totalRecords ?? 0,
+      skillsRecords: skillsSummary?.totalSkills ?? 0,
       elapsedMs: Date.now() - startedAt
     });
   } catch (error) {
@@ -1469,11 +1729,17 @@ app.get('/profile/:userId', async (req, res) => {
 
     const row = result.rows?.[0] ?? null;
     const profileValues = mapRowToProfile(row);
-    const [educationSummary, experienceSummary] = await Promise.all([
+    const [educationSummary, experienceSummary, skillsSummary] = await Promise.all([
       getEducationStatus(userId),
-      getExperienceStatus(userId)
+      getExperienceStatus(userId),
+      getSkillStatus(userId)
     ]);
-    const missingFields = computeProfileMissingFields(row, educationSummary, experienceSummary);
+    const missingFields = computeProfileMissingFields(
+      row,
+      educationSummary,
+      experienceSummary,
+      skillsSummary
+    );
     const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
     const isComplete = isCompleteFlag && missingFields.length === 0;
     const message = row ? null : 'Aún no has configurado tu perfil.';
@@ -1483,7 +1749,8 @@ app.get('/profile/:userId', async (req, res) => {
       missingFields,
       message,
       educationSummary,
-      experienceSummary
+      experienceSummary,
+      skillsSummary
     });
 
     console.info('[Profile] Detail response sent', {
@@ -1493,6 +1760,7 @@ app.get('/profile/:userId', async (req, res) => {
       missingFieldsCount: missingFields.length,
       educationRecords: educationSummary?.totalRecords ?? 0,
       experienceRecords: experienceSummary?.totalRecords ?? 0,
+      skillsRecords: skillsSummary?.totalSkills ?? 0,
       elapsedMs: Date.now() - startedAt
     });
 
@@ -1512,6 +1780,8 @@ app.options('/profile/:userId/education', cors());
 app.options('/profile/:userId/education/:educationId', cors());
 app.options('/profile/:userId/experience', cors());
 app.options('/profile/:userId/experience/:experienceId', cors());
+app.options('/profile/:userId/skills', cors());
+app.options('/profile/:userId/skills/:skillId', cors());
 
 app.get('/profile/:userId/education', async (req, res) => {
   const startedAt = Date.now();
@@ -1638,6 +1908,67 @@ app.get('/profile/:userId/experience', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo obtener la experiencia laboral.');
+  }
+});
+
+app.get('/profile/:userId/skills', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Skills] List request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Skills] List request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Skills] List request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Skills] List request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const [skills, skillsSummary] = await Promise.all([listSkills(userId), getSkillStatus(userId)]);
+
+    console.info('[Skills] List response sent', {
+      userId,
+      count: skills.length,
+      totalSkills: skillsSummary.totalSkills,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, skills, skillsSummary });
+  } catch (error) {
+    console.error('[Skills] List request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo obtener las habilidades.');
   }
 });
 
@@ -1850,6 +2181,151 @@ app.post('/profile/:userId/experience', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo crear el registro de experiencia.');
+  }
+});
+
+app.post('/profile/:userId/skills', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Skills] Create request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Skills] Create request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Skills] Create request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  let normalized;
+  try {
+    normalized = normalizeSkillPayload(req.body || {}, { allowName: true });
+  } catch (validationError) {
+    console.warn('[Skills] Create request validation failed', {
+      userId,
+      error: validationError?.message || validationError
+    });
+    return res.status(400).json({ ok: false, error: validationError?.message || 'La información de la habilidad no es válida.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Skills] Create request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const levelValue = normalized.level === null ? null : Number(normalized.level);
+    const yearsValue = normalized.yearsExperience === null ? null : Number(normalized.yearsExperience);
+    const endorsementsValue =
+      normalized.endorsementCount === null ? 0 : Number(normalized.endorsementCount);
+
+    let skillId = normalized.skillId ?? null;
+
+    if (!skillId && normalized.skillName) {
+      const result = await executeQuery(
+        `BEGIN sp_usuario_habilidades_pkg.sp_upsert_habilidad_usuario_by_nombre(
+             p_id_usuario        => :userId,
+             p_nombre_habilidad  => :skillName,
+             p_nivel             => :level,
+             p_anios_experiencia => :years,
+             p_cantidad_respaldo => :endorsements,
+             o_id_habilidad      => :skillId
+           ); END;`,
+        {
+          userId,
+          skillName: normalized.skillName,
+          level: levelValue,
+          years: yearsValue,
+          endorsements: endorsementsValue,
+          skillId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        },
+        { autoCommit: true }
+      );
+
+      skillId = Number(result.outBinds?.skillId ?? 0);
+    } else if (skillId) {
+      await executeQuery(
+        `BEGIN sp_usuario_habilidades_pkg.sp_upsert_habilidad_usuario(
+             p_id_usuario        => :userId,
+             p_id_habilidad      => :skillId,
+             p_nivel             => :level,
+             p_anios_experiencia => :years,
+             p_cantidad_respaldo => :endorsements
+           ); END;`,
+        {
+          userId,
+          skillId,
+          level: levelValue,
+          years: yearsValue,
+          endorsements: endorsementsValue
+        },
+        { autoCommit: true }
+      );
+    }
+
+    if (!skillId || !Number.isInteger(skillId) || skillId <= 0) {
+      console.error('[Skills] Create request failed: invalid skill identifier after upsert', {
+        userId,
+        skillId,
+        normalized
+      });
+      return res
+        .status(500)
+        .json({ ok: false, error: 'No se pudo determinar la habilidad creada o actualizada.' });
+    }
+
+    const [skill, skillsSummary] = await Promise.all([
+      getSkillEntry(userId, skillId),
+      getSkillStatus(userId)
+    ]);
+
+    if (!skill) {
+      console.error('[Skills] Create request failed: skill not found after upsert', {
+        userId,
+        skillId
+      });
+      return res
+        .status(500)
+        .json({ ok: false, error: 'No se pudo recuperar la habilidad recién registrada.' });
+    }
+
+    console.info('[Skills] Create successful', {
+      userId,
+      skillId,
+      skillsSummary,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.status(201).json({ ok: true, skill, skillsSummary });
+  } catch (error) {
+    console.error('[Skills] Create request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo registrar la habilidad.');
   }
 });
 
@@ -2079,6 +2555,128 @@ app.put('/profile/:userId/experience/:experienceId', async (req, res) => {
   }
 });
 
+app.put('/profile/:userId/skills/:skillId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+  const skillId = Number.parseInt(req.params.skillId, 10);
+
+  console.info('[Skills] Update request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    skillId: Number.isNaN(skillId) ? req.params.skillId : skillId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Skills] Update request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!Number.isInteger(skillId) || skillId <= 0) {
+    console.warn('[Skills] Update request rejected: invalid skill id', {
+      path: req.originalUrl,
+      skillId: req.params.skillId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de la habilidad no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Skills] Update request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  let normalized;
+  try {
+    normalized = normalizeSkillPayload(req.body || {}, {
+      requireId: true,
+      allowName: false,
+      overrideSkillId: skillId
+    });
+  } catch (validationError) {
+    console.warn('[Skills] Update request validation failed', {
+      userId,
+      skillId,
+      error: validationError?.message || validationError
+    });
+    return res.status(400).json({ ok: false, error: validationError?.message || 'La información de la habilidad no es válida.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Skills] Update request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId,
+        skillId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const levelValue = normalized.level === null ? null : Number(normalized.level);
+    const yearsValue = normalized.yearsExperience === null ? null : Number(normalized.yearsExperience);
+    const endorsementsValue =
+      normalized.endorsementCount === null ? null : Number(normalized.endorsementCount);
+
+    await executeQuery(
+      `BEGIN sp_usuario_habilidades_pkg.sp_actualizar_habilidad_usuario(
+           p_id_usuario        => :userId,
+           p_id_habilidad      => :skillId,
+           p_nivel             => :level,
+           p_anios_experiencia => :years,
+           p_cantidad_respaldo => :endorsements
+         ); END;`,
+      {
+        userId,
+        skillId,
+        level: levelValue,
+        years: yearsValue,
+        endorsements: endorsementsValue
+      },
+      { autoCommit: true }
+    );
+
+    const [skill, skillsSummary] = await Promise.all([
+      getSkillEntry(userId, skillId),
+      getSkillStatus(userId)
+    ]);
+
+    if (!skill) {
+      console.error('[Skills] Update request failed: skill not found after update', {
+        userId,
+        skillId
+      });
+      return res.status(404).json({ ok: false, error: 'La habilidad indicada no existe.' });
+    }
+
+    console.info('[Skills] Update successful', {
+      userId,
+      skillId,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, skill, skillsSummary });
+  } catch (error) {
+    console.error('[Skills] Update request failed', {
+      userId,
+      skillId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo actualizar la habilidad.');
+  }
+});
+
 app.delete('/profile/:userId/education/:educationId', async (req, res) => {
   const startedAt = Date.now();
   const accessToken = extractBearerToken(req);
@@ -2251,6 +2849,91 @@ app.delete('/profile/:userId/experience/:experienceId', async (req, res) => {
   }
 });
 
+app.delete('/profile/:userId/skills/:skillId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+  const skillId = Number.parseInt(req.params.skillId, 10);
+
+  console.info('[Skills] Delete request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    skillId: Number.isNaN(skillId) ? req.params.skillId : skillId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Skills] Delete request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!Number.isInteger(skillId) || skillId <= 0) {
+    console.warn('[Skills] Delete request rejected: invalid skill id', {
+      path: req.originalUrl,
+      skillId: req.params.skillId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de la habilidad no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Skills] Delete request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Skills] Delete request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId,
+        skillId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    await executeQuery(
+      `BEGIN sp_usuario_habilidades_pkg.sp_eliminar_habilidad_usuario(
+           p_id_usuario   => :userId,
+           p_id_habilidad => :skillId
+         ); END;`,
+      {
+        userId,
+        skillId
+      },
+      { autoCommit: true }
+    );
+
+    const skillsSummary = await getSkillStatus(userId);
+
+    console.info('[Skills] Delete successful', {
+      userId,
+      skillId,
+      remainingSkills: skillsSummary.totalSkills,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, skillsSummary });
+  } catch (error) {
+    console.error('[Skills] Delete request failed', {
+      userId,
+      skillId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo eliminar la habilidad.');
+  }
+});
+
 app.put('/profile/:userId', async (req, res) => {
   const startedAt = Date.now();
   const accessToken = extractBearerToken(req);
@@ -2400,11 +3083,17 @@ app.put('/profile/:userId', async (req, res) => {
 
     const row = result.rows?.[0] ?? null;
     const profileValues = mapRowToProfile(row);
-    const [educationSummary, experienceSummary] = await Promise.all([
+    const [educationSummary, experienceSummary, skillsSummary] = await Promise.all([
       getEducationStatus(userId),
-      getExperienceStatus(userId)
+      getExperienceStatus(userId),
+      getSkillStatus(userId)
     ]);
-    const missingFields = computeProfileMissingFields(row, educationSummary, experienceSummary);
+    const missingFields = computeProfileMissingFields(
+      row,
+      educationSummary,
+      experienceSummary,
+      skillsSummary
+    );
     const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
     const isComplete = isCompleteFlag && missingFields.length === 0;
 
@@ -2413,7 +3102,8 @@ app.put('/profile/:userId', async (req, res) => {
       missingFields,
       message: 'Perfil actualizado correctamente.',
       educationSummary,
-      experienceSummary
+      experienceSummary,
+      skillsSummary
     });
 
     console.info('[Profile] Update successful', {
@@ -2422,6 +3112,7 @@ app.put('/profile/:userId', async (req, res) => {
       missingFieldsCount: missingFields.length,
       educationRecords: educationSummary?.totalRecords ?? 0,
       experienceRecords: experienceSummary?.totalRecords ?? 0,
+      skillsRecords: skillsSummary?.totalSkills ?? 0,
       elapsedMs: Date.now() - startedAt
     });
 

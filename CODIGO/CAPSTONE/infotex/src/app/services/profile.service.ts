@@ -84,12 +84,38 @@ export interface ExperiencePayload {
   description?: string | null;
 }
 
+export interface SkillSummary {
+  totalSkills: number;
+  averageLevel: number | null;
+  maxLevel: number | null;
+  minLevel: number | null;
+}
+
+export interface SkillEntry {
+  id: number;
+  skillId: number;
+  name: string;
+  category: string | null;
+  level: number | null;
+  yearsExperience: number | null;
+  endorsementCount: number;
+}
+
+export interface SkillPayload {
+  skillId?: number | null;
+  skillName?: string | null;
+  level?: number | null;
+  yearsExperience?: number | null;
+  endorsementCount?: number | null;
+}
+
 export interface ProfileData extends ProfileValues, ProfileValidationFlags, ProfileValidationErrors {
   isComplete: boolean;
   missingFields: string[];
   message: string | null;
   educationSummary: EducationSummary | null;
   experienceSummary: ExperienceSummary | null;
+  skillsSummary: SkillSummary | null;
 }
 
 export interface UpdateProfilePayload {
@@ -113,6 +139,7 @@ interface ProfileResponseEnvelope {
   error?: unknown;
   educationSummary?: unknown;
   experienceSummary?: unknown;
+  skillsSummary?: unknown;
   [key: string]: unknown;
 }
 
@@ -132,6 +159,26 @@ interface ExperienceResponseEnvelope {
   message?: unknown;
   error?: unknown;
   [key: string]: unknown;
+}
+
+interface SkillsResponseEnvelope {
+  ok: boolean;
+  skills?: unknown;
+  skill?: unknown;
+  skillsSummary?: unknown;
+  message?: unknown;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+interface SkillListResult {
+  skills: SkillEntry[];
+  skillsSummary: SkillSummary | null;
+}
+
+interface SkillMutationResult {
+  skill: SkillEntry;
+  skillsSummary: SkillSummary | null;
 }
 
 interface EducationListResult {
@@ -342,6 +389,86 @@ export class ProfileService {
       );
   }
 
+  getSkills(): Observable<SkillListResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/skills`;
+
+    return this.http
+      .get<SkillsResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) => this.normalizeSkillListResponse(response, 'No fue posible obtener tus habilidades.')),
+        catchError((error) =>
+          this.handleRequestError('getSkills', endpoint, error, 'No fue posible obtener tus habilidades.')
+        )
+      );
+  }
+
+  createSkill(payload: SkillPayload): Observable<SkillMutationResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/skills`;
+
+    return this.http
+      .post<SkillsResponseEnvelope>(`${this.apiUrl}${endpoint}`, this.prepareSkillPayload(payload), { headers })
+      .pipe(
+        map((response) => this.normalizeSkillMutationResponse(response, 'No fue posible registrar la habilidad.')),
+        catchError((error) =>
+          this.handleRequestError('createSkill', endpoint, error, 'No fue posible registrar la habilidad.')
+        )
+      );
+  }
+
+  updateSkill(skillId: number, payload: SkillPayload): Observable<SkillMutationResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/skills/${skillId}`;
+
+    return this.http
+      .put<SkillsResponseEnvelope>(`${this.apiUrl}${endpoint}`, this.prepareSkillPayload(payload), { headers })
+      .pipe(
+        map((response) => this.normalizeSkillMutationResponse(response, 'No fue posible actualizar la habilidad.')),
+        catchError((error) =>
+          this.handleRequestError('updateSkill', endpoint, error, 'No fue posible actualizar la habilidad.')
+        )
+      );
+  }
+
+  deleteSkill(skillId: number): Observable<SkillSummary | null> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/skills/${skillId}`;
+
+    return this.http
+      .delete<SkillsResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) => this.normalizeSkillDeleteResponse(response, 'No fue posible eliminar la habilidad.')),
+        catchError((error) =>
+          this.handleRequestError('deleteSkill', endpoint, error, 'No fue posible eliminar la habilidad.')
+        )
+      );
+  }
+
   deleteEducation(educationId: number): Observable<EducationSummary | null> {
     const session = this.resolveSession();
 
@@ -459,6 +586,12 @@ export class ProfileService {
           baseData['experienceSummary'] ??
           validations['experienceSummary'] ??
           errors['experienceSummary']
+      ),
+      skillsSummary: this.toSkillSummary(
+        response['skillsSummary'] ??
+          baseData['skillsSummary'] ??
+          validations['skillsSummary'] ??
+          errors['skillsSummary']
       )
     } satisfies ProfileData;
 
@@ -679,6 +812,16 @@ export class ProfileService {
     } satisfies Record<string, unknown>;
   }
 
+  private prepareSkillPayload(payload: SkillPayload): Record<string, unknown> {
+    return {
+      skillId: this.normalizeOptionalNumber(payload.skillId),
+      skillName: this.normalizeOptionalString(payload.skillName),
+      level: this.normalizeOptionalNumber(payload.level),
+      yearsExperience: this.normalizeOptionalNumber(payload.yearsExperience),
+      endorsementCount: this.normalizeOptionalNumber(payload.endorsementCount)
+    } satisfies Record<string, unknown>;
+  }
+
   private normalizeRequiredString(value: unknown): string {
     const normalized = this.toNullableString(value);
 
@@ -718,6 +861,19 @@ export class ProfileService {
 
     const trimmed = normalized.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private normalizeOptionalNumber(value: unknown): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   private normalizeDateOutput(value: unknown): string | null {
@@ -844,6 +1000,56 @@ export class ProfileService {
       this.toExperienceSummary(
         response.experienceSummary ?? (response as any)?.data?.experienceSummary
       ) ?? null
+    );
+  }
+
+  private normalizeSkillListResponse(
+    response: SkillsResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): SkillListResult {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    const skills = this.toSkillArray((response as any)?.skills ?? (response as any)?.data?.skills);
+    const skillsSummary = this.toSkillSummary(
+      response.skillsSummary ?? (response as any)?.data?.skillsSummary
+    );
+
+    return { skills, skillsSummary } satisfies SkillListResult;
+  }
+
+  private normalizeSkillMutationResponse(
+    response: SkillsResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): SkillMutationResult {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    const skill = this.toSkillEntry(response.skill ?? (response as any)?.data?.skill);
+
+    if (!skill) {
+      throw new Error(defaultMessage);
+    }
+
+    const skillsSummary = this.toSkillSummary(
+      response.skillsSummary ?? (response as any)?.data?.skillsSummary
+    );
+
+    return { skill, skillsSummary } satisfies SkillMutationResult;
+  }
+
+  private normalizeSkillDeleteResponse(
+    response: SkillsResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): SkillSummary | null {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    return (
+      this.toSkillSummary(response.skillsSummary ?? (response as any)?.data?.skillsSummary) ?? null
     );
   }
 
@@ -1010,6 +1216,94 @@ export class ProfileService {
       invalidDateCount,
       currentCount
     } satisfies ExperienceSummary;
+  }
+
+  private toSkillArray(value: unknown): SkillEntry[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => this.toSkillEntry(item))
+      .filter((item): item is SkillEntry => item !== null);
+  }
+
+  private toSkillEntry(value: unknown): SkillEntry | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const idCandidate =
+      record['skillId'] ??
+      record['SKILL_ID'] ??
+      record['id'] ??
+      record['ID'] ??
+      record['ID_HABILIDAD'];
+    const id = Number(idCandidate);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return null;
+    }
+
+    const rawName = record['name'] ?? record['NAME'] ?? record['NOMBRE'];
+    const name = this.normalizeRequiredString(rawName);
+
+    if (!name) {
+      return null;
+    }
+
+    const category = this.normalizeOptionalString(record['category'] ?? record['CATEGORY'] ?? record['CATEGORIA']);
+    const level = this.normalizeOptionalNumber(record['level'] ?? record['LEVEL'] ?? record['NIVEL']);
+    const yearsExperience = this.normalizeOptionalNumber(
+      record['yearsExperience'] ??
+        record['YEARS_EXPERIENCE'] ??
+        record['YEARS'] ??
+        record['ANIOS_EXPERIENCIA'] ??
+        record['ANIOS']
+    );
+    const endorsementsRaw = this.normalizeOptionalNumber(
+      record['endorsementCount'] ??
+        record['ENDORSEMENT_COUNT'] ??
+        record['cantidad_respaldo'] ??
+        record['CANTIDAD_RESPALDO']
+    );
+    const endorsementCount = endorsementsRaw === null ? 0 : Math.max(Math.floor(endorsementsRaw), 0);
+
+    return {
+      id,
+      skillId: id,
+      name,
+      category,
+      level,
+      yearsExperience,
+      endorsementCount
+    } satisfies SkillEntry;
+  }
+
+  private toSkillSummary(value: unknown): SkillSummary | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const totalRaw = Number(
+      record['totalSkills'] ?? record['TOTAL_SKILLS'] ?? record['total'] ?? record['o_total_habilidades']
+    );
+    const averageRaw = Number(
+      record['averageLevel'] ?? record['AVERAGE_LEVEL'] ?? record['o_promedio_nivel'] ?? record['promedioNivel']
+    );
+    const maxRaw = Number(record['maxLevel'] ?? record['MAX_LEVEL'] ?? record['o_max_nivel']);
+    const minRaw = Number(record['minLevel'] ?? record['MIN_LEVEL'] ?? record['o_min_nivel']);
+
+    const totalSkills = Number.isFinite(totalRaw) ? Math.max(Math.floor(totalRaw), 0) : 0;
+
+    return {
+      totalSkills,
+      averageLevel: Number.isFinite(averageRaw) ? averageRaw : null,
+      maxLevel: Number.isFinite(maxRaw) ? maxRaw : null,
+      minLevel: Number.isFinite(minRaw) ? minRaw : null
+    } satisfies SkillSummary;
   }
 
   private extractErrorMessage(
