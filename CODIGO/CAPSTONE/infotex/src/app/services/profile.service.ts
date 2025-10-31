@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
@@ -109,6 +109,12 @@ export interface SkillPayload {
   endorsementCount?: number | null;
 }
 
+export interface SkillCatalogItem {
+  skillId: number;
+  name: string;
+  category: string | null;
+}
+
 export interface ProfileData extends ProfileValues, ProfileValidationFlags, ProfileValidationErrors {
   isComplete: boolean;
   missingFields: string[];
@@ -166,6 +172,15 @@ interface SkillsResponseEnvelope {
   skills?: unknown;
   skill?: unknown;
   skillsSummary?: unknown;
+  message?: unknown;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+interface SkillCatalogResponseEnvelope {
+  ok: boolean;
+  items?: unknown;
+  count?: unknown;
   message?: unknown;
   error?: unknown;
   [key: string]: unknown;
@@ -384,6 +399,38 @@ export class ProfileService {
             endpoint,
             error,
             'No fue posible actualizar el registro de experiencia.'
+          )
+        )
+      );
+  }
+
+  getSkillCatalog(category?: string | null): Observable<SkillCatalogItem[]> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { headers } = session;
+    const endpoint = `/skills/catalog`;
+    const options: { headers: HttpHeaders; params?: HttpParams } = { headers };
+
+    if (category && category.trim().length > 0) {
+      options.params = new HttpParams().set('category', category.trim());
+    }
+
+    return this.http
+      .get<SkillCatalogResponseEnvelope>(`${this.apiUrl}${endpoint}`, options)
+      .pipe(
+        map((response) =>
+          this.normalizeSkillCatalogResponse(response, 'No se pudo obtener el catálogo de habilidades.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'getSkillCatalog',
+            endpoint,
+            error,
+            'No se pudo obtener el catálogo de habilidades.'
           )
         )
       );
@@ -1003,6 +1050,22 @@ export class ProfileService {
     );
   }
 
+  private normalizeSkillCatalogResponse(
+    response: SkillCatalogResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): SkillCatalogItem[] {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    return this.toSkillCatalogItems(
+      response.items ??
+        (response as any)?.data?.items ??
+        (response as any)?.skills ??
+        (response as any)?.catalog
+    );
+  }
+
   private normalizeSkillListResponse(
     response: SkillsResponseEnvelope | null | undefined,
     defaultMessage: string
@@ -1216,6 +1279,48 @@ export class ProfileService {
       invalidDateCount,
       currentCount
     } satisfies ExperienceSummary;
+  }
+
+  private toSkillCatalogItems(value: unknown): SkillCatalogItem[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => this.toSkillCatalogItem(item))
+      .filter((item): item is SkillCatalogItem => item !== null);
+  }
+
+  private toSkillCatalogItem(value: unknown): SkillCatalogItem | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const idCandidate =
+      record['skillId'] ??
+      record['SKILL_ID'] ??
+      record['id'] ??
+      record['ID'] ??
+      record['ID_HABILIDAD'];
+    const skillId = Number(idCandidate);
+
+    if (!Number.isFinite(skillId) || skillId <= 0) {
+      return null;
+    }
+
+    const rawName = record['name'] ?? record['NAME'] ?? record['nombre'] ?? record['NOMBRE'];
+    const name = this.normalizeRequiredString(rawName);
+
+    if (!name) {
+      return null;
+    }
+
+    const category = this.normalizeOptionalString(
+      record['category'] ?? record['CATEGORY'] ?? record['categoria'] ?? record['CATEGORIA']
+    );
+
+    return { skillId, name, category } satisfies SkillCatalogItem;
   }
 
   private toSkillArray(value: unknown): SkillEntry[] {

@@ -33,6 +33,7 @@ import {
   ExperienceEntry,
   ExperiencePayload,
   ExperienceSummary,
+  SkillCatalogItem,
   SkillEntry,
   SkillPayload,
   SkillSummary
@@ -63,6 +64,7 @@ function createEmptyFieldState(): FieldState {
 
 const DEFAULT_COUNTRY = 'Chile';
 const FALLBACK_CAREER_CATEGORY = 'Otras carreras';
+const FALLBACK_SKILL_CATEGORY = 'Otras habilidades';
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
@@ -153,6 +155,33 @@ export class Profile implements OnInit, AfterViewInit {
   protected readonly skillsSubmitError = signal<string | null>(null);
   protected readonly editingSkillId = signal<number | null>(null);
   protected readonly skillsDeletingId = signal<number | null>(null);
+  protected readonly skillCatalog = signal<SkillCatalogItem[]>([]);
+  protected readonly skillCatalogLoading = signal(false);
+  protected readonly skillCatalogError = signal<string | null>(null);
+  protected readonly skillCatalogGroups = computed(() => {
+    const groups = new Map<string, SkillCatalogItem[]>();
+    const fallbackCategory = FALLBACK_SKILL_CATEGORY;
+
+    for (const item of this.skillCatalog()) {
+      if (!item || !item.name) {
+        continue;
+      }
+
+      const category = item.category?.trim() || fallbackCategory;
+      const list = groups.get(category) ?? [];
+      list.push(item);
+      groups.set(category, list);
+    }
+
+    return Array.from(groups.entries())
+      .map(([category, items]) => ({
+        category,
+        items: items
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+      }))
+      .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+  });
   protected readonly cityOptions = signal<string[]>([]);
   protected readonly citiesLoading = signal(false);
   protected readonly citiesError = signal<string | null>(null);
@@ -217,8 +246,7 @@ export class Profile implements OnInit, AfterViewInit {
   });
 
   protected readonly skillForm = this.fb.group({
-    skillId: [null as number | null],
-    skillName: ['', [Validators.required]],
+    skillId: [null as number | null, [Validators.required]],
     level: [''],
     yearsExperience: [''],
     endorsementCount: ['']
@@ -229,7 +257,7 @@ export class Profile implements OnInit, AfterViewInit {
   }
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.loadCities(), this.loadCareers()]);
+    await Promise.all([this.loadCities(), this.loadCareers(), this.loadSkillCatalog()]);
     await this.loadProfile();
     await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills()]);
     this.initializeAlertEffects();
@@ -237,7 +265,7 @@ export class Profile implements OnInit, AfterViewInit {
 
   protected async retry(): Promise<void> {
     await this.loadProfile();
-    await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills()]);
+    await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills(), this.loadSkillCatalog()]);
   }
 
   protected openEditor(): void {
@@ -772,7 +800,10 @@ export class Profile implements OnInit, AfterViewInit {
     this.skillsSubmitError.set(null);
     this.resetSkillForm();
     this.skillForm.enable();
-    this.skillForm.controls.skillName.enable();
+    this.skillForm.controls.skillId.enable();
+    if (!this.skillCatalogLoading() && this.skillCatalog().length === 0) {
+      void this.loadSkillCatalog();
+    }
     this.skillsEditorOpen.set(true);
     this.skillForm.markAsPristine();
     this.skillForm.markAsUntouched();
@@ -782,6 +813,7 @@ export class Profile implements OnInit, AfterViewInit {
     this.skillsSubmitError.set(null);
     this.skillsEditorOpen.set(true);
     this.editingSkillId.set(entry.skillId);
+    this.ensureSkillCatalogEntry(entry);
     this.skillForm.setValue({
       skillId: entry.skillId,
       skillName: entry.name ?? '',
@@ -789,7 +821,7 @@ export class Profile implements OnInit, AfterViewInit {
       yearsExperience: entry.yearsExperience?.toString() ?? '',
       endorsementCount: entry.endorsementCount?.toString() ?? ''
     });
-    this.skillForm.controls.skillName.disable();
+    this.skillForm.controls.skillId.disable();
     this.skillForm.markAsPristine();
     this.skillForm.markAsUntouched();
   }
@@ -812,18 +844,21 @@ export class Profile implements OnInit, AfterViewInit {
 
     this.skillsSubmitError.set(null);
 
-    if (!this.editingSkillId() && this.skillForm.controls.skillName.invalid) {
-      this.skillForm.controls.skillName.markAsTouched();
-      this.skillForm.controls.skillName.markAsDirty();
+    const skillIdControl = this.skillForm.controls.skillId;
+
+    if (!this.editingSkillId() && skillIdControl.invalid) {
+      skillIdControl.markAsTouched();
+      skillIdControl.markAsDirty();
       return;
     }
 
     this.skillsSaving.set(true);
 
     const raw = this.skillForm.getRawValue();
+    const selectedCatalog = this.skillCatalog().find((item) => item.skillId === raw.skillId);
     const payload: SkillPayload = {
       skillId: raw.skillId ?? null,
-      skillName: typeof raw.skillName === 'string' ? raw.skillName.trim() : '',
+      skillName: selectedCatalog?.name ?? '',
       level: this.parseSkillNumber(raw.level),
       yearsExperience: this.parseSkillNumber(raw.yearsExperience),
       endorsementCount: this.parseSkillInteger(raw.endorsementCount)
@@ -842,6 +877,7 @@ export class Profile implements OnInit, AfterViewInit {
           : [response.skill, ...items.filter((item) => item.skillId !== response.skill.skillId)];
         return this.sortSkillEntries(updated);
       });
+      this.ensureSkillCatalogEntry(response.skill);
 
       this.skillsEditorOpen.set(false);
       this.editingSkillId.set(null);
@@ -971,6 +1007,46 @@ export class Profile implements OnInit, AfterViewInit {
     }
   }
 
+  private async loadSkillCatalog(): Promise<void> {
+    this.skillCatalogLoading.set(true);
+    this.skillCatalogError.set(null);
+
+    try {
+      const response = await firstValueFrom(this.profileService.getSkillCatalog());
+      const unique = new Map<number, SkillCatalogItem>();
+
+      for (const item of response) {
+        if (!item || !item.skillId || !item.name) {
+          continue;
+        }
+
+        unique.set(item.skillId, {
+          skillId: item.skillId,
+          name: item.name,
+          category: item.category ?? null
+        });
+      }
+
+      for (const existing of this.skillCatalog()) {
+        if (!existing || !existing.skillId || !existing.name) {
+          continue;
+        }
+
+        if (!unique.has(existing.skillId)) {
+          unique.set(existing.skillId, existing);
+        }
+      }
+
+      this.skillCatalog.set(Array.from(unique.values()));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo obtener el catálogo de habilidades.';
+      this.skillCatalogError.set(message);
+    } finally {
+      this.skillCatalogLoading.set(false);
+    }
+  }
+
   private async loadEducation(): Promise<void> {
     this.educationLoading.set(true);
     this.educationError.set(null);
@@ -1019,7 +1095,9 @@ export class Profile implements OnInit, AfterViewInit {
 
     try {
       const result = await firstValueFrom(this.profileService.getSkills());
-      this.skills.set(this.sortSkillEntries(result.skills));
+      const sorted = this.sortSkillEntries(result.skills);
+      this.skills.set(sorted);
+      sorted.forEach((entry) => this.ensureSkillCatalogEntry(entry));
       this.skillsSummary.set(result.skillsSummary ?? null);
     } catch (error) {
       const message =
@@ -1085,18 +1163,45 @@ export class Profile implements OnInit, AfterViewInit {
   private resetSkillForm(): void {
     this.skillForm.reset({
       skillId: null,
-      skillName: '',
       level: '',
       yearsExperience: '',
       endorsementCount: ''
     });
-    this.skillForm.controls.skillName.enable();
+    this.skillForm.controls.skillId.enable();
     this.skillForm.markAsPristine();
     this.skillForm.markAsUntouched();
   }
 
   private resetBackendValidation(): void {
     this.fieldState.set(createEmptyFieldState());
+  }
+
+  private ensureSkillCatalogEntry(
+    entry: (Pick<SkillEntry, 'skillId' | 'name' | 'category'> | SkillCatalogItem | null | undefined)
+  ): void {
+    if (!entry) {
+      return;
+    }
+
+    const skillId = entry.skillId;
+    const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+
+    if (!skillId || !name) {
+      return;
+    }
+
+    const category =
+      typeof entry.category === 'string' && entry.category.trim().length > 0
+        ? entry.category.trim()
+        : null;
+
+    this.skillCatalog.update((items) => {
+      if (items.some((item) => item.skillId === skillId)) {
+        return items;
+      }
+
+      return [...items, { skillId, name, category }];
+    });
   }
 
   private applyBackendValidation(profile: ProfileData): void {
