@@ -310,6 +310,121 @@
                       </ng-container>
                     </div>
                   </section>
+
+                  <section class="profile-section profile-section--skills">
+                    <div class="profile-section__header">
+                      <div>
+                        <span class="profile-section__eyebrow">Talento</span>
+                        <h3 class="profile-section__title mb-1">Habilidades</h3>
+                        <p class="profile-section__subtitle text-secondary mb-0">
+                          <ng-container *ngIf="skillsSummary() as summary; else skillsSummaryFallback">
+                            <ng-container *ngIf="summary.totalSkills > 0; else noSkillsRecords">
+                              {{ summary.totalSkills === 1 ? '1 habilidad registrada' : summary.totalSkills + ' habilidades registradas' }}.
+                              <ng-container *ngIf="summary.averageLevel !== null">
+                                Nivel promedio {{ summary.averageLevel | number:'1.1-1' }} / 5.
+                              </ng-container>
+                              <ng-container *ngIf="summary.maxLevel !== null && summary.minLevel !== null">
+                                Rango {{ summary.minLevel }}–{{ summary.maxLevel }}.
+                              </ng-container>
+                            </ng-container>
+                            <ng-template #noSkillsRecords>
+                              Aún no has agregado tus habilidades.
+                            </ng-template>
+                          </ng-container>
+                          <ng-template #skillsSummaryFallback>
+                            Aún no has agregado tus habilidades.
+                          </ng-template>
+                        </p>
+                      </div>
+                      <div class="profile-section__actions">
+                        <button
+                          type="button"
+                          class="icon-button icon-button--primary"
+                          (click)="openSkillCreator()"
+                          aria-label="Agregar habilidad"
+                          [disabled]="skillsSaving()"
+                        >
+                          <i class="bi bi-stars"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="profile-section__body">
+                      <div *ngIf="skillsError()" class="alert alert-danger" role="alert">
+                        {{ skillsError() }}
+                      </div>
+
+                      <div *ngIf="skillsLoading()" class="text-secondary">
+                        Cargando habilidades...
+                      </div>
+
+                      <ng-container *ngIf="!skillsLoading() && !skillsError()">
+                        <div *ngIf="skills().length > 0; else noSkillItems" class="skills-list mt-3">
+                          <div
+                            class="skill-item card bg-dark border-secondary mb-3"
+                            *ngFor="let item of skills(); trackBy: trackSkillById"
+                          >
+                            <div class="skill-item__body card-body">
+                              <div class="skill-item__header">
+                                <div class="skill-item__info">
+                                  <h4 class="h6 mb-1 text-white">{{ item.name }}</h4>
+                                  <p class="mb-0 text-secondary" *ngIf="item.category">{{ item.category }}</p>
+                                </div>
+                                <div class="skill-item__stats">
+                                  <div class="skill-stat">
+                                    <span class="skill-stat__label">Nivel</span>
+                                    <span class="skill-stat__value">{{ item.level !== null ? item.level : '—' }}</span>
+                                  </div>
+                                  <div class="skill-stat">
+                                    <span class="skill-stat__label">Años</span>
+                                    <span class="skill-stat__value">
+                                      {{ item.yearsExperience !== null ? (item.yearsExperience | number:'1.0-1') : '—' }}
+                                    </span>
+                                  </div>
+                                  <div class="skill-stat">
+                                    <span class="skill-stat__label">Respaldos</span>
+                                    <span class="skill-stat__value">{{ item.endorsementCount }}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div class="skill-item__actions">
+                                <button
+                                  type="button"
+                                  class="btn btn-outline-light btn-sm"
+                                  (click)="editSkill(item)"
+                                  [disabled]="skillsSaving() || skillsDeletingId() === item.skillId"
+                                >
+                                  <i class="bi bi-pencil me-1"></i>
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  class="btn btn-outline-danger btn-sm"
+                                  (click)="deleteSkill(item)"
+                                  [disabled]="skillsDeletingId() === item.skillId || skillsSaving()"
+                                >
+                                  <span
+                                    *ngIf="skillsDeletingId() === item.skillId"
+                                    class="spinner-border spinner-border-sm me-2"
+                                    role="status"
+                                    aria-hidden="true"
+                                  ></span>
+                                  <ng-container *ngIf="skillsDeletingId() !== item.skillId">
+                                    <i class="bi bi-trash me-1"></i>
+                                  </ng-container>
+                                  {{ skillsDeletingId() === item.skillId ? 'Eliminando...' : 'Eliminar' }}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <ng-template #noSkillItems>
+                          <p class="text-secondary mt-3 mb-0">Aún no has agregado tus habilidades.</p>
+                        </ng-template>
+                      </ng-container>
+                    </div>
+                  </section>
                 </div>
               </ng-container>
 
@@ -744,6 +859,111 @@
                 aria-hidden="true"
               ></span>
               {{ experienceSaving() ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</ng-container>
+
+<ng-container *ngIf="skillsEditorOpen()">
+  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="skillsEditorTitle">
+    <div class="profile-editor__backdrop" (click)="cancelSkillEdit()"></div>
+    <div class="profile-editor__panel" (click)="$event.stopPropagation()">
+      <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
+        <div>
+          <h2 id="skillsEditorTitle" class="h5 mb-1 text-white">
+            {{ editingSkillId() ? 'Editar habilidad' : 'Agregar habilidad' }}
+          </h2>
+          <p class="mb-0 text-secondary">Comparte tus conocimientos y destaca tus fortalezas.</p>
+        </div>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          aria-label="Cerrar"
+          (click)="cancelSkillEdit()"
+          [disabled]="skillsSaving()"
+        ></button>
+      </div>
+      <div class="profile-editor__body">
+        <div *ngIf="skillsSubmitError()" class="alert alert-danger" role="alert">
+          {{ skillsSubmitError() }}
+        </div>
+        <form class="skills-form" [formGroup]="skillForm" (ngSubmit)="saveSkill()" novalidate>
+          <div class="row g-3">
+            <div class="col-12">
+              <label for="skillName" class="form-label">Habilidad</label>
+              <input
+                id="skillName"
+                type="text"
+                class="form-control"
+                formControlName="skillName"
+                [placeholder]="editingSkillId() ? 'El nombre de la habilidad no se puede modificar' : 'Ej. Desarrollo web'"
+                [class.is-invalid]="
+                  !editingSkillId() && skillForm.controls.skillName.invalid &&
+                  (skillForm.controls.skillName.dirty || skillForm.controls.skillName.touched)
+                "
+              />
+              <div class="invalid-feedback">La habilidad es obligatoria.</div>
+              <div class="form-text text-light">Indica el nombre tal como aparece en el catálogo.</div>
+            </div>
+            <div class="col-sm-6">
+              <label for="skillLevel" class="form-label">Nivel</label>
+              <select id="skillLevel" class="form-select" formControlName="level">
+                <option value="">Sin nivel</option>
+                <option *ngFor="let level of [1, 2, 3, 4, 5]" [value]="level">{{ level }}</option>
+              </select>
+              <div class="form-text text-light">Valores del 1 (básico) al 5 (experto).</div>
+            </div>
+            <div class="col-sm-6">
+              <label for="skillYears" class="form-label">Años de experiencia</label>
+              <input
+                id="skillYears"
+                type="number"
+                class="form-control"
+                formControlName="yearsExperience"
+                min="0"
+                step="0.1"
+                placeholder="Ej. 3.5"
+              />
+              <div class="form-text text-light">Puedes ingresar valores decimales para mayor precisión.</div>
+            </div>
+            <div class="col-sm-6">
+              <label for="skillEndorsements" class="form-label">Respaldos</label>
+              <input
+                id="skillEndorsements"
+                type="number"
+                class="form-control"
+                formControlName="endorsementCount"
+                min="0"
+                step="1"
+                placeholder="0"
+              />
+              <div class="form-text text-light">Cantidad de recomendaciones recibidas en la plataforma.</div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button
+              type="button"
+              class="btn btn-outline-light"
+              (click)="cancelSkillEdit()"
+              [disabled]="skillsSaving()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="skillsSaving() || (!editingSkillId() && skillForm.controls.skillName.invalid)"
+            >
+              <span
+                *ngIf="skillsSaving()"
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              {{ skillsSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
         </form>
