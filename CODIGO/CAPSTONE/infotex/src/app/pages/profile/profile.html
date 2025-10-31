@@ -894,19 +894,52 @@
           <div class="row g-3">
             <div class="col-12">
               <label for="skillName" class="form-label">Habilidad</label>
-              <input
+              <select
                 id="skillName"
-                type="text"
-                class="form-control"
-                formControlName="skillName"
-                [placeholder]="editingSkillId() ? 'El nombre de la habilidad no se puede modificar' : 'Ej. Desarrollo web'"
+                class="form-select"
+                formControlName="skillId"
+                [disabled]="skillCatalogLoading() || editingSkillId()"
                 [class.is-invalid]="
-                  !editingSkillId() && skillForm.controls.skillName.invalid &&
-                  (skillForm.controls.skillName.dirty || skillForm.controls.skillName.touched)
+                  !editingSkillId() && skillForm.controls.skillId.invalid &&
+                  (skillForm.controls.skillId.dirty || skillForm.controls.skillId.touched)
                 "
-              />
+              >
+                <option [ngValue]="null" disabled>
+                  {{
+                    skillCatalogLoading()
+                      ? 'Cargando catálogo de habilidades...'
+                      : 'Selecciona una habilidad'
+                  }}
+                </option>
+                <ng-container *ngFor="let group of skillCatalogGroups()">
+                  <optgroup [label]="group.category">
+                    <option *ngFor="let item of group.items" [ngValue]="item.skillId">
+                      {{ item.name }}
+                    </option>
+                  </optgroup>
+                </ng-container>
+              </select>
               <div class="invalid-feedback">La habilidad es obligatoria.</div>
-              <div class="form-text text-light">Indica el nombre tal como aparece en el catálogo.</div>
+              <div *ngIf="skillCatalogError(); else skillCatalogHint" class="form-text text-warning">
+                {{ skillCatalogError() }}
+              </div>
+              <ng-template #skillCatalogHint>
+                <div class="form-text text-light">
+                  <ng-container *ngIf="skillCatalogLoading(); else skillCatalogReady">
+                    Cargando catálogo de habilidades...
+                  </ng-container>
+                  <ng-template #skillCatalogReady>
+                    <ng-container
+                      *ngIf="skillCatalog().length > 0; else emptySkillCatalog"
+                    >
+                      Selecciona la habilidad tal como aparece en el catálogo.
+                    </ng-container>
+                    <ng-template #emptySkillCatalog>
+                      <span class="text-warning">No hay habilidades disponibles en el catálogo.</span>
+                    </ng-template>
+                  </ng-template>
+                </div>
+              </ng-template>
             </div>
             <div class="col-sm-6">
               <label for="skillLevel" class="form-label">Nivel</label>

@@ -570,6 +570,48 @@ async function listSkills(userId) {
   }
 }
 
+async function listSkillCatalog(category) {
+  let connection;
+  try {
+    connection = await oracledb.getConnection();
+    const result = await connection.execute(
+      'BEGIN sp_listar_habilidades_catalogo(:category, :items); END;',
+      {
+        category: category ?? null,
+        items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.items || null;
+    const rows = await fetchCursorRows(cursor);
+
+    const mappedEntries = rows
+      .map((row) => mapSkillRow(row))
+      .filter((entry) => entry && typeof entry.skillId === 'number')
+      .map((entry) => ({
+        skillId: entry.skillId,
+        name: entry.name,
+        category: entry.category
+      }));
+
+    console.info('[Skills] listSkillCatalog mapped entries', {
+      category: category ?? null,
+      mappedCount: mappedEntries.length,
+      preview: mappedEntries.slice(0, 3)
+    });
+
+    return mappedEntries;
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (error) {
+        console.error('[DB] Error releasing connection after listing skill catalog:', error);
+      }
+    }
+  }
+}
+
 async function getSkillEntry(userId, skillId) {
   const result = await executeQuery(
     `BEGIN sp_usuario_habilidades_pkg.sp_obtener_habilidad_usuario(
@@ -1908,6 +1950,59 @@ app.get('/profile/:userId/experience', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo obtener la experiencia laboral.');
+  }
+});
+
+app.get('/skills/catalog', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const rawCategory = typeof req.query.category === 'string' ? req.query.category : null;
+  const category = rawCategory ? rawCategory.trim() : null;
+
+  console.info('[Skills] Catalog request received', {
+    method: req.method,
+    path: req.originalUrl,
+    hasAuthorization: Boolean(accessToken),
+    category,
+    ip: getClientIp(req)
+  });
+
+  if (!accessToken) {
+    console.warn('[Skills] Catalog request rejected: missing access token', {
+      path: req.originalUrl,
+      category
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Skills] Catalog request rejected: invalid access token', {
+        path: req.originalUrl,
+        category
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const items = await listSkillCatalog(category);
+
+    console.info('[Skills] Catalog response sent', {
+      category,
+      count: items.length,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, items, count: items.length });
+  } catch (error) {
+    console.error('[Skills] Catalog request failed', {
+      category,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo obtener el catálogo de habilidades.');
   }
 });
 
