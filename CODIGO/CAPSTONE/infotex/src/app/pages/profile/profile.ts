@@ -32,7 +32,10 @@ import {
   EducationSummary,
   ExperienceEntry,
   ExperiencePayload,
-  ExperienceSummary
+  ExperienceSummary,
+  SkillEntry,
+  SkillPayload,
+  SkillSummary
 } from '../../services/profile.service';
 
 import { ProfileFieldsService } from '../../services/profilefields.service';
@@ -141,6 +144,15 @@ export class Profile implements OnInit, AfterViewInit {
   protected readonly experienceSubmitError = signal<string | null>(null);
   protected readonly editingExperienceId = signal<number | null>(null);
   protected readonly experienceDeletingId = signal<number | null>(null);
+  protected readonly skills = signal<SkillEntry[]>([]);
+  protected readonly skillsSummary = signal<SkillSummary | null>(null);
+  protected readonly skillsLoading = signal(false);
+  protected readonly skillsError = signal<string | null>(null);
+  protected readonly skillsEditorOpen = signal(false);
+  protected readonly skillsSaving = signal(false);
+  protected readonly skillsSubmitError = signal<string | null>(null);
+  protected readonly editingSkillId = signal<number | null>(null);
+  protected readonly skillsDeletingId = signal<number | null>(null);
   protected readonly cityOptions = signal<string[]>([]);
   protected readonly citiesLoading = signal(false);
   protected readonly citiesError = signal<string | null>(null);
@@ -204,6 +216,14 @@ export class Profile implements OnInit, AfterViewInit {
     description: ['']
   });
 
+  protected readonly skillForm = this.fb.group({
+    skillId: [null as number | null],
+    skillName: ['', [Validators.required]],
+    level: [''],
+    yearsExperience: [''],
+    endorsementCount: ['']
+  });
+
   ngAfterViewInit(): void {
     this.initializeAlertEffects();
   }
@@ -211,12 +231,13 @@ export class Profile implements OnInit, AfterViewInit {
   async ngOnInit(): Promise<void> {
     await Promise.all([this.loadCities(), this.loadCareers()]);
     await this.loadProfile();
-    await Promise.all([this.loadEducation(), this.loadExperience()]);
+    await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills()]);
     this.initializeAlertEffects();
   }
 
   protected async retry(): Promise<void> {
     await this.loadProfile();
+    await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills()]);
   }
 
   protected openEditor(): void {
@@ -493,6 +514,10 @@ export class Profile implements OnInit, AfterViewInit {
     return item.id;
   }
 
+  protected trackSkillById(index: number, item: SkillEntry): number {
+    return item.skillId;
+  }
+
   protected trackCityOption(index: number, option: string): string {
     return option;
   }
@@ -742,6 +767,121 @@ export class Profile implements OnInit, AfterViewInit {
     }
   }
 
+  protected openSkillCreator(): void {
+    this.editingSkillId.set(null);
+    this.skillsSubmitError.set(null);
+    this.resetSkillForm();
+    this.skillForm.enable();
+    this.skillForm.controls.skillName.enable();
+    this.skillsEditorOpen.set(true);
+    this.skillForm.markAsPristine();
+    this.skillForm.markAsUntouched();
+  }
+
+  protected editSkill(entry: SkillEntry): void {
+    this.skillsSubmitError.set(null);
+    this.skillsEditorOpen.set(true);
+    this.editingSkillId.set(entry.skillId);
+    this.skillForm.setValue({
+      skillId: entry.skillId,
+      skillName: entry.name ?? '',
+      level: entry.level ?? '',
+      yearsExperience: entry.yearsExperience ?? '',
+      endorsementCount: entry.endorsementCount ?? ''
+    });
+    this.skillForm.controls.skillName.disable();
+    this.skillForm.markAsPristine();
+    this.skillForm.markAsUntouched();
+  }
+
+  protected cancelSkillEdit(): void {
+    if (this.skillsSaving()) {
+      return;
+    }
+
+    this.skillsEditorOpen.set(false);
+    this.skillsSubmitError.set(null);
+    this.editingSkillId.set(null);
+    this.resetSkillForm();
+  }
+
+  protected async saveSkill(): Promise<void> {
+    if (this.skillsSaving()) {
+      return;
+    }
+
+    this.skillsSubmitError.set(null);
+
+    if (!this.editingSkillId() && this.skillForm.controls.skillName.invalid) {
+      this.skillForm.controls.skillName.markAsTouched();
+      this.skillForm.controls.skillName.markAsDirty();
+      return;
+    }
+
+    this.skillsSaving.set(true);
+
+    const raw = this.skillForm.getRawValue();
+    const payload: SkillPayload = {
+      skillId: raw.skillId ?? null,
+      skillName: typeof raw.skillName === 'string' ? raw.skillName.trim() : '',
+      level: this.parseSkillNumber(raw.level),
+      yearsExperience: this.parseSkillNumber(raw.yearsExperience),
+      endorsementCount: this.parseSkillInteger(raw.endorsementCount)
+    };
+
+    try {
+      const editingId = this.editingSkillId();
+      const response = editingId
+        ? await firstValueFrom(this.profileService.updateSkill(editingId, payload))
+        : await firstValueFrom(this.profileService.createSkill(payload));
+
+      this.skillsSummary.set(response.skillsSummary ?? null);
+      this.skills.update((items) => {
+        const updated = editingId
+          ? items.map((item) => (item.skillId === editingId ? response.skill : item))
+          : [response.skill, ...items.filter((item) => item.skillId !== response.skill.skillId)];
+        return this.sortSkillEntries(updated);
+      });
+
+      this.skillsEditorOpen.set(false);
+      this.editingSkillId.set(null);
+      this.resetSkillForm();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo guardar la información de la habilidad.';
+      this.skillsSubmitError.set(message);
+    } finally {
+      this.skillsSaving.set(false);
+    }
+  }
+
+  protected async deleteSkill(entry: SkillEntry): Promise<void> {
+    if (!entry || this.skillsDeletingId() === entry.skillId) {
+      return;
+    }
+
+    const confirmed = window.confirm(`¿Deseas eliminar la habilidad "${entry.name}" de tu perfil?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.skillsDeletingId.set(entry.skillId);
+    this.skillsSubmitError.set(null);
+
+    try {
+      const summary = await firstValueFrom(this.profileService.deleteSkill(entry.skillId));
+      this.skillsSummary.set(summary ?? null);
+      this.skills.update((items) => items.filter((item) => item.skillId !== entry.skillId));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo eliminar la habilidad.';
+      this.skillsSubmitError.set(message);
+    } finally {
+      this.skillsDeletingId.set(null);
+    }
+  }
+
   private async loadCities(): Promise<void> {
     this.citiesLoading.set(true);
     this.citiesError.set(null);
@@ -822,6 +962,7 @@ export class Profile implements OnInit, AfterViewInit {
       });
       this.educationSummary.set(null);
       this.experienceSummary.set(null);
+      this.skillsSummary.set(null);
       if (!this.editorOpen()) {
         this.profileForm.disable({ emitEvent: false });
       }
@@ -872,12 +1013,32 @@ export class Profile implements OnInit, AfterViewInit {
     }
   }
 
+  private async loadSkills(): Promise<void> {
+    this.skillsLoading.set(true);
+    this.skillsError.set(null);
+
+    try {
+      const result = await firstValueFrom(this.profileService.getSkills());
+      this.skills.set(this.sortSkillEntries(result.skills));
+      this.skillsSummary.set(result.skillsSummary ?? null);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo obtener la información de habilidades.';
+      this.skillsError.set(message);
+      this.skills.set([]);
+      this.skillsSummary.set(null);
+    } finally {
+      this.skillsLoading.set(false);
+    }
+  }
+
   private applyProfile(status: ProfileData): void {
     this.profile.set(status);
     this.applyBackendValidation(status);
     this.avatarHasError.set(false);
     this.educationSummary.set(status.educationSummary ?? null);
     this.experienceSummary.set(status.experienceSummary ?? null);
+    this.skillsSummary.set(status.skillsSummary ?? null);
     this.profileForm.reset({
       displayName: status.displayName ?? '',
       biography: status.biography ?? '',
@@ -919,6 +1080,19 @@ export class Profile implements OnInit, AfterViewInit {
     });
     this.experienceForm.markAsPristine();
     this.experienceForm.markAsUntouched();
+  }
+
+  private resetSkillForm(): void {
+    this.skillForm.reset({
+      skillId: null,
+      skillName: '',
+      level: '',
+      yearsExperience: '',
+      endorsementCount: ''
+    });
+    this.skillForm.controls.skillName.enable();
+    this.skillForm.markAsPristine();
+    this.skillForm.markAsUntouched();
   }
 
   private resetBackendValidation(): void {
@@ -1062,6 +1236,33 @@ export class Profile implements OnInit, AfterViewInit {
     });
   }
 
+  private sortSkillEntries(entries: SkillEntry[]): SkillEntry[] {
+    return [...entries].sort((a, b) => {
+      const levelA = this.parseSkillNumber(a.level);
+      const levelB = this.parseSkillNumber(b.level);
+
+      if (levelA !== levelB) {
+        return (levelB ?? Number.NEGATIVE_INFINITY) - (levelA ?? Number.NEGATIVE_INFINITY);
+      }
+
+      const yearsA = this.parseSkillNumber(a.yearsExperience);
+      const yearsB = this.parseSkillNumber(b.yearsExperience);
+
+      if (yearsA !== yearsB) {
+        return (yearsB ?? Number.NEGATIVE_INFINITY) - (yearsA ?? Number.NEGATIVE_INFINITY);
+      }
+
+      const endorsementsA = this.parseSkillInteger(a.endorsementCount) ?? 0;
+      const endorsementsB = this.parseSkillInteger(b.endorsementCount) ?? 0;
+
+      if (endorsementsA !== endorsementsB) {
+        return endorsementsB - endorsementsA;
+      }
+
+      return (a.name ?? '').localeCompare(b.name ?? '', 'es', { sensitivity: 'base' });
+    });
+  }
+
   private parseEducationDate(value: string | null | undefined): number {
     if (!value) {
       return Number.POSITIVE_INFINITY;
@@ -1078,6 +1279,29 @@ export class Profile implements OnInit, AfterViewInit {
 
   private parseExperienceDate(value: string | null | undefined): number {
     return this.parseEducationDate(value);
+  }
+
+  private parseSkillNumber(value: unknown): number | null {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private parseSkillInteger(value: unknown): number | null {
+    const parsed = this.parseSkillNumber(value);
+
+    if (parsed === null) {
+      return null;
+    }
+
+    return Math.max(Math.round(parsed), 0);
   }
   
   currentYear = new Date().getFullYear();
