@@ -785,9 +785,9 @@ export class Profile implements OnInit, AfterViewInit {
     this.skillForm.setValue({
       skillId: entry.skillId,
       skillName: entry.name ?? '',
-      level: entry.level ?? '',
-      yearsExperience: entry.yearsExperience ?? '',
-      endorsementCount: entry.endorsementCount ?? ''
+      level: entry.level?.toString() ?? '',
+      yearsExperience: entry.yearsExperience?.toString() ?? '',
+      endorsementCount: entry.endorsementCount?.toString() ?? ''
     });
     this.skillForm.controls.skillName.disable();
     this.skillForm.markAsPristine();
