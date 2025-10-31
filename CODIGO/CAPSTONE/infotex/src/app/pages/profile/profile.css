@@ -249,6 +249,28 @@
   color: rgba(248, 249, 250, 0.85);
 }
 
+.experience-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.experience-item {
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.experience-item:hover {
+  border-color: rgba(13, 110, 253, 0.45);
+  transform: translateY(-2px);
+}
+
+.experience-item__body {
+  padding-bottom: 0;
+}
+
+.experience-item__description {
+  color: rgba(248, 249, 250, 0.85);
+}
+
 .education-form .form-label {
   font-weight: 500;
 }

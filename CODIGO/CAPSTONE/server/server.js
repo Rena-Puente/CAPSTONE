@@ -173,6 +173,34 @@ function normalizeEducationPayload(payload = {}) {
   };
 }
 
+function normalizeExperiencePayload(payload = {}) {
+  const title = typeof payload.title === 'string' ? payload.title.trim() : '';
+
+  if (!title) {
+    throw new Error('El título es obligatorio.');
+  }
+
+  const company = typeof payload.company === 'string' ? payload.company.trim() : '';
+  const location = typeof payload.location === 'string' ? payload.location.trim() : '';
+  const description = typeof payload.description === 'string' ? payload.description.trim() : '';
+
+  const startDate = parseEducationDate(payload.startDate, 'inicio');
+  const endDate = parseEducationDate(payload.endDate, 'fin');
+
+  if (startDate && endDate && endDate.getTime() < startDate.getTime()) {
+    throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+  }
+
+  return {
+    title,
+    company: company || null,
+    location: location || null,
+    startDate,
+    endDate,
+    description: description || null
+  };
+}
+
 async function fetchCursorRows(cursor) {
   const rows = [];
 
@@ -297,6 +325,25 @@ function mapEducationRow(row) {
   };
 }
 
+function mapExperienceRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  const idValue = Number(row.ID_EXPERIENCIA ?? row.id_experiencia ?? null);
+  const id = Number.isNaN(idValue) ? null : idValue;
+
+  return {
+    id,
+    title: toNullableTrimmedString(row.TITULO ?? row.titulo),
+    company: toNullableTrimmedString(row.EMPRESA ?? row.empresa),
+    startDate: toIsoString(row.FECHA_INICIO ?? row.fecha_inicio),
+    endDate: toIsoString(row.FECHA_FIN ?? row.fecha_fin),
+    location: toNullableTrimmedString(row.UBICACION ?? row.ubicacion),
+    description: toNullableTrimmedString(row.DESCRIPCION ?? row.descripcion)
+  };
+}
+
 async function listEducation(userId) {
   let connection;
   try {
@@ -340,6 +387,54 @@ async function listEducation(userId) {
         await connection.close();
       } catch (error) {
         console.error('[DB] Error releasing connection after listing education:', error);
+      }
+    }
+  }
+}
+
+async function listExperience(userId) {
+  let connection;
+  try {
+    connection = await oracledb.getConnection();
+    const result = await connection.execute(
+      'BEGIN sp_experiencia_pkg.sp_listar_experiencia(:userId, :items); END;',
+      {
+        userId,
+        items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.items || null;
+    const rows = await fetchCursorRows(cursor);
+    const previewRows = rows.slice(0, 3).map((row, index) => ({
+      index,
+      keys: Object.keys(row || {}),
+      values: row
+    }));
+
+    console.info('[Experience] listExperience rows fetched', {
+      userId,
+      rowCount: rows.length,
+      preview: previewRows
+    });
+
+    const mappedEntries = rows
+      .map((row) => mapExperienceRow(row))
+      .filter((entry) => entry && typeof entry.id === 'number');
+
+    console.info('[Experience] listExperience mapped entries', {
+      userId,
+      mappedCount: mappedEntries.length,
+      preview: mappedEntries.slice(0, 3)
+    });
+
+    return mappedEntries;
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (error) {
+        console.error('[DB] Error releasing connection after listing experience:', error);
       }
     }
   }
@@ -401,6 +496,62 @@ async function getEducationEntry(userId, educationId) {
   return entry;
 }
 
+async function getExperienceEntry(userId, experienceId) {
+  const result = await executeQuery(
+    `BEGIN sp_experiencia_pkg.sp_obtener_experiencia(
+       p_id_experiencia => :experienceId,
+       p_id_usuario     => :userId,
+       o_titulo         => :title,
+       o_empresa        => :company,
+       o_fecha_inicio   => :startDate,
+       o_fecha_fin      => :endDate,
+       o_ubicacion      => :location,
+       o_descripcion    => :description,
+       o_existe         => :exists
+     ); END;`,
+    {
+      experienceId,
+      userId,
+      title: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+      company: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+      startDate: { dir: oracledb.BIND_OUT, type: oracledb.DATE },
+      endDate: { dir: oracledb.BIND_OUT, type: oracledb.DATE },
+      location: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 4000 },
+      description: { dir: oracledb.BIND_OUT, type: oracledb.CLOB },
+      exists: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds || {};
+  const exists = Number(outBinds.exists ?? 0) === 1;
+
+  if (!exists) {
+    console.info('[Experience] getExperienceEntry: entry not found', {
+      userId,
+      experienceId
+    });
+    return null;
+  }
+
+  const entry = {
+    id: experienceId,
+    title: toNullableTrimmedString(outBinds.title),
+    company: toNullableTrimmedString(outBinds.company),
+    startDate: toIsoString(outBinds.startDate),
+    endDate: toIsoString(outBinds.endDate),
+    location: toNullableTrimmedString(outBinds.location),
+    description: toNullableTrimmedString(outBinds.description)
+  };
+
+  console.info('[Experience] getExperienceEntry: entry retrieved', {
+    userId,
+    experienceId,
+    entry
+  });
+
+  return entry;
+}
+
 async function getEducationStatus(userId) {
   const result = await executeQuery(
     `BEGIN sp_educacion_pkg.sp_educacion_chk(
@@ -430,6 +581,45 @@ async function getEducationStatus(userId) {
   };
 
   console.info('[Education] getEducationStatus result', {
+    userId,
+    summary
+  });
+
+  return summary;
+}
+
+async function getExperienceStatus(userId) {
+  const result = await executeQuery(
+    `BEGIN sp_experiencia_pkg.sp_experiencia_chk(
+       p_id_usuario         => :userId,
+       o_tiene_experiencia  => :hasExperience,
+       o_total_registros    => :totalRecords,
+       o_con_fechas_validas => :validDates,
+       o_actuales           => :currentCount
+     ); END;`,
+    {
+      userId,
+      hasExperience: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      totalRecords: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      validDates: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+      currentCount: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    }
+  );
+
+  const outBinds = result.outBinds || {};
+  const totalRecords = Number(outBinds.totalRecords ?? 0);
+  const validDates = Number(outBinds.validDates ?? 0);
+  const invalidDateCount = Math.max(totalRecords - validDates, 0);
+
+  const summary = {
+    hasExperience: Number(outBinds.hasExperience ?? 0) === 1,
+    totalRecords,
+    validDateCount: validDates,
+    invalidDateCount,
+    currentCount: Number(outBinds.currentCount ?? 0)
+  };
+
+  console.info('[Experience] getExperienceStatus result', {
     userId,
     summary
   });
@@ -497,6 +687,8 @@ const PROFILE_FIELD_LABELS = {
 
 const EDUCATION_SECTION_LABEL = 'Historial educativo';
 const EDUCATION_DATES_NOTE = 'Historial educativo (revisa las fechas)';
+const EXPERIENCE_SECTION_LABEL = 'Experiencia laboral';
+const EXPERIENCE_DATES_NOTE = 'Experiencia laboral (revisa las fechas)';
 
 const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'city', 'avatarUrl'];
 
@@ -569,6 +761,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
   const message = options.message ?? null;
   const isComplete = Boolean(options.isComplete);
   const educationSummary = options.educationSummary ?? null;
+  const experienceSummary = options.experienceSummary ?? null;
 
   const data = {
     ...baseValues,
@@ -578,6 +771,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     missingFields,
     message,
     educationSummary,
+    experienceSummary,
     profile: baseValues
   };
 
@@ -597,7 +791,8 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     isComplete,
     missingFields,
     message,
-    educationSummary
+    educationSummary,
+    experienceSummary
   };
 }
 
@@ -699,7 +894,7 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
   return { values, statuses, missingFields, isValid };
 }
 
-function computeProfileMissingFields(row, educationStatus = null) {
+function computeProfileMissingFields(row, educationStatus = null, experienceStatus = null) {
   if (!row) {
     const defaults = Object.values(PROFILE_FIELD_LABELS);
     const missingEducation =
@@ -708,8 +903,14 @@ function computeProfileMissingFields(row, educationStatus = null) {
         : educationStatus.invalidDateCount > 0
           ? [EDUCATION_DATES_NOTE]
           : [];
+    const missingExperience =
+      !experienceStatus || !experienceStatus.hasExperience
+        ? [EXPERIENCE_SECTION_LABEL]
+        : experienceStatus.invalidDateCount > 0
+          ? [EXPERIENCE_DATES_NOTE]
+          : [];
 
-    return [...defaults, ...missingEducation];
+    return [...defaults, ...missingEducation, ...missingExperience];
   }
 
   const missing = [];
@@ -743,6 +944,12 @@ function computeProfileMissingFields(row, educationStatus = null) {
     missing.push(EDUCATION_SECTION_LABEL);
   } else if (educationStatus.invalidDateCount > 0) {
     missing.push(EDUCATION_DATES_NOTE);
+  }
+
+  if (!experienceStatus || !experienceStatus.hasExperience) {
+    missing.push(EXPERIENCE_SECTION_LABEL);
+  } else if (experienceStatus.invalidDateCount > 0) {
+    missing.push(EXPERIENCE_DATES_NOTE);
   }
 
   return missing;
@@ -846,8 +1053,11 @@ app.post('/auth/login', async (req, res) => {
       );
 
       const profileRow = profileResult.rows?.[0] ?? null;
-      const educationStatus = await getEducationStatus(userId);
-      const missingFields = computeProfileMissingFields(profileRow, educationStatus);
+      const [educationStatus, experienceStatus] = await Promise.all([
+        getEducationStatus(userId),
+        getExperienceStatus(userId)
+      ]);
+      const missingFields = computeProfileMissingFields(profileRow, educationStatus, experienceStatus);
 
       if (!profileRow) {
         isProfileComplete = false;
@@ -1147,8 +1357,11 @@ app.get('/profile/status/:userId', async (req, res) => {
     );
 
     const row = result.rows?.[0] ?? null;
-    const educationSummary = await getEducationStatus(userId);
-    const missingFields = computeProfileMissingFields(row, educationSummary);
+    const [educationSummary, experienceSummary] = await Promise.all([
+      getEducationStatus(userId),
+      getExperienceStatus(userId)
+    ]);
+    const missingFields = computeProfileMissingFields(row, educationSummary, experienceSummary);
 
     if (!row) {
       return res.json({
@@ -1156,7 +1369,8 @@ app.get('/profile/status/:userId', async (req, res) => {
         profile: null,
         isComplete: false,
         missingFields,
-        educationSummary
+        educationSummary,
+        experienceSummary
       });
     }
 
@@ -1174,7 +1388,8 @@ app.get('/profile/status/:userId', async (req, res) => {
       },
       isComplete,
       missingFields,
-      educationSummary
+      educationSummary,
+      experienceSummary
     });
 
     console.info('[Profile] Status response sent', {
@@ -1183,6 +1398,7 @@ app.get('/profile/status/:userId', async (req, res) => {
       isComplete,
       missingFieldsCount: missingFields.length,
       educationRecords: educationSummary?.totalRecords ?? 0,
+      experienceRecords: experienceSummary?.totalRecords ?? 0,
       elapsedMs: Date.now() - startedAt
     });
   } catch (error) {
@@ -1253,8 +1469,11 @@ app.get('/profile/:userId', async (req, res) => {
 
     const row = result.rows?.[0] ?? null;
     const profileValues = mapRowToProfile(row);
-    const educationSummary = await getEducationStatus(userId);
-    const missingFields = computeProfileMissingFields(row, educationSummary);
+    const [educationSummary, experienceSummary] = await Promise.all([
+      getEducationStatus(userId),
+      getExperienceStatus(userId)
+    ]);
+    const missingFields = computeProfileMissingFields(row, educationSummary, experienceSummary);
     const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
     const isComplete = isCompleteFlag && missingFields.length === 0;
     const message = row ? null : 'Aún no has configurado tu perfil.';
@@ -1263,7 +1482,8 @@ app.get('/profile/:userId', async (req, res) => {
       isComplete,
       missingFields,
       message,
-      educationSummary
+      educationSummary,
+      experienceSummary
     });
 
     console.info('[Profile] Detail response sent', {
@@ -1272,6 +1492,7 @@ app.get('/profile/:userId', async (req, res) => {
       isComplete,
       missingFieldsCount: missingFields.length,
       educationRecords: educationSummary?.totalRecords ?? 0,
+      experienceRecords: experienceSummary?.totalRecords ?? 0,
       elapsedMs: Date.now() - startedAt
     });
 
@@ -1289,6 +1510,8 @@ app.get('/profile/:userId', async (req, res) => {
 
 app.options('/profile/:userId/education', cors());
 app.options('/profile/:userId/education/:educationId', cors());
+app.options('/profile/:userId/experience', cors());
+app.options('/profile/:userId/experience/:experienceId', cors());
 
 app.get('/profile/:userId/education', async (req, res) => {
   const startedAt = Date.now();
@@ -1351,6 +1574,70 @@ app.get('/profile/:userId/education', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo obtener la información educativa.');
+  }
+});
+
+app.get('/profile/:userId/experience', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Experience] List request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Experience] List request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Experience] List request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Experience] List request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const [experience, experienceSummary] = await Promise.all([
+      listExperience(userId),
+      getExperienceStatus(userId)
+    ]);
+
+    console.info('[Experience] List successful', {
+      userId,
+      count: experience.length,
+      currentRecords: experienceSummary.currentCount,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, experience, experienceSummary });
+  } catch (error) {
+    console.error('[Experience] List request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo obtener la experiencia laboral.');
   }
 });
 
@@ -1457,6 +1744,112 @@ app.post('/profile/:userId/education', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo crear el registro educativo.');
+  }
+});
+
+app.post('/profile/:userId/experience', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+
+  console.info('[Experience] Create request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Experience] Create request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Experience] Create request rejected: missing access token', {
+      path: req.originalUrl,
+      userId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  let normalizedPayload;
+
+  try {
+    normalizedPayload = normalizeExperiencePayload(req.body || {});
+  } catch (validationError) {
+    const message = validationError instanceof Error ? validationError.message : 'Los datos enviados no son válidos.';
+    return res.status(400).json({ ok: false, error: message });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Experience] Create request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    const result = await executeQuery(
+      `BEGIN sp_experiencia_pkg.sp_crear_experiencia(
+         p_id_usuario     => :userId,
+         p_titulo         => :title,
+         p_empresa        => :company,
+         p_fecha_inicio   => :startDate,
+         p_fecha_fin      => :endDate,
+         p_ubicacion      => :location,
+         p_descripcion    => :description,
+         o_id_experiencia => :experienceId
+       ); END;`,
+      {
+        userId,
+        title: normalizedPayload.title,
+        company: normalizedPayload.company,
+        startDate: normalizedPayload.startDate,
+        endDate: normalizedPayload.endDate,
+        location: normalizedPayload.location,
+        description: normalizedPayload.description,
+        experienceId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      { autoCommit: true }
+    );
+
+    const newId = Number(result.outBinds?.experienceId ?? 0);
+
+    if (!Number.isInteger(newId) || newId <= 0) {
+      throw new Error('No se pudo determinar el identificador de la experiencia creada.');
+    }
+
+    const [experience, experienceSummary] = await Promise.all([
+      getExperienceEntry(userId, newId),
+      getExperienceStatus(userId)
+    ]);
+
+    if (!experience) {
+      throw new Error('La experiencia recién creada no pudo ser recuperada.');
+    }
+
+    console.info('[Experience] Create successful', {
+      userId,
+      experienceId: newId,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.status(201).json({ ok: true, experience, experienceSummary });
+  } catch (error) {
+    console.error('[Experience] Create request failed', {
+      userId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo crear el registro de experiencia.');
   }
 });
 
@@ -1573,6 +1966,119 @@ app.put('/profile/:userId/education/:educationId', async (req, res) => {
   }
 });
 
+app.put('/profile/:userId/experience/:experienceId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+  const experienceId = Number.parseInt(req.params.experienceId, 10);
+
+  console.info('[Experience] Update request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    experienceId: Number.isNaN(experienceId) ? req.params.experienceId : experienceId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Experience] Update request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!Number.isInteger(experienceId) || experienceId <= 0) {
+    console.warn('[Experience] Update request rejected: invalid experience id', {
+      path: req.originalUrl,
+      experienceId: req.params.experienceId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de experiencia no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Experience] Update request rejected: missing access token', {
+      path: req.originalUrl,
+      userId,
+      experienceId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  let normalizedPayload;
+
+  try {
+    normalizedPayload = normalizeExperiencePayload(req.body || {});
+  } catch (validationError) {
+    const message = validationError instanceof Error ? validationError.message : 'Los datos enviados no son válidos.';
+    return res.status(400).json({ ok: false, error: message });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Experience] Update request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId,
+        experienceId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    await executeQuery(
+      `BEGIN sp_experiencia_pkg.sp_actualizar_experiencia(
+         p_id_experiencia => :experienceId,
+         p_id_usuario     => :userId,
+         p_titulo         => :title,
+         p_empresa        => :company,
+         p_fecha_inicio   => :startDate,
+         p_fecha_fin      => :endDate,
+         p_ubicacion      => :location,
+         p_descripcion    => :description
+       ); END;`,
+      {
+        experienceId,
+        userId,
+        title: normalizedPayload.title,
+        company: normalizedPayload.company,
+        startDate: normalizedPayload.startDate,
+        endDate: normalizedPayload.endDate,
+        location: normalizedPayload.location,
+        description: normalizedPayload.description
+      },
+      { autoCommit: true }
+    );
+
+    const [experience, experienceSummary] = await Promise.all([
+      getExperienceEntry(userId, experienceId),
+      getExperienceStatus(userId)
+    ]);
+
+    if (!experience) {
+      throw new Error('No se pudo obtener la experiencia actualizada.');
+    }
+
+    console.info('[Experience] Update successful', {
+      userId,
+      experienceId,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, experience, experienceSummary });
+  } catch (error) {
+    console.error('[Experience] Update request failed', {
+      userId,
+      experienceId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo actualizar el registro de experiencia.');
+  }
+});
+
 app.delete('/profile/:userId/education/:educationId', async (req, res) => {
   const startedAt = Date.now();
   const accessToken = extractBearerToken(req);
@@ -1656,6 +2162,92 @@ app.delete('/profile/:userId/education/:educationId', async (req, res) => {
       error: error?.message || error
     });
     handleOracleError(error, res, 'No se pudo eliminar el registro educativo.');
+  }
+});
+
+app.delete('/profile/:userId/experience/:experienceId', async (req, res) => {
+  const startedAt = Date.now();
+  const accessToken = extractBearerToken(req);
+  const userId = Number.parseInt(req.params.userId, 10);
+  const experienceId = Number.parseInt(req.params.experienceId, 10);
+
+  console.info('[Experience] Delete request received', {
+    method: req.method,
+    path: req.originalUrl,
+    userId: Number.isNaN(userId) ? req.params.userId : userId,
+    experienceId: Number.isNaN(experienceId) ? req.params.experienceId : experienceId,
+    hasAuthorization: Boolean(accessToken),
+    ip: getClientIp(req)
+  });
+
+  if (!Number.isInteger(userId) || userId <= 0) {
+    console.warn('[Experience] Delete request rejected: invalid user id', {
+      path: req.originalUrl,
+      userId: req.params.userId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+  }
+
+  if (!Number.isInteger(experienceId) || experienceId <= 0) {
+    console.warn('[Experience] Delete request rejected: invalid experience id', {
+      path: req.originalUrl,
+      experienceId: req.params.experienceId
+    });
+    return res.status(400).json({ ok: false, error: 'El identificador de experiencia no es válido.' });
+  }
+
+  if (!accessToken) {
+    console.warn('[Experience] Delete request rejected: missing access token', {
+      path: req.originalUrl,
+      userId,
+      experienceId
+    });
+    return res.status(401).json({ ok: false, error: 'El token de acceso es obligatorio.' });
+  }
+
+  try {
+    const isValid = await isAccessTokenValid(accessToken);
+
+    if (!isValid) {
+      console.warn('[Experience] Delete request rejected: invalid access token', {
+        path: req.originalUrl,
+        userId,
+        experienceId
+      });
+      return res.status(401).json({ ok: false, error: 'El token de acceso no es válido.' });
+    }
+
+    await executeQuery(
+      `BEGIN sp_experiencia_pkg.sp_eliminar_experiencia(
+         p_id_experiencia => :experienceId,
+         p_id_usuario     => :userId
+       ); END;`,
+      {
+        experienceId,
+        userId
+      },
+      { autoCommit: true }
+    );
+
+    const experienceSummary = await getExperienceStatus(userId);
+
+    console.info('[Experience] Delete successful', {
+      userId,
+      experienceId,
+      remainingRecords: experienceSummary.totalRecords,
+      elapsedMs: Date.now() - startedAt
+    });
+
+    res.json({ ok: true, experienceSummary });
+  } catch (error) {
+    console.error('[Experience] Delete request failed', {
+      userId,
+      experienceId,
+      path: req.originalUrl,
+      elapsedMs: Date.now() - startedAt,
+      error: error?.message || error
+    });
+    handleOracleError(error, res, 'No se pudo eliminar el registro de experiencia.');
   }
 });
 
@@ -1808,8 +2400,11 @@ app.put('/profile/:userId', async (req, res) => {
 
     const row = result.rows?.[0] ?? null;
     const profileValues = mapRowToProfile(row);
-    const educationSummary = await getEducationStatus(userId);
-    const missingFields = computeProfileMissingFields(row, educationSummary);
+    const [educationSummary, experienceSummary] = await Promise.all([
+      getEducationStatus(userId),
+      getExperienceStatus(userId)
+    ]);
+    const missingFields = computeProfileMissingFields(row, educationSummary, experienceSummary);
     const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
     const isComplete = isCompleteFlag && missingFields.length === 0;
 
@@ -1817,7 +2412,8 @@ app.put('/profile/:userId', async (req, res) => {
       isComplete,
       missingFields,
       message: 'Perfil actualizado correctamente.',
-      educationSummary
+      educationSummary,
+      experienceSummary
     });
 
     console.info('[Profile] Update successful', {
@@ -1825,6 +2421,7 @@ app.put('/profile/:userId', async (req, res) => {
       isComplete,
       missingFieldsCount: missingFields.length,
       educationRecords: educationSummary?.totalRecords ?? 0,
+      experienceRecords: experienceSummary?.totalRecords ?? 0,
       elapsedMs: Date.now() - startedAt
     });
 

@@ -57,11 +57,39 @@ export interface EducationPayload {
   description?: string | null;
 }
 
+export interface ExperienceSummary {
+  hasExperience: boolean;
+  totalRecords: number;
+  validDateCount: number;
+  invalidDateCount: number;
+  currentCount: number;
+}
+
+export interface ExperienceEntry {
+  id: number;
+  title: string;
+  company: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  location: string | null;
+  description: string | null;
+}
+
+export interface ExperiencePayload {
+  title: string;
+  company?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  location?: string | null;
+  description?: string | null;
+}
+
 export interface ProfileData extends ProfileValues, ProfileValidationFlags, ProfileValidationErrors {
   isComplete: boolean;
   missingFields: string[];
   message: string | null;
   educationSummary: EducationSummary | null;
+  experienceSummary: ExperienceSummary | null;
 }
 
 export interface UpdateProfilePayload {
@@ -83,6 +111,8 @@ interface ProfileResponseEnvelope {
   isComplete?: unknown;
   message?: unknown;
   error?: unknown;
+  educationSummary?: unknown;
+  experienceSummary?: unknown;
   [key: string]: unknown;
 }
 
@@ -90,6 +120,15 @@ interface EducationResponseEnvelope {
   ok: boolean;
   education?: unknown;
   educationSummary?: unknown;
+  message?: unknown;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+interface ExperienceResponseEnvelope {
+  ok: boolean;
+  experience?: unknown;
+  experienceSummary?: unknown;
   message?: unknown;
   error?: unknown;
   [key: string]: unknown;
@@ -103,6 +142,16 @@ interface EducationListResult {
 interface EducationMutationResult {
   education: EducationEntry;
   educationSummary: EducationSummary | null;
+}
+
+interface ExperienceListResult {
+  experience: ExperienceEntry[];
+  experienceSummary: ExperienceSummary | null;
+}
+
+interface ExperienceMutationResult {
+  experience: ExperienceEntry;
+  experienceSummary: ExperienceSummary | null;
 }
 
 @Injectable({
@@ -213,6 +262,86 @@ export class ProfileService {
       );
   }
 
+  getExperience(): Observable<ExperienceListResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/experience`;
+
+    return this.http
+      .get<ExperienceResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) =>
+          this.normalizeExperienceListResponse(response, 'No fue posible obtener tu experiencia laboral.')
+        ),
+        catchError((error) =>
+          this.handleRequestError('getExperience', endpoint, error, 'No fue posible obtener tu experiencia laboral.')
+        )
+      );
+  }
+
+  createExperience(payload: ExperiencePayload): Observable<ExperienceMutationResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/experience`;
+
+    return this.http
+      .post<ExperienceResponseEnvelope>(`${this.apiUrl}${endpoint}`, this.prepareExperiencePayload(payload), {
+        headers
+      })
+      .pipe(
+        map((response) =>
+          this.normalizeExperienceMutationResponse(response, 'No fue posible crear el registro de experiencia.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'createExperience',
+            endpoint,
+            error,
+            'No fue posible crear el registro de experiencia.'
+          )
+        )
+      );
+  }
+
+  updateExperience(experienceId: number, payload: ExperiencePayload): Observable<ExperienceMutationResult> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/experience/${experienceId}`;
+
+    return this.http
+      .put<ExperienceResponseEnvelope>(`${this.apiUrl}${endpoint}`, this.prepareExperiencePayload(payload), {
+        headers
+      })
+      .pipe(
+        map((response) =>
+          this.normalizeExperienceMutationResponse(response, 'No fue posible actualizar el registro de experiencia.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'updateExperience',
+            endpoint,
+            error,
+            'No fue posible actualizar el registro de experiencia.'
+          )
+        )
+      );
+  }
+
   deleteEducation(educationId: number): Observable<EducationSummary | null> {
     const session = this.resolveSession();
 
@@ -231,6 +360,33 @@ export class ProfileService {
         ),
         catchError((error) =>
           this.handleRequestError('deleteEducation', endpoint, error, 'No fue posible eliminar el registro educativo.')
+        )
+      );
+  }
+
+  deleteExperience(experienceId: number): Observable<ExperienceSummary | null> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const { userId, headers } = session;
+    const endpoint = `/profile/${userId}/experience/${experienceId}`;
+
+    return this.http
+      .delete<ExperienceResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers })
+      .pipe(
+        map((response) =>
+          this.normalizeExperienceDeleteResponse(response, 'No fue posible eliminar el registro de experiencia.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'deleteExperience',
+            endpoint,
+            error,
+            'No fue posible eliminar el registro de experiencia.'
+          )
         )
       );
   }
@@ -297,6 +453,12 @@ export class ProfileService {
           baseData['educationSummary'] ??
           validations['educationSummary'] ??
           errors['educationSummary']
+      ),
+      experienceSummary: this.toExperienceSummary(
+        response['experienceSummary'] ??
+          baseData['experienceSummary'] ??
+          validations['experienceSummary'] ??
+          errors['experienceSummary']
       )
     } satisfies ProfileData;
 
@@ -506,6 +668,17 @@ export class ProfileService {
     } satisfies Record<string, unknown>;
   }
 
+  private prepareExperiencePayload(payload: ExperiencePayload): Record<string, unknown> {
+    return {
+      title: this.normalizeRequiredString(payload.title),
+      company: this.normalizeOptionalString(payload.company),
+      startDate: this.normalizeDateInput(payload.startDate),
+      endDate: this.normalizeDateInput(payload.endDate),
+      location: this.normalizeOptionalString(payload.location),
+      description: this.normalizeOptionalString(payload.description)
+    } satisfies Record<string, unknown>;
+  }
+
   private normalizeRequiredString(value: unknown): string {
     const normalized = this.toNullableString(value);
 
@@ -618,6 +791,62 @@ export class ProfileService {
     );
   }
 
+  private normalizeExperienceListResponse(
+    response: ExperienceResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): ExperienceListResult {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    const experience = this.toExperienceArray(
+      (response as any)?.experience ?? (response as any)?.data?.experience
+    );
+    const experienceSummary = this.toExperienceSummary(
+      response.experienceSummary ?? (response as any)?.data?.experienceSummary
+    );
+
+    return { experience, experienceSummary } satisfies ExperienceListResult;
+  }
+
+  private normalizeExperienceMutationResponse(
+    response: ExperienceResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): ExperienceMutationResult {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    const experience = this.toExperienceEntry(
+      response.experience ?? (response as any)?.data?.experience
+    );
+
+    if (!experience) {
+      throw new Error(defaultMessage);
+    }
+
+    const experienceSummary = this.toExperienceSummary(
+      response.experienceSummary ?? (response as any)?.data?.experienceSummary
+    );
+
+    return { experience, experienceSummary } satisfies ExperienceMutationResult;
+  }
+
+  private normalizeExperienceDeleteResponse(
+    response: ExperienceResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): ExperienceSummary | null {
+    if (!response?.ok) {
+      throw new Error(this.extractErrorMessage(response, defaultMessage));
+    }
+
+    return (
+      this.toExperienceSummary(
+        response.experienceSummary ?? (response as any)?.data?.experienceSummary
+      ) ?? null
+    );
+  }
+
   private toEducationArray(value: unknown): EducationEntry[] {
     if (!Array.isArray(value)) {
       return [];
@@ -698,6 +927,89 @@ export class ProfileService {
       validDateCount,
       invalidDateCount
     } satisfies EducationSummary;
+  }
+
+  private toExperienceArray(value: unknown): ExperienceEntry[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => this.toExperienceEntry(item))
+      .filter((item): item is ExperienceEntry => item !== null);
+  }
+
+  private toExperienceEntry(value: unknown): ExperienceEntry | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const idCandidate =
+      record['id'] ??
+      record['ID'] ??
+      record['experienceId'] ??
+      record['ID_EXPERIENCIA'];
+    const id = Number(idCandidate);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      return null;
+    }
+
+    return {
+      id,
+      title: this.normalizeRequiredString(record['title'] ?? record['TITULO']),
+      company: this.normalizeOptionalString(record['company'] ?? record['EMPRESA']),
+      startDate: this.normalizeDateOutput(record['startDate'] ?? record['START_DATE'] ?? record['FECHA_INICIO']),
+      endDate: this.normalizeDateOutput(record['endDate'] ?? record['END_DATE'] ?? record['FECHA_FIN']),
+      location: this.normalizeOptionalString(record['location'] ?? record['UBICACION']),
+      description: this.normalizeOptionalString(record['description'] ?? record['DESCRIPCION'])
+    } satisfies ExperienceEntry;
+  }
+
+  private toExperienceSummary(value: unknown): ExperienceSummary | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const totalRecordsRaw = Number(
+      record['totalRecords'] ?? record['TOTAL_RECORDS'] ?? record['o_total_registros'] ?? record['TOTAL']
+    );
+    const validDatesRaw = Number(
+      record['validDateCount'] ??
+        record['VALID_DATE_COUNT'] ??
+        record['o_con_fechas_validas'] ??
+        record['VALID_DATES']
+    );
+    const invalidDatesRaw = Number(
+      record['invalidDateCount'] ??
+        record['INVALID_DATE_COUNT'] ??
+        record['o_invalid_date_count'] ??
+        record['INVALID_DATES']
+    );
+    const currentCountRaw = Number(
+      record['currentCount'] ?? record['CURRENT_COUNT'] ?? record['o_actuales'] ?? record['ACTUAL']
+    );
+    const hasExperience = this.toBoolean(
+      record['hasExperience'] ?? record['HAS_EXPERIENCE'] ?? record['o_tiene_experiencia'],
+      false
+    );
+
+    const totalRecords = Number.isFinite(totalRecordsRaw) ? Math.max(Math.floor(totalRecordsRaw), 0) : 0;
+    const validDateCount = Number.isFinite(validDatesRaw) ? Math.max(Math.floor(validDatesRaw), 0) : 0;
+    const invalidDateCount = Number.isFinite(invalidDatesRaw)
+      ? Math.max(Math.floor(invalidDatesRaw), 0)
+      : Math.max(totalRecords - validDateCount, 0);
+    const currentCount = Number.isFinite(currentCountRaw) ? Math.max(Math.floor(currentCountRaw), 0) : 0;
+
+    return {
+      hasExperience,
+      totalRecords,
+      validDateCount,
+      invalidDateCount,
+      currentCount
+    } satisfies ExperienceSummary;
   }
 
   private extractErrorMessage(
