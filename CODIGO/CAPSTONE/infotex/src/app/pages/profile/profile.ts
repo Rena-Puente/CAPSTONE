@@ -29,7 +29,10 @@ import {
   UpdateProfilePayload,
   EducationEntry,
   EducationPayload,
-  EducationSummary
+  EducationSummary,
+  ExperienceEntry,
+  ExperiencePayload,
+  ExperienceSummary
 } from '../../services/profile.service';
 
 import { ProfileFieldsService } from '../../services/profilefields.service';
@@ -129,6 +132,15 @@ export class Profile implements OnInit, AfterViewInit {
   protected readonly educationSubmitError = signal<string | null>(null);
   protected readonly editingEducationId = signal<number | null>(null);
   protected readonly educationDeletingId = signal<number | null>(null);
+  protected readonly experience = signal<ExperienceEntry[]>([]);
+  protected readonly experienceSummary = signal<ExperienceSummary | null>(null);
+  protected readonly experienceLoading = signal(false);
+  protected readonly experienceError = signal<string | null>(null);
+  protected readonly experienceEditorOpen = signal(false);
+  protected readonly experienceSaving = signal(false);
+  protected readonly experienceSubmitError = signal<string | null>(null);
+  protected readonly editingExperienceId = signal<number | null>(null);
+  protected readonly experienceDeletingId = signal<number | null>(null);
   protected readonly cityOptions = signal<string[]>([]);
   protected readonly citiesLoading = signal(false);
   protected readonly citiesError = signal<string | null>(null);
@@ -183,6 +195,15 @@ export class Profile implements OnInit, AfterViewInit {
     description: ['']
   });
 
+  protected readonly experienceForm = this.fb.nonNullable.group({
+    title: ['', [Validators.required]],
+    company: [''],
+    startDate: [''],
+    endDate: [''],
+    location: [''],
+    description: ['']
+  });
+
   ngAfterViewInit(): void {
     this.initializeAlertEffects();
   }
@@ -190,7 +211,7 @@ export class Profile implements OnInit, AfterViewInit {
   async ngOnInit(): Promise<void> {
     await Promise.all([this.loadCities(), this.loadCareers()]);
     await this.loadProfile();
-    await this.loadEducation();
+    await Promise.all([this.loadEducation(), this.loadExperience()]);
     this.initializeAlertEffects();
   }
 
@@ -468,6 +489,10 @@ export class Profile implements OnInit, AfterViewInit {
     return item.id;
   }
 
+  protected trackExperienceById(index: number, item: ExperienceEntry): number {
+    return item.id;
+  }
+
   protected trackCityOption(index: number, option: string): string {
     return option;
   }
@@ -600,6 +625,123 @@ export class Profile implements OnInit, AfterViewInit {
     }
   }
 
+  protected openExperienceCreator(): void {
+    this.editingExperienceId.set(null);
+    this.experienceSubmitError.set(null);
+    this.resetExperienceForm();
+    this.experienceEditorOpen.set(true);
+    this.experienceForm.markAsPristine();
+    this.experienceForm.markAsUntouched();
+  }
+
+  protected editExperience(entry: ExperienceEntry): void {
+    this.experienceSubmitError.set(null);
+    this.experienceEditorOpen.set(true);
+    this.editingExperienceId.set(entry.id);
+    this.experienceForm.setValue({
+      title: entry.title ?? '',
+      company: entry.company ?? '',
+      startDate: entry.startDate ?? '',
+      endDate: entry.endDate ?? '',
+      location: entry.location ?? '',
+      description: entry.description ?? ''
+    });
+    this.experienceForm.markAsPristine();
+    this.experienceForm.markAsUntouched();
+  }
+
+  protected cancelExperienceEdit(): void {
+    if (this.experienceSaving()) {
+      return;
+    }
+
+    this.experienceEditorOpen.set(false);
+    this.experienceSubmitError.set(null);
+    this.editingExperienceId.set(null);
+    this.resetExperienceForm();
+  }
+
+  protected async saveExperience(): Promise<void> {
+    this.experienceSubmitError.set(null);
+
+    if (this.experienceForm.invalid) {
+      this.experienceForm.markAllAsTouched();
+      return;
+    }
+
+    this.experienceSaving.set(true);
+
+    const raw = this.experienceForm.getRawValue();
+    const payload: ExperiencePayload = {
+      title: raw.title.trim(),
+      company: raw.company.trim() || null,
+      startDate: raw.startDate.trim() || null,
+      endDate: raw.endDate.trim() || null,
+      location: raw.location.trim() || null,
+      description: raw.description.trim() || null
+    };
+
+    const editingId = this.editingExperienceId();
+
+    try {
+      if (editingId) {
+        const response = await firstValueFrom(this.profileService.updateExperience(editingId, payload));
+        this.experienceSummary.set(response.experienceSummary ?? null);
+        this.experience.update((items) =>
+          this.sortExperienceEntries(
+            items.map((item) => (item.id === editingId ? response.experience : item))
+          )
+        );
+      } else {
+        const response = await firstValueFrom(this.profileService.createExperience(payload));
+        this.experienceSummary.set(response.experienceSummary ?? null);
+        this.experience.update((items) =>
+          this.sortExperienceEntries([
+            response.experience,
+            ...items.filter((item) => item.id !== response.experience.id)
+          ])
+        );
+      }
+
+      this.experienceEditorOpen.set(false);
+      this.editingExperienceId.set(null);
+      this.resetExperienceForm();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo guardar la información de experiencia.';
+      this.experienceSubmitError.set(message);
+    } finally {
+      this.experienceSaving.set(false);
+    }
+  }
+
+  protected async deleteExperience(entry: ExperienceEntry): Promise<void> {
+    if (!entry || this.experienceDeletingId() === entry.id) {
+      return;
+    }
+
+    const confirmed = window.confirm(`¿Deseas eliminar "${entry.title}" de tu experiencia laboral?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.experienceDeletingId.set(entry.id);
+    this.experienceSubmitError.set(null);
+
+    try {
+      const summary = await firstValueFrom(this.profileService.deleteExperience(entry.id));
+      this.experienceSummary.set(summary ?? null);
+      this.experience.update((items) => items.filter((item) => item.id !== entry.id));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo eliminar el registro de experiencia.';
+      this.experienceSubmitError.set(message);
+    } finally {
+      this.experienceDeletingId.set(null);
+    }
+  }
+
   private async loadCities(): Promise<void> {
     this.citiesLoading.set(true);
     this.citiesError.set(null);
@@ -678,6 +820,8 @@ export class Profile implements OnInit, AfterViewInit {
         career: '',
         avatarUrl: ''
       });
+      this.educationSummary.set(null);
+      this.experienceSummary.set(null);
       if (!this.editorOpen()) {
         this.profileForm.disable({ emitEvent: false });
       }
@@ -707,13 +851,33 @@ export class Profile implements OnInit, AfterViewInit {
     }
   }
 
+  private async loadExperience(): Promise<void> {
+    this.experienceLoading.set(true);
+    this.experienceError.set(null);
+
+    try {
+      const result = await firstValueFrom(this.profileService.getExperience());
+      this.experience.set(this.sortExperienceEntries(result.experience));
+      this.experienceSummary.set(result.experienceSummary ?? null);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo obtener la información de experiencia laboral.';
+      this.experienceError.set(message);
+      this.experience.set([]);
+      this.experienceSummary.set(null);
+    } finally {
+      this.experienceLoading.set(false);
+    }
+  }
+
   private applyProfile(status: ProfileData): void {
     this.profile.set(status);
     this.applyBackendValidation(status);
     this.avatarHasError.set(false);
-    if (status.educationSummary) {
-      this.educationSummary.set(status.educationSummary);
-    }
+    this.educationSummary.set(status.educationSummary ?? null);
+    this.experienceSummary.set(status.experienceSummary ?? null);
     this.profileForm.reset({
       displayName: status.displayName ?? '',
       biography: status.biography ?? '',
@@ -742,6 +906,19 @@ export class Profile implements OnInit, AfterViewInit {
     });
     this.educationForm.markAsPristine();
     this.educationForm.markAsUntouched();
+  }
+
+  private resetExperienceForm(): void {
+    this.experienceForm.reset({
+      title: '',
+      company: '',
+      startDate: '',
+      endDate: '',
+      location: '',
+      description: ''
+    });
+    this.experienceForm.markAsPristine();
+    this.experienceForm.markAsUntouched();
   }
 
   private resetBackendValidation(): void {
@@ -869,6 +1046,22 @@ export class Profile implements OnInit, AfterViewInit {
     });
   }
 
+  private sortExperienceEntries(entries: ExperienceEntry[]): ExperienceEntry[] {
+    return [...entries].sort((a, b) => {
+      const aEnd = this.parseExperienceDate(a.endDate);
+      const bEnd = this.parseExperienceDate(b.endDate);
+
+      if (aEnd !== bEnd) {
+        return bEnd - aEnd;
+      }
+
+      const aStart = this.parseExperienceDate(a.startDate);
+      const bStart = this.parseExperienceDate(b.startDate);
+
+      return bStart - aStart;
+    });
+  }
+
   private parseEducationDate(value: string | null | undefined): number {
     if (!value) {
       return Number.POSITIVE_INFINITY;
@@ -881,6 +1074,10 @@ export class Profile implements OnInit, AfterViewInit {
     }
 
     return parsed.getTime();
+  }
+
+  private parseExperienceDate(value: string | null | undefined): number {
+    return this.parseEducationDate(value);
   }
   
   currentYear = new Date().getFullYear();

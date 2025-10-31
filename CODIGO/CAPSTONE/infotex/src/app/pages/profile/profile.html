@@ -224,6 +224,92 @@
                       </ng-container>
                     </div>
                   </section>
+
+                  <section class="profile-section profile-section--experience">
+                    <div class="profile-section__header">
+                      <div>
+                        <span class="profile-section__eyebrow">Trayectoria</span>
+                        <h3 class="profile-section__title mb-1">Experiencia</h3>
+                        <p class="profile-section__subtitle text-secondary mb-0">
+                          <ng-container *ngIf="experienceSummary() as summary; else experienceSummaryFallback">
+                            <ng-container *ngIf="summary.totalRecords > 0; else noExperienceRecords">
+                              {{ summary.totalRecords === 1 ? '1 experiencia laboral' : summary.totalRecords + ' experiencias laborales' }}.
+                              <ng-container *ngIf="summary.invalidDateCount > 0">
+                                {{ summary.invalidDateCount === 1 ? 'Un registro requiere' : summary.invalidDateCount + ' registros requieren' }} revisar las fechas.
+                              </ng-container>
+                              <ng-container *ngIf="summary.currentCount > 0">
+                                {{ summary.currentCount === 1 ? 'Actualmente 1 rol activo.' : 'Actualmente ' + summary.currentCount + ' roles activos.' }}
+                              </ng-container>
+                            </ng-container>
+                            <ng-template #noExperienceRecords>
+                              Aún no has agregado tu experiencia laboral.
+                            </ng-template>
+                          </ng-container>
+                          <ng-template #experienceSummaryFallback>
+                            Aún no has agregado tu experiencia laboral.
+                          </ng-template>
+                        </p>
+                      </div>
+                      <div class="profile-section__actions">
+                        <button
+                          type="button"
+                          class="icon-button icon-button--primary"
+                          (click)="openExperienceCreator()"
+                          aria-label="Agregar experiencia"
+                        >
+                          <i class="bi bi-briefcase"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="profile-section__body">
+                      <div *ngIf="experienceError()" class="alert alert-danger" role="alert">
+                        {{ experienceError() }}
+                      </div>
+
+                      <div *ngIf="experienceLoading()" class="text-secondary">
+                        Cargando experiencia...
+                      </div>
+
+                      <ng-container *ngIf="!experienceLoading() && !experienceError()">
+                        <div *ngIf="experience().length > 0; else noExperienceItems" class="experience-list mt-3">
+                          <div
+                            class="experience-item card bg-dark border-secondary mb-3"
+                            *ngFor="let item of experience(); trackBy: trackExperienceById"
+                          >
+                            <div
+                              class="experience-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3"
+                            >
+                              <div>
+                                <h4 class="h6 mb-1 text-white">{{ item.title }}</h4>
+                                <p class="mb-1 text-secondary" *ngIf="item.company || item.location">
+                                  <ng-container *ngIf="item.company">{{ item.company }}</ng-container>
+                                  <ng-container *ngIf="item.company && item.location"> · </ng-container>
+                                  <ng-container *ngIf="item.location">{{ item.location }}</ng-container>
+                                </p>
+                                <p class="mb-0 text-secondary small">
+                                  {{ item.startDate | date:'yyyy' }} –
+                                  <ng-container *ngIf="item.endDate; else currentExperience">{{ item.endDate | date:'yyyy' }}</ng-container>
+                                </p>
+                                <ng-template #currentExperience>Presente</ng-template>
+                              </div>
+                            </div>
+                            <div class="experience-item__description card-body pt-0">
+                              <p class="mb-0 text-light" *ngIf="item.description; else noExperienceDescription">
+                                {{ item.description }}
+                              </p>
+                              <ng-template #noExperienceDescription>
+                                <p class="mb-0 text-secondary">Sin descripción adicional.</p>
+                              </ng-template>
+                            </div>
+                          </div>
+                        </div>
+                        <ng-template #noExperienceItems>
+                          <p class="text-secondary mt-3 mb-0">Aún no has agregado tu experiencia laboral.</p>
+                        </ng-template>
+                      </ng-container>
+                    </div>
+                  </section>
                 </div>
               </ng-container>
 
@@ -562,6 +648,102 @@
                 aria-hidden="true"
               ></span>
               {{ educationSaving() ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</ng-container>
+<ng-container *ngIf="experienceEditorOpen()">
+  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="experienceEditorTitle">
+    <div class="profile-editor__backdrop" (click)="cancelExperienceEdit()"></div>
+    <div class="profile-editor__panel" (click)="$event.stopPropagation()">
+      <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
+        <div>
+          <h2 id="experienceEditorTitle" class="h5 mb-1 text-white">
+            {{ editingExperienceId() ? 'Editar experiencia' : 'Agregar experiencia' }}
+          </h2>
+          <p class="mb-0 text-secondary">Comparte tu trayectoria profesional y proyectos destacados.</p>
+        </div>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          aria-label="Cerrar"
+          (click)="cancelExperienceEdit()"
+          [disabled]="experienceSaving()"
+        ></button>
+      </div>
+      <div class="profile-editor__body">
+        <div *ngIf="experienceSubmitError()" class="alert alert-danger" role="alert">
+          {{ experienceSubmitError() }}
+        </div>
+        <form class="education-form" [formGroup]="experienceForm" (ngSubmit)="saveExperience()" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="experienceTitle" class="form-label">Título o cargo</label>
+              <input
+                id="experienceTitle"
+                type="text"
+                class="form-control"
+                formControlName="title"
+                [class.is-invalid]="
+                  experienceForm.controls.title.invalid &&
+                  (experienceForm.controls.title.dirty || experienceForm.controls.title.touched)
+                "
+              />
+              <div class="invalid-feedback">El título es obligatorio.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="experienceCompany" class="form-label">Empresa</label>
+              <input id="experienceCompany" type="text" class="form-control" formControlName="company" />
+            </div>
+            <div class="col-md-6">
+              <label for="experienceLocation" class="form-label">Ubicación</label>
+              <input id="experienceLocation" type="text" class="form-control" formControlName="location" />
+            </div>
+            <div class="col-md-3">
+              <label for="experienceStart" class="form-label">Año inicio</label>
+              <select id="experienceStart" class="form-control" formControlName="startDate">
+                <option value="">Selecciona un año</option>
+                <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="experienceEnd" class="form-label">Año fin</label>
+              <select id="experienceEnd" class="form-control" formControlName="endDate">
+                <option value="">Presente</option>
+                <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label for="experienceDescription" class="form-label">Descripción</label>
+              <textarea
+                id="experienceDescription"
+                class="form-control"
+                rows="3"
+                formControlName="description"
+              ></textarea>
+              <div class="form-text text-light">Describe tus responsabilidades, logros o aprendizajes clave.</div>
+            </div>
+          </div>
+          <div class="d-flex justify-content-end gap-2 mt-4">
+            <button
+              type="button"
+              class="btn btn-outline-light"
+              (click)="cancelExperienceEdit()"
+              [disabled]="experienceSaving()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="experienceForm.invalid || experienceSaving()">
+              <span
+                *ngIf="experienceSaving()"
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              {{ experienceSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
         </form>
