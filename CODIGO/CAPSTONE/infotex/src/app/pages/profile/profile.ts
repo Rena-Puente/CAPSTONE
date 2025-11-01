@@ -816,7 +816,6 @@ export class Profile implements OnInit, AfterViewInit {
     this.ensureSkillCatalogEntry(entry);
     this.skillForm.setValue({
       skillId: entry.skillId,
-      skillName: entry.name ?? '',
       level: entry.level?.toString() ?? '',
       yearsExperience: entry.yearsExperience?.toString() ?? '',
       endorsementCount: entry.endorsementCount?.toString() ?? ''
@@ -856,9 +855,10 @@ export class Profile implements OnInit, AfterViewInit {
 
     const raw = this.skillForm.getRawValue();
     const selectedCatalog = this.skillCatalog().find((item) => item.skillId === raw.skillId);
+    const existingSkill = this.skills().find((item) => item.skillId === raw.skillId);
     const payload: SkillPayload = {
       skillId: raw.skillId ?? null,
-      skillName: selectedCatalog?.name ?? '',
+      skillName: selectedCatalog?.name ?? existingSkill?.name ?? '',
       level: this.parseSkillNumber(raw.level),
       yearsExperience: this.parseSkillNumber(raw.yearsExperience),
       endorsementCount: this.parseSkillInteger(raw.endorsementCount)

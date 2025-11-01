@@ -898,9 +898,9 @@
                 id="skillName"
                 class="form-select"
                 formControlName="skillId"
-                [disabled]="skillCatalogLoading() || editingSkillId()"
+                [disabled]="skillCatalogLoading() || editingSkillId() !== null"
                 [class.is-invalid]="
-                  !editingSkillId() && skillForm.controls.skillId.invalid &&
+                  editingSkillId() === null && skillForm.controls.skillId.invalid &&
                   (skillForm.controls.skillId.dirty || skillForm.controls.skillId.touched)
                 "
               >
@@ -988,7 +988,7 @@
             <button
               type="submit"
               class="btn btn-primary"
-              [disabled]="skillsSaving() || (!editingSkillId() && skillForm.controls.skillName.invalid)"
+              [disabled]="skillsSaving() || (editingSkillId() === null && skillForm.controls.skillId.invalid)"
             >
               <span
                 *ngIf="skillsSaving()"

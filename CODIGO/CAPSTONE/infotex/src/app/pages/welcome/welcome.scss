@@ -134,24 +134,24 @@
   text-align: center;
 }
 
-.login-menu__form {
+.orm {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.login-menu__field {
+.ield {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
 
-.login-menu__field label {
+.ield label {
   font-weight: 600;
   font-size: 0.95rem;
 }
 
-.login-menu__field input {
+.ield input {
   background: #0d1117;
   border: 1px solid rgba(48, 54, 61, 0.9);
   border-radius: 10px;
@@ -161,13 +161,13 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-menu__field input:focus-visible {
+.ield input:focus-visible {
   outline: none;
   border-color: #58a6ff;
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
 }
 
-.login-menu__field input.is-invalid {
+.ield input.is-invalid {
   border-color: #f85149;
   box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.25);
 }
