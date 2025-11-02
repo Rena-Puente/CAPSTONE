@@ -41,6 +41,11 @@ interface RefreshResponse {
   error?: string;
 }
 
+interface RegisterResponse {
+  ok: boolean;
+  error?: string;
+}
+
 interface AuthSession {
   userId: number;
   accessToken: string;
@@ -97,7 +102,29 @@ export class AuthService {
     );
   }
 
-   login(email: string, password: string): Observable<{ userId: number; isProfileComplete: boolean | null }> {
+  register(email: string, password: string, passwordConfirmation: string): Observable<void> {
+    return this.http
+      .post<RegisterResponse>(`${this.apiUrl}/auth/register`, {
+        email,
+        password,
+        passwordConfirmation
+      })
+      .pipe(
+        map((response) => {
+          if (!response.ok) {
+            const message = response.error || 'No se pudo crear la cuenta.';
+            throw new Error(message);
+          }
+        }),
+        catchError((error) => {
+          const message = error?.error?.error || error?.message || 'No se pudo crear la cuenta.';
+          console.error('[AuthService] Registration failed', { email, error: message });
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  login(email: string, password: string): Observable<{ userId: number; isProfileComplete: boolean | null }> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password }).pipe(
       map((response) => {
         if (

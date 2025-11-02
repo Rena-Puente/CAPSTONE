@@ -179,7 +179,52 @@
 
 .login-menu__error--global {
   text-align: center;
-  margin-top: -0.5rem;
+  margin-top: 0.5rem;
+}
+
+.login-menu__tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  margin-bottom: 1.5rem;
+}
+
+.login-menu__tab {
+  border: none;
+  background: none;
+  color: rgba(240, 246, 252, 0.65);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.login-menu__tab:hover,
+.login-menu__tab:focus-visible {
+  outline: none;
+  background: rgba(88, 166, 255, 0.16);
+  color: #f0f6fc;
+}
+
+.login-menu__tab--active {
+  background: rgba(88, 166, 255, 0.2);
+  color: #f0f6fc;
+  box-shadow: inset 0 0 0 1px rgba(88, 166, 255, 0.35);
+}
+
+.login-menu__success {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(63, 185, 80, 0.16);
+  color: #c7f5d7;
+  font-size: 0.9rem;
+  border: 1px solid rgba(63, 185, 80, 0.4);
 }
 
 .login-menu__options {
@@ -248,15 +293,20 @@
   color: rgba(240, 246, 252, 0.75);
 }
 
-.login-menu__register a {
+.login-menu__register-link {
+  background: none;
+  border: none;
   color: #58a6ff;
-  text-decoration: none;
   font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.25rem;
 }
 
-.login-menu__register a:hover,
-.login-menu__register a:focus-visible {
+.login-menu__register-link:hover,
+.login-menu__register-link:focus-visible {
   text-decoration: underline;
+  outline: none;
 }
 
 @media (max-width: 600px) {
