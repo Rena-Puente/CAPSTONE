@@ -1,83 +1,106 @@
-<section class="welcome">
-  <div class="welcome__container">
-    <div class="welcome__card">
-      <div class="welcome__chips" aria-hidden="true">
-        <span class="chip chip--success">Beta 2025</span>
-        <span class="chip chip--purple">Comunidad Dev</span>
-        <span class="chip chip--ghost">100% gratis</span>
-      </div>
+<section class="welcome py-5 py-lg-6">
+  <div class="welcome__container container">
+    <div class="row g-4 g-xl-5 align-items-stretch justify-content-center">
+      <div class="col-12 col-lg-7 col-xl-8 d-flex">
+        <article class="welcome__card card border-0 shadow-lg w-100">
+          <div class="card-body p-4 p-md-5">
+            <div class="welcome__chips d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4" aria-hidden="true">
+              <span class="chip chip--success badge rounded-pill">Beta 2025</span>
+              <span class="chip chip--purple badge rounded-pill">Comunidad Dev</span>
+              <span class="chip chip--ghost badge rounded-pill">100% gratis</span>
+            </div>
 
-      <h1 class="welcome__title">Bienvenido a InfoTex</h1>
-      <p class="welcome__message">
-        Esta es la zona de invitados. Inicia sesión para acceder al contenido completo de la plataforma.
-      </p>
+            <h1 class="welcome__title display-5 fw-bold text-center text-lg-start">Bienvenido a InfoTex</h1>
+            <p class="welcome__message lead text-center text-lg-start mb-4">
+              Esta es la zona de invitados. Inicia sesión para acceder al contenido completo de la plataforma.
+            </p>
 
-      <div class="welcome__highlights" aria-hidden="true">
-        <div class="highlight">
-          <div class="highlight__value">5K+</div>
-          <div class="highlight__label">Desarrolladores</div>
-        </div>
-        <div class="highlight">
-          <div class="highlight__value">450+</div>
-          <div class="highlight__label">Proyectos</div>
-        </div>
-        <div class="highlight">
-          <div class="highlight__value">120+</div>
-          <div class="highlight__label">Empresas</div>
-        </div>
-      </div>
+            <div class="welcome__highlights row row-cols-1 row-cols-sm-3 g-3 g-lg-4 mb-4" aria-hidden="true">
+              <div class="col">
+                <div class="highlight h-100 text-center text-lg-start">
+                  <div class="highlight__value">5K+</div>
+                  <div class="highlight__label">Desarrolladores</div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="highlight h-100 text-center text-lg-start">
+                  <div class="highlight__value">450+</div>
+                  <div class="highlight__label">Proyectos</div>
+                </div>
+              </div>
+              <div class="col">
+                <div class="highlight h-100 text-center text-lg-start">
+                  <div class="highlight__value">120+</div>
+                  <div class="highlight__label">Empresas</div>
+                </div>
+              </div>
+            </div>
 
-      <button type="button" class="welcome__cta" (click)="openMenu('login')">
-        Iniciar sesión
-      </button>
+            <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start align-items-stretch align-items-sm-center mb-3">
+              <button type="button" class="welcome__cta btn btn-success btn-lg px-4" (click)="openMenu('login')">
+                Iniciar sesión
+              </button>
+              <div class="welcome__subcta small text-body-secondary text-center text-sm-start">
+                ¿Nuevo por aquí? <a href="#" (click)="openMenu('register'); $event.preventDefault()">Crea tu cuenta</a> en 30 segundos.
+              </div>
+            </div>
 
-      <div class="welcome__subcta">
-        ¿Nuevo por aquí? <a href="#" (click)="openMenu('register'); $event.preventDefault()">Crea tu cuenta</a> en 30 segundos.
-      </div>
+            <div class="welcome__features row row-cols-1 row-cols-md-3 g-3 g-lg-4" role="list" aria-label="Características principales">
+              <article class="feature col" role="listitem">
+                <div class="feature__body h-100">
+                  <div class="feature__icon" aria-hidden="true">🧭</div>
+                  <h3 class="feature__title h5">Matching transparente</h3>
+                  <p class="feature__text">
+                    Perfiles verificados y ofertas claras. Menos entrevistas eternas, más contrataciones felices.
+                  </p>
+                </div>
+              </article>
+              <article class="feature col" role="listitem">
+                <div class="feature__body h-100">
+                  <div class="feature__icon" aria-hidden="true">🧑‍🤝‍🧑</div>
+                  <h3 class="feature__title h5">Comunidad & eventos</h3>
+                  <p class="feature__text">Meetups y mentorías para crecer tu red—y tu repositorio de stickers.</p>
+                </div>
+              </article>
+              <article class="feature col" role="listitem">
+                <div class="feature__body h-100">
+                  <div class="feature__icon" aria-hidden="true">📊</div>
+                  <h3 class="feature__title h5">Datos para decidir</h3>
+                  <p class="feature__text">Tendencias de skills y salarios para mover tu carrera con cabeza (y con datos).</p>
+                </div>
+              </article>
+            </div>
 
-      <div class="welcome__features" role="list" aria-label="Características principales">
-        <article class="feature" role="listitem">
-          <div class="feature__icon" aria-hidden="true">🧭</div>
-          <h3 class="feature__title">Matching transparente</h3>
-          <p class="feature__text">Perfiles verificados y ofertas claras. Menos entrevistas eternas, más contrataciones felices.</p>
+            <div class="welcome__brands mt-4" aria-label="Empresas que confían en InfoTex">
+              <span class="brands__label text-uppercase small text-body-secondary">Confiado por equipos de</span>
+              <div class="brands__row d-grid gap-3 gap-sm-4" aria-hidden="true">
+                <div class="brand-skel"></div>
+                <div class="brand-skel"></div>
+                <div class="brand-skel"></div>
+                <div class="brand-skel"></div>
+              </div>
+            </div>
+          </div>
         </article>
-        <article class="feature" role="listitem">
-          <div class="feature__icon" aria-hidden="true">🧑‍🤝‍🧑</div>
-          <h3 class="feature__title">Comunidad & eventos</h3>
-          <p class="feature__text">Meetups y mentorías para crecer tu red—y tu repositorio de stickers.</p>
-        </article>
-        <article class="feature" role="listitem">
-          <div class="feature__icon" aria-hidden="true">📊</div>
-          <h3 class="feature__title">Datos para decidir</h3>
-          <p class="feature__text">Tendencias de skills y salarios para mover tu carrera con cabeza (y con datos).</p>
-        </article>
       </div>
 
-      <div class="welcome__brands" aria-label="Empresas que confían en InfoTex">
-        <span class="brands__label">Confiado por equipos de</span>
-        <div class="brands__row" aria-hidden="true">
-          <div class="brand-skel"></div>
-          <div class="brand-skel"></div>
-          <div class="brand-skel"></div>
-          <div class="brand-skel"></div>
+      <!-- Banner promocional (“publicidad” propia de la plataforma) -->
+      <aside class="col-12 col-lg-5 col-xl-4">
+        <div class="promo-banner card border-0 h-100" role="complementary" aria-label="Promoción destacada">
+          <div class="promo-banner__content card-body">
+            <span class="promo-banner__badge badge rounded-pill bg-warning-subtle text-warning-emphasis">Nuevo</span>
+            <h2 class="promo-banner__title h4 fw-semibold mt-3">Hackweek InfoTex · Noviembre</h2>
+            <p class="promo-banner__text mb-4">
+              Súmate al desafío de 7 días, participa por mentorías y acceso prioritario a vacantes partner.
+            </p>
+            <div class="promo-banner__actions d-flex flex-column flex-sm-row gap-2">
+              <button type="button" class="promo-banner__cta btn btn-outline-light" (click)="openMenu()">Participar</button>
+              <a routerLink="/about" class="promo-banner__link btn btn-link text-decoration-none p-0">Más info</a>
+            </div>
+          </div>
         </div>
-      </div>
+      </aside>
     </div>
-
-    <!-- Banner promocional (“publicidad” propia de la plataforma) -->
-    <aside class="promo-banner" role="complementary" aria-label="Promoción destacada">
-      <div class="promo-banner__content">
-        <span class="promo-banner__badge">Nuevo</span>
-        <h2 class="promo-banner__title">Hackweek InfoTex · Noviembre</h2>
-        <p class="promo-banner__text">
-          Súmate al desafío de 7 días, participa por mentorías y acceso prioritario a vacantes partner.
-        </p>
-      </div>
-      <div class="promo-banner__actions">
-        <button type="button" class="promo-banner__cta" (click)="openMenu()">Participar</button>
-        <a routerLink="/about" class="promo-banner__link">Más info</a>
-      </div>
-    </aside>
   </div>
 
   <!-- Menú de login (sin cambios funcionales) -->
