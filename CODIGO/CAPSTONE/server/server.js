@@ -572,20 +572,32 @@ async function listSkills(userId) {
 
 async function listSkillCatalog(category) {
   let connection;
+  const normalizedCategory = typeof category === 'string' ? category.trim() : '';
+  const hasCategoryFilter = normalizedCategory.length > 0;
+
   try {
     connection = await oracledb.getConnection();
-    const result = await connection.execute(
-      'BEGIN sp_listar_habilidades_catalogo(:category, :items); END;',
-      {
-        category: category ?? null,
-        items: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
-      }
-    );
 
-    const cursor = result.outBinds?.items || null;
-    const rows = await fetchCursorRows(cursor);
+    const binds = {};
+    let sql =
+      'SELECT\n' +
+      '  id_habilidad AS "ID_HABILIDAD",\n' +
+      '  nombre AS "NOMBRE",\n' +
+      '  categoria AS "CATEGORIA"\n' +
+      'FROM habilidades';
 
-    const mappedEntries = rows
+    if (hasCategoryFilter) {
+      sql += '\nWHERE UPPER(categoria) = UPPER(:category)';
+      binds.category = normalizedCategory;
+    }
+
+    sql += '\nORDER BY categoria ASC, nombre ASC';
+
+    const result = await connection.execute(sql, binds);
+    const rows = result.rows || [];
+    const normalizedRows = await Promise.all(rows.map((row) => normalizeCursorRow(row)));
+
+    const mappedEntries = normalizedRows
       .map((row) => mapSkillRow(row))
       .filter((entry) => entry && typeof entry.skillId === 'number')
       .map((entry) => ({
@@ -595,7 +607,7 @@ async function listSkillCatalog(category) {
       }));
 
     console.info('[Skills] listSkillCatalog mapped entries', {
-      category: category ?? null,
+      category: hasCategoryFilter ? normalizedCategory : null,
       mappedCount: mappedEntries.length,
       preview: mappedEntries.slice(0, 3)
     });
