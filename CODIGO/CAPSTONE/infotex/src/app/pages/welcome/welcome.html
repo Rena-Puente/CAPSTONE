@@ -27,12 +27,12 @@
         </div>
       </div>
 
-      <button type="button" class="welcome__cta" (click)="openMenu()">
+      <button type="button" class="welcome__cta" (click)="openMenu('login')">
         Iniciar sesión
       </button>
 
       <div class="welcome__subcta">
-        ¿Nuevo por aquí? <a routerLink="/register">Crea tu cuenta</a> en 30 segundos.
+        ¿Nuevo por aquí? <a href="#" (click)="openMenu('register'); $event.preventDefault()">Crea tu cuenta</a> en 30 segundos.
       </div>
 
       <div class="welcome__features" role="list" aria-label="Características principales">
@@ -95,12 +95,56 @@
       <div class="login-menu__avatar" aria-hidden="true">
         <span class="login-menu__avatar-icon">👤</span>
       </div>
-      <h2 id="loginMenuTitle">Bienvenido de nuevo</h2>
+      <nav class="login-menu__tabs" role="tablist">
+        <button
+          type="button"
+          class="login-menu__tab"
+          [class.login-menu__tab--active]="activeTab() === 'login'"
+          (click)="switchToLogin()"
+          role="tab"
+          [attr.aria-selected]="activeTab() === 'login'"
+          aria-controls="loginPanel"
+          id="loginTab"
+        >
+          Iniciar sesión
+        </button>
+        <button
+          type="button"
+          class="login-menu__tab"
+          [class.login-menu__tab--active]="activeTab() === 'register'"
+          (click)="switchToRegister()"
+          role="tab"
+          [attr.aria-selected]="activeTab() === 'register'"
+          aria-controls="registerPanel"
+          id="registerTab"
+        >
+          Crear cuenta
+        </button>
+      </nav>
+
+      <h2 id="loginMenuTitle">{{ activeTab() === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta' }}</h2>
       <p class="login-menu__subtitle" id="loginMenuSubtitle">
-        Introduce tus credenciales para acceder a InfoTex
+        {{
+          activeTab() === 'login'
+            ? 'Introduce tus credenciales para acceder a InfoTex'
+            : 'Registra tu correo y una contraseña segura para comenzar.'
+        }}
       </p>
 
-      <form class="login-menu__form" [formGroup]="loginForm" (ngSubmit)="submit()" novalidate>
+      <div class="login-menu__success" *ngIf="loginSuccessMessage() && activeTab() === 'login'" role="status">
+        {{ loginSuccessMessage() }}
+      </div>
+
+      <form
+        *ngIf="activeTab() === 'login'"
+        class="login-menu__form"
+        [formGroup]="loginForm"
+        (ngSubmit)="submitLogin()"
+        novalidate
+        role="tabpanel"
+        id="loginPanel"
+        aria-labelledby="loginTab"
+      >
         <div class="login-menu__field">
           <label for="loginEmail">Correo electrónico</label>
           <input
@@ -113,7 +157,8 @@
           <span class="login-menu__error" *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
             El correo es obligatorio.
           </span>
-          <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
+          <span class="login-menu__error" *ngIf="emailControl.hasError('email') && emailControl.touched">
+            Ingresa un correo electrónico válido.
           </span>
         </div>
 
@@ -126,14 +171,12 @@
             autocomplete="current-password"
             [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)"
           />
-              <span class="login-menu__error" *ngIf="emailControl.hasError('email') && emailControl.touched">
-                Ingresa un correo electrónico válido.
-              </span>
-
-              <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
-                Debe contener al menos 6 caracteres.
-              </span>
-
+          <span class="login-menu__error" *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
+            La contraseña es obligatoria.
+          </span>
+          <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
+            Debe contener al menos 6 caracteres.
+          </span>
         </div>
 
         <div class="login-menu__options">
@@ -144,15 +187,109 @@
           <a class="login-menu__link" href="#">¿Olvidaste tu contraseña?</a>
         </div>
 
-        <button type="submit" class="login-menu__submit" [disabled]="loading()">
-          <span *ngIf="!loading()">Acceder</span>
-          <span *ngIf="loading()">Accediendo...</span>
+        <button type="submit" class="login-menu__submit" [disabled]="loginLoading()">
+          <span *ngIf="!loginLoading()">Acceder</span>
+          <span *ngIf="loginLoading()">Accediendo...</span>
         </button>
 
-        <p class="login-menu__error login-menu__error--global" *ngIf="errorMessage()">{{ errorMessage() }}</p>
+        <p class="login-menu__error login-menu__error--global" *ngIf="loginErrorMessage()">{{ loginErrorMessage() }}</p>
       </form>
 
-      <p class="login-menu__register">¿No tienes una cuenta? <a routerLink="/register">Regístrate</a></p>
+      <form
+        *ngIf="activeTab() === 'register'"
+        class="login-menu__form"
+        [formGroup]="registerForm"
+        (ngSubmit)="submitRegistration()"
+        novalidate
+        role="tabpanel"
+        id="registerPanel"
+        aria-labelledby="registerTab"
+      >
+        <div class="login-menu__field">
+          <label for="registerEmail">Correo electrónico</label>
+          <input
+            id="registerEmail"
+            type="email"
+            formControlName="email"
+            autocomplete="email"
+            [class.is-invalid]="registerEmailControl.invalid && (registerEmailControl.dirty || registerEmailControl.touched)"
+          />
+          <span class="login-menu__error" *ngIf="registerEmailControl.hasError('required') && (registerEmailControl.dirty || registerEmailControl.touched)">
+            El correo es obligatorio.
+          </span>
+          <span class="login-menu__error" *ngIf="registerEmailControl.hasError('email') && registerEmailControl.touched">
+            Ingresa un correo electrónico válido.
+          </span>
+        </div>
+
+        <div class="login-menu__field">
+          <label for="registerPassword">Contraseña</label>
+          <input
+            id="registerPassword"
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+            [class.is-invalid]="registerPasswordControl.invalid && (registerPasswordControl.dirty || registerPasswordControl.touched)"
+          />
+          <span class="login-menu__error" *ngIf="registerPasswordControl.hasError('required') && (registerPasswordControl.dirty || registerPasswordControl.touched)">
+            La contraseña es obligatoria.
+          </span>
+          <span class="login-menu__error" *ngIf="registerPasswordControl.hasError('minlength') && registerPasswordControl.touched">
+            Debe contener al menos 6 caracteres.
+          </span>
+        </div>
+
+        <div class="login-menu__field">
+          <label for="registerPasswordConfirmation">Confirma tu contraseña</label>
+          <input
+            id="registerPasswordConfirmation"
+            type="password"
+            formControlName="passwordConfirmation"
+            autocomplete="new-password"
+            [class.is-invalid]="
+              registerPasswordConfirmationControl.invalid &&
+              (registerPasswordConfirmationControl.dirty || registerPasswordConfirmationControl.touched)
+            "
+          />
+          <span
+            class="login-menu__error"
+            *ngIf="
+              registerPasswordConfirmationControl.hasError('required') &&
+              (registerPasswordConfirmationControl.dirty || registerPasswordConfirmationControl.touched)
+            "
+          >
+            Debes confirmar la contraseña.
+          </span>
+          <span
+            class="login-menu__error"
+            *ngIf="
+              registerForm.hasError('passwordMismatch') &&
+              registerPasswordConfirmationControl.touched &&
+              !registerPasswordConfirmationControl.hasError('required')
+            "
+          >
+            Las contraseñas deben coincidir.
+          </span>
+        </div>
+
+        <button type="submit" class="login-menu__submit" [disabled]="registerLoading()">
+          <span *ngIf="!registerLoading()">Registrarme</span>
+          <span *ngIf="registerLoading()">Creando cuenta...</span>
+        </button>
+
+        <p class="login-menu__error login-menu__error--global" *ngIf="registerErrorMessage()">{{ registerErrorMessage() }}</p>
+      </form>
+
+      <p class="login-menu__register">
+        <ng-container *ngIf="activeTab() === 'login'; else loginCta">
+          ¿No tienes una cuenta?
+          <button type="button" class="login-menu__register-link" (click)="switchToRegister()">Regístrate</button>
+        </ng-container>
+        <ng-template #loginCta>
+          ¿Ya tienes una cuenta?
+          <button type="button" class="login-menu__register-link" (click)="switchToLogin()">Inicia sesión</button>
+        </ng-template>
+      </p>
     </div>
   </div>
 </section>
