@@ -42,7 +42,7 @@ async function findUserByOAuth(provider, providerId) {
   const normalizedProvider = String(provider).trim().toUpperCase();
 
   const result = await executeQuery(
-    'BEGIN :userId := fn_get_usuario_oauth(:provider, :providerId); END;',
+    'BEGIN :userId := sp_oauth_pkg.fn_get_usuario_oauth(:provider, :providerId); END;',
     {
       provider: normalizedProvider,
       providerId: String(providerId),
@@ -62,7 +62,7 @@ async function findUserByOAuth(provider, providerId) {
 async function createUserFromGithub({ providerId, email, name, avatar }) {
   const result = await executeQuery(
     `BEGIN
-       sp_registrar_usuario_oauth(
+       sp_oauth_pkg.sp_registrar_usuario_oauth(
          p_proveedor    => :provider,
          p_provider_id  => :providerId,
          p_correo       => :email,
@@ -101,7 +101,7 @@ async function saveGithubTokens({
 }) {
   await executeQuery(
     `BEGIN
-       sp_guardar_token_oauth(
+       sp_oauth_pkg.sp_guardar_token_oauth(
          p_id_usuario    => :userId,
          p_proveedor     => :provider,
          p_provider_id   => :providerId,
