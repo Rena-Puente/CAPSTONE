@@ -116,82 +116,6 @@
   text-decoration: underline;
 }
 
-.welcome__oauth {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-}
-
-.welcome__github-button {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  width: 100%;
-  max-width: 320px;
-  padding: 0.85rem 1.5rem;
-  border-radius: 999px;
-  border: 1px solid rgba(240, 246, 252, 0.25);
-  background: rgba(13, 17, 23, 0.85);
-  color: #f0f6fc;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.welcome__github-button:hover,
-.welcome__github-button:focus-visible {
-  transform: translateY(-1px);
-  border-color: rgba(240, 246, 252, 0.4);
-  background: rgba(240, 246, 252, 0.08);
-  color: #f0f6fc;
-}
-
-.welcome__github-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.welcome__github-icon svg {
-  width: 1.5rem;
-  height: 1.5rem;
-  fill: currentColor;
-}
-
-.welcome__github-spinner {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  border: 0.2rem solid rgba(240, 246, 252, 0.3);
-  border-top-color: #f0f6fc;
-  animation: welcomeGithubSpin 0.8s linear infinite;
-}
-
-.welcome__github-button--loading {
-  border-color: rgba(240, 246, 252, 0.15);
-  background: rgba(13, 17, 23, 0.75);
-}
-
-.welcome__github-text {
-  font-size: 1rem;
-}
-
-.welcome__oauth-error {
-  color: #f88d8d;
-  font-size: 0.95rem;
-  line-height: 1.4;
-}
-
-@keyframes welcomeGithubSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .feature__body {
   display: flex;
   flex-direction: column;
@@ -391,6 +315,95 @@
   text-align: center;
 }
 
+.login-menu__oauth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.login-menu__oauth-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(240, 246, 252, 0.25);
+  background: rgba(13, 17, 23, 0.9);
+  color: #f0f6fc;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.login-menu__oauth-button:hover,
+.login-menu__oauth-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(240, 246, 252, 0.45);
+  background: rgba(240, 246, 252, 0.08);
+  color: #f0f6fc;
+}
+
+.login-menu__oauth-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.login-menu__oauth-button--loading {
+  border-color: rgba(240, 246, 252, 0.15);
+  background: rgba(13, 17, 23, 0.75);
+}
+
+.login-menu__oauth-icon svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  fill: currentColor;
+}
+
+.login-menu__oauth-spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 0.2rem solid rgba(240, 246, 252, 0.3);
+  border-top-color: #f0f6fc;
+  animation: loginMenuOauthSpin 0.8s linear infinite;
+}
+
+.login-menu__oauth-text {
+  font-size: 1rem;
+}
+
+.login-menu__oauth-error {
+  color: #ffa198;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.login-menu__divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  color: rgba(240, 246, 252, 0.4);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.login-menu__divider::before,
+.login-menu__divider::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(240, 246, 252, 0.12);
+  margin: 0 0.75rem;
+}
+
 .login-menu__form {
   display: flex;
   flex-direction: column;
@@ -507,6 +520,12 @@
   font-weight: 600;
   margin-bottom: 1rem;
   text-align: center;
+}
+
+@keyframes loginMenuOauthSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 575.98px) {
