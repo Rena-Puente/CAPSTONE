@@ -219,6 +219,8 @@
   justify-content: center;
   align-items: center;
   padding: 1.5rem;
+  min-height: 100vh;
+  overflow-y: auto;
 }
 
 .login-menu__backdrop {
@@ -436,4 +438,59 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+@media (max-width: 767.98px) {
+  .login-menu {
+    align-items: flex-start;
+    padding: clamp(1rem, 4vw, 1.5rem) clamp(0.75rem, 6vw, 1.5rem);
+  }
+
+  .login-menu__panel {
+    width: min(420px, 100%);
+    margin-inline: auto;
+    margin-top: clamp(1.5rem, 6vh, 3rem);
+    padding: clamp(2rem, 6vw, 2.75rem) clamp(1.25rem, 5vw, 2rem) clamp(2rem, 6vw, 2.5rem);
+    border-radius: 18px;
+    box-shadow: 0 24px 48px rgba(8, 8, 10, 0.55);
+  }
+
+  .login-menu__tabs {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .login-menu__subtitle {
+    text-align: left;
+  }
+}
+
+@supports (height: 100dvh) {
+  .login-menu {
+    min-height: 100dvh;
+  }
+}
+
+.brand-skel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* el logo se adapta dentro del bloque */
+.brand-skel .brand-logo {
+  max-height: 26px;
+  width: auto;
+  filter: grayscale(100%);
+  opacity: .8;
+  transition: .2s;
+}
+
+/* interacción fina */
+.brand-skel:hover .brand-logo {
+  filter: grayscale(0%);
+  opacity: 1;
+  transform: translateY(-1px) scale(1.05);
 }

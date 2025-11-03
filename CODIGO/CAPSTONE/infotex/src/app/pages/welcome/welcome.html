@@ -4,16 +4,21 @@
       <div class="col-12 col-lg-7 col-xl-8 d-flex">
         <article class="welcome__card card border-0 shadow-lg w-100">
           <div class="card-body p-4 p-md-5">
-            <div class="welcome__chips d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4" aria-hidden="true">
+            <div class="welcome__chips d-flex flex-wrap justify-content-center justify-content-lg-start gap-2 mb-4"
+              aria-hidden="true">
               <span class="chip chip--success badge rounded-pill">Beta 2025</span>
               <span class="chip chip--purple badge rounded-pill">Comunidad Dev</span>
               <span class="chip chip--ghost badge rounded-pill">100% gratis</span>
             </div>
 
-            <h1 class="welcome__title display-5 fw-bold text-center text-lg-start">Bienvenido a InfoTex</h1>
+            <h1 class="welcome__title display-5 fw-bold text-center text-lg-start">
+              Tu plataforma para crecer en tecnología
+            </h1>
             <p class="welcome__message lead text-center text-lg-start mb-4">
-              Esta es la zona de invitados. Inicia sesión para acceder al contenido completo de la plataforma.
+              Crea tu perfil, descubre talento, comparte proyectos y conecta con el mundo tech.
+              Inicia sesión para obtener acceso completo.
             </p>
+
 
             <div class="welcome__highlights row row-cols-1 row-cols-sm-3 g-3 g-lg-4 mb-4" aria-hidden="true">
               <div class="col">
@@ -36,16 +41,19 @@
               </div>
             </div>
 
-            <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start align-items-stretch align-items-sm-center mb-3">
+            <div
+              class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start align-items-stretch align-items-sm-center mb-3">
               <button type="button" class="welcome__cta btn btn-success btn-lg px-4" (click)="openMenu('login')">
                 Iniciar sesión
               </button>
-              <div class="welcome__subcta small text-body-secondary text-center text-sm-start">
-                ¿Nuevo por aquí? <a href="#" (click)="openMenu('register'); $event.preventDefault()">Crea tu cuenta</a> en 30 segundos.
+              <div class="welcome__subcta small text-body-primary text-center text-sm-start">
+                ¿Nuevo por aquí? <a href="#" (click)="openMenu('register'); $event.preventDefault()">Crea tu cuenta</a>
+                en 30 segundos.
               </div>
             </div>
 
-            <div class="welcome__features row row-cols-1 row-cols-md-3 g-3 g-lg-4" role="list" aria-label="Características principales">
+            <div class="welcome__features row row-cols-1 row-cols-md-3 g-3 g-lg-4" role="list"
+              aria-label="Características principales">
               <article class="feature col" role="listitem">
                 <div class="feature__body h-100">
                   <div class="feature__icon" aria-hidden="true">🧭</div>
@@ -66,20 +74,45 @@
                 <div class="feature__body h-100">
                   <div class="feature__icon" aria-hidden="true">📊</div>
                   <h3 class="feature__title h5">Datos para decidir</h3>
-                  <p class="feature__text">Tendencias de skills y salarios para mover tu carrera con cabeza (y con datos).</p>
+                  <p class="feature__text">Tendencias de skills y salarios para mover tu carrera con cabeza (y con
+                    datos).</p>
                 </div>
               </article>
             </div>
 
             <div class="welcome__brands mt-4" aria-label="Empresas que confían en InfoTex">
-              <span class="brands__label text-uppercase small text-body-secondary">Confiado por equipos de</span>
-              <div class="brands__row d-grid gap-3 gap-sm-4" aria-hidden="true">
-                <div class="brand-skel"></div>
-                <div class="brand-skel"></div>
-                <div class="brand-skel"></div>
-                <div class="brand-skel"></div>
+              <span class="brands__label text-uppercase small text-body-primary">Confiado por equipos de</span>
+
+              <div class="brands__row d-grid gap-3 gap-sm-4 mt-3" aria-hidden="true">
+
+                <div class="brand-skel">
+                  <img src="https://angular.io/assets/images/logos/angular/angular.svg" alt="Angular" title="Angular"
+                    class="brand-logo" />
+                </div>
+
+                <div class="brand-skel">
+                  <img src="https://nodejs.org/static/images/logo.svg" alt="Node.js" title="Node.js"
+                    class="brand-logo" />
+                </div>
+
+                <div class="brand-skel">
+                  <img src="https://logos-world.net/wp-content/uploads/2020/09/Oracle-Logo.png" alt="Oracle"
+                    title="Oracle" class="brand-logo" />
+                </div>
+
+                <div class="brand-skel">
+                  <img src="https://www.docker.com/wp-content/uploads/2022/03/Moby-logo.png" alt="Docker" title="Docker"
+                    class="brand-logo" />
+                </div>
+
+                <div class="brand-skel">
+                  <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub"
+                    title="GitHub" class="brand-logo" />
+                </div>
+
               </div>
             </div>
+
           </div>
         </article>
       </div>
@@ -94,7 +127,8 @@
               Súmate al desafío de 7 días, participa por mentorías y acceso prioritario a vacantes partner.
             </p>
             <div class="promo-banner__actions d-flex flex-column flex-sm-row gap-2">
-              <button type="button" class="promo-banner__cta btn btn-outline-light" (click)="openMenu()">Participar</button>
+              <button type="button" class="promo-banner__cta btn btn-outline-light"
+                (click)="openMenu()">Participar</button>
               <a routerLink="/about" class="promo-banner__link btn btn-link text-decoration-none p-0">Más info</a>
             </div>
           </div>
@@ -106,41 +140,21 @@
   <!-- Menú de login (sin cambios funcionales) -->
   <div class="login-menu" *ngIf="isMenuOpen()">
     <div class="login-menu__backdrop" (click)="closeMenu()" aria-hidden="true"></div>
-    <div
-      class="login-menu__panel"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="loginMenuTitle"
-      aria-describedby="loginMenuSubtitle"
-      (click)="$event.stopPropagation()"
-    >
+    <div class="login-menu__panel" role="dialog" aria-modal="true" aria-labelledby="loginMenuTitle"
+      aria-describedby="loginMenuSubtitle" (click)="$event.stopPropagation()">
       <button type="button" class="login-menu__close" (click)="closeMenu()" aria-label="Cerrar formulario">×</button>
       <div class="login-menu__avatar" aria-hidden="true">
         <span class="login-menu__avatar-icon">👤</span>
       </div>
       <nav class="login-menu__tabs" role="tablist">
-        <button
-          type="button"
-          class="login-menu__tab"
-          [class.login-menu__tab--active]="activeTab() === 'login'"
-          (click)="switchToLogin()"
-          role="tab"
-          [attr.aria-selected]="activeTab() === 'login'"
-          aria-controls="loginPanel"
-          id="loginTab"
-        >
+        <button type="button" class="login-menu__tab" [class.login-menu__tab--active]="activeTab() === 'login'"
+          (click)="switchToLogin()" role="tab" [attr.aria-selected]="activeTab() === 'login'" aria-controls="loginPanel"
+          id="loginTab">
           Iniciar sesión
         </button>
-        <button
-          type="button"
-          class="login-menu__tab"
-          [class.login-menu__tab--active]="activeTab() === 'register'"
-          (click)="switchToRegister()"
-          role="tab"
-          [attr.aria-selected]="activeTab() === 'register'"
-          aria-controls="registerPanel"
-          id="registerTab"
-        >
+        <button type="button" class="login-menu__tab" [class.login-menu__tab--active]="activeTab() === 'register'"
+          (click)="switchToRegister()" role="tab" [attr.aria-selected]="activeTab() === 'register'"
+          aria-controls="registerPanel" id="registerTab">
           Crear cuenta
         </button>
       </nav>
@@ -148,9 +162,9 @@
       <h2 id="loginMenuTitle">{{ activeTab() === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta' }}</h2>
       <p class="login-menu__subtitle" id="loginMenuSubtitle">
         {{
-          activeTab() === 'login'
-            ? 'Introduce tus credenciales para acceder a InfoTex'
-            : 'Registra tu correo y una contraseña segura para comenzar.'
+        activeTab() === 'login'
+        ? 'Introduce tus credenciales para acceder a InfoTex'
+        : 'Registra tu correo y una contraseña segura para comenzar.'
         }}
       </p>
 
@@ -158,26 +172,14 @@
         {{ loginSuccessMessage() }}
       </div>
 
-      <form
-        *ngIf="activeTab() === 'login'"
-        class="login-menu__form"
-        [formGroup]="loginForm"
-        (ngSubmit)="submitLogin()"
-        novalidate
-        role="tabpanel"
-        id="loginPanel"
-        aria-labelledby="loginTab"
-      >
+      <form *ngIf="activeTab() === 'login'" class="login-menu__form" [formGroup]="loginForm" (ngSubmit)="submitLogin()"
+        novalidate role="tabpanel" id="loginPanel" aria-labelledby="loginTab">
         <div class="login-menu__field">
           <label for="loginEmail">Correo electrónico</label>
-          <input
-            id="loginEmail"
-            type="email"
-            formControlName="email"
-            autocomplete="email"
-            [class.is-invalid]="emailControl.invalid && (emailControl.dirty || emailControl.touched)"
-          />
-          <span class="login-menu__error" *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
+          <input id="loginEmail" type="email" formControlName="email" autocomplete="email"
+            [class.is-invalid]="emailControl.invalid && (emailControl.dirty || emailControl.touched)" />
+          <span class="login-menu__error"
+            *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
             El correo es obligatorio.
           </span>
           <span class="login-menu__error" *ngIf="emailControl.hasError('email') && emailControl.touched">
@@ -187,14 +189,10 @@
 
         <div class="login-menu__field">
           <label for="loginPassword">Contraseña</label>
-          <input
-            id="loginPassword"
-            type="password"
-            formControlName="password"
-            autocomplete="current-password"
-            [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)"
-          />
-          <span class="login-menu__error" *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
+          <input id="loginPassword" type="password" formControlName="password" autocomplete="current-password"
+            [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)" />
+          <span class="login-menu__error"
+            *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
             La contraseña es obligatoria.
           </span>
           <span class="login-menu__error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
@@ -218,79 +216,54 @@
         <p class="login-menu__error login-menu__error--global" *ngIf="loginErrorMessage()">{{ loginErrorMessage() }}</p>
       </form>
 
-      <form
-        *ngIf="activeTab() === 'register'"
-        class="login-menu__form"
-        [formGroup]="registerForm"
-        (ngSubmit)="submitRegistration()"
-        novalidate
-        role="tabpanel"
-        id="registerPanel"
-        aria-labelledby="registerTab"
-      >
+      <form *ngIf="activeTab() === 'register'" class="login-menu__form" [formGroup]="registerForm"
+        (ngSubmit)="submitRegistration()" novalidate role="tabpanel" id="registerPanel" aria-labelledby="registerTab">
         <div class="login-menu__field">
           <label for="registerEmail">Correo electrónico</label>
-          <input
-            id="registerEmail"
-            type="email"
-            formControlName="email"
-            autocomplete="email"
-            [class.is-invalid]="registerEmailControl.invalid && (registerEmailControl.dirty || registerEmailControl.touched)"
-          />
-          <span class="login-menu__error" *ngIf="registerEmailControl.hasError('required') && (registerEmailControl.dirty || registerEmailControl.touched)">
+          <input id="registerEmail" type="email" formControlName="email" autocomplete="email"
+            [class.is-invalid]="registerEmailControl.invalid && (registerEmailControl.dirty || registerEmailControl.touched)" />
+          <span class="login-menu__error"
+            *ngIf="registerEmailControl.hasError('required') && (registerEmailControl.dirty || registerEmailControl.touched)">
             El correo es obligatorio.
           </span>
-          <span class="login-menu__error" *ngIf="registerEmailControl.hasError('email') && registerEmailControl.touched">
+          <span class="login-menu__error"
+            *ngIf="registerEmailControl.hasError('email') && registerEmailControl.touched">
             Ingresa un correo electrónico válido.
           </span>
         </div>
 
         <div class="login-menu__field">
           <label for="registerPassword">Contraseña</label>
-          <input
-            id="registerPassword"
-            type="password"
-            formControlName="password"
-            autocomplete="new-password"
-            [class.is-invalid]="registerPasswordControl.invalid && (registerPasswordControl.dirty || registerPasswordControl.touched)"
-          />
-          <span class="login-menu__error" *ngIf="registerPasswordControl.hasError('required') && (registerPasswordControl.dirty || registerPasswordControl.touched)">
+          <input id="registerPassword" type="password" formControlName="password" autocomplete="new-password"
+            [class.is-invalid]="registerPasswordControl.invalid && (registerPasswordControl.dirty || registerPasswordControl.touched)" />
+          <span class="login-menu__error"
+            *ngIf="registerPasswordControl.hasError('required') && (registerPasswordControl.dirty || registerPasswordControl.touched)">
             La contraseña es obligatoria.
           </span>
-          <span class="login-menu__error" *ngIf="registerPasswordControl.hasError('minlength') && registerPasswordControl.touched">
+          <span class="login-menu__error"
+            *ngIf="registerPasswordControl.hasError('minlength') && registerPasswordControl.touched">
             Debe contener al menos 6 caracteres.
           </span>
         </div>
 
         <div class="login-menu__field">
           <label for="registerPasswordConfirmation">Confirma tu contraseña</label>
-          <input
-            id="registerPasswordConfirmation"
-            type="password"
-            formControlName="passwordConfirmation"
-            autocomplete="new-password"
-            [class.is-invalid]="
+          <input id="registerPasswordConfirmation" type="password" formControlName="passwordConfirmation"
+            autocomplete="new-password" [class.is-invalid]="
               registerPasswordConfirmationControl.invalid &&
               (registerPasswordConfirmationControl.dirty || registerPasswordConfirmationControl.touched)
-            "
-          />
-          <span
-            class="login-menu__error"
-            *ngIf="
+            " />
+          <span class="login-menu__error" *ngIf="
               registerPasswordConfirmationControl.hasError('required') &&
               (registerPasswordConfirmationControl.dirty || registerPasswordConfirmationControl.touched)
-            "
-          >
+            ">
             Debes confirmar la contraseña.
           </span>
-          <span
-            class="login-menu__error"
-            *ngIf="
+          <span class="login-menu__error" *ngIf="
               registerForm.hasError('passwordMismatch') &&
               registerPasswordConfirmationControl.touched &&
               !registerPasswordConfirmationControl.hasError('required')
-            "
-          >
+            ">
             Las contraseñas deben coincidir.
           </span>
         </div>
@@ -300,7 +273,8 @@
           <span *ngIf="registerLoading()">Creando cuenta...</span>
         </button>
 
-        <p class="login-menu__error login-menu__error--global" *ngIf="registerErrorMessage()">{{ registerErrorMessage() }}</p>
+        <p class="login-menu__error login-menu__error--global" *ngIf="registerErrorMessage()">{{ registerErrorMessage()
+          }}</p>
       </form>
 
       <p class="login-menu__register">
