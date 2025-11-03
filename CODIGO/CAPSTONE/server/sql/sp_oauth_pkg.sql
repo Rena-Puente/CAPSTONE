@@ -30,7 +30,7 @@ CREATE OR REPLACE PACKAGE BODY sp_oauth_pkg AS
     p_proveedor   IN VARCHAR2,
     p_provider_id IN VARCHAR2
   ) RETURN NUMBER IS
-    v_id_usuario usuarios.id_usuario%TYPE;
+    v_id_usuario admin.usuarios.id_usuario%TYPE;
     v_proveedor  VARCHAR2(100);
   BEGIN
     IF p_proveedor IS NULL OR p_provider_id IS NULL THEN
@@ -40,11 +40,11 @@ CREATE OR REPLACE PACKAGE BODY sp_oauth_pkg AS
     v_proveedor := UPPER(TRIM(p_proveedor));
 
     BEGIN
-      SELECT id_usuario
+      SELECT o.id_usuario
         INTO v_id_usuario
-        FROM oauth
-       WHERE proveedor = v_proveedor
-         AND provider_id = p_provider_id
+        FROM admin.cuentas_oauth o
+       WHERE o.proveedor = v_proveedor
+         AND o.id_proveedor_usuario = p_provider_id
          AND ROWNUM = 1;
 
       RETURN v_id_usuario;
@@ -62,8 +62,38 @@ CREATE OR REPLACE PACKAGE BODY sp_oauth_pkg AS
     p_avatar       IN  VARCHAR2,
     p_id_usuario   OUT NUMBER
   ) IS
-    v_id_usuario usuarios.id_usuario%TYPE;
+    v_id_usuario admin.usuarios.id_usuario%TYPE;
     v_proveedor  VARCHAR2(100);
+    v_dummy      PLS_INTEGER;
+
+    PROCEDURE set_avatar(p_user_id NUMBER, p_url VARCHAR2) IS
+    BEGIN
+      IF p_url IS NULL THEN
+        RETURN;
+      END IF;
+
+      BEGIN
+        EXECUTE IMMEDIATE
+          'UPDATE admin.perfiles SET avatar_url = :1 WHERE id_usuario = :2'
+          USING p_url, p_user_id;
+
+        IF SQL%ROWCOUNT = 0 THEN
+          NULL; -- No hay perfil todavía; se inserta más abajo
+        END IF;
+      EXCEPTION
+        WHEN OTHERS THEN
+          IF SQLCODE = -904 THEN
+            BEGIN
+              EXECUTE IMMEDIATE
+                'UPDATE admin.perfiles SET imagen_url = :1 WHERE id_usuario = :2'
+                USING p_url, p_user_id;
+            EXCEPTION
+              WHEN OTHERS THEN
+                NULL;
+            END;
+          END IF;
+      END;
+    END set_avatar;
   BEGIN
     v_proveedor := UPPER(TRIM(p_proveedor));
 
@@ -75,16 +105,18 @@ CREATE OR REPLACE PACKAGE BODY sp_oauth_pkg AS
     END IF;
 
     BEGIN
-      SELECT id_usuario
+      SELECT u.id_usuario
         INTO v_id_usuario
-        FROM usuarios
-       WHERE LOWER(correo) = LOWER(p_correo)
+        FROM admin.usuarios u
+       WHERE LOWER(u.correo) = LOWER(p_correo)
          AND ROWNUM = 1;
     EXCEPTION
       WHEN NO_DATA_FOUND THEN
-        SELECT NVL(MAX(id_usuario), 0) + 1 INTO v_id_usuario FROM usuarios;
+        SELECT NVL(MAX(u.id_usuario), 0) + 1
+          INTO v_id_usuario
+          FROM admin.usuarios u;
 
-        INSERT INTO usuarios (id_usuario, correo, contrasena_hash, activo)
+        INSERT INTO admin.usuarios (id_usuario, correo, contrasena_hash, activo)
         VALUES (
           v_id_usuario,
           p_correo,
@@ -93,25 +125,34 @@ CREATE OR REPLACE PACKAGE BODY sp_oauth_pkg AS
         );
     END;
 
-    p_id_usuario := v_id_usuario;
+    BEGIN
+      SELECT 1
+        INTO v_dummy
+        FROM admin.perfiles p
+       WHERE p.id_usuario = v_id_usuario;
 
-    MERGE INTO perfiles pf
-    USING (SELECT v_id_usuario AS id_usuario FROM dual) src
-    ON (pf.id_usuario = src.id_usuario)
-    WHEN MATCHED THEN
-      UPDATE SET
-        pf.nombre_mostrar = COALESCE(p_nombre, pf.nombre_mostrar),
-        pf.url_avatar     = COALESCE(p_avatar, pf.url_avatar)
-    WHEN NOT MATCHED THEN
-      INSERT (
-        id_usuario,
-        nombre_mostrar,
-        url_avatar
-      ) VALUES (
-        v_id_usuario,
-        p_nombre,
-        p_avatar
-      );
+      UPDATE admin.perfiles
+         SET nombre_mostrar = COALESCE(nombre_mostrar, p_nombre)
+       WHERE id_usuario = v_id_usuario;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        INSERT INTO admin.perfiles (id_usuario, nombre_mostrar)
+        VALUES (v_id_usuario, p_nombre);
+    END;
+
+    set_avatar(v_id_usuario, p_avatar);
+
+    INSERT INTO admin.cuentas_oauth (
+      id_usuario,
+      proveedor,
+      id_proveedor_usuario
+    ) VALUES (
+      v_id_usuario,
+      v_proveedor,
+      p_provider_id
+    );
+
+    p_id_usuario := v_id_usuario;
   END sp_registrar_usuario_oauth;
 
   PROCEDURE sp_guardar_token_oauth(
@@ -127,33 +168,33 @@ CREATE OR REPLACE PACKAGE BODY sp_oauth_pkg AS
   BEGIN
     v_proveedor := UPPER(TRIM(p_proveedor));
 
-    MERGE INTO oauth o
+    MERGE INTO admin.cuentas_oauth o
     USING (
-      SELECT p_id_usuario    AS id_usuario,
-             v_proveedor     AS proveedor,
-             p_provider_id   AS provider_id
+      SELECT p_id_usuario        AS id_usuario,
+             v_proveedor         AS proveedor,
+             p_provider_id       AS id_proveedor_usuario
         FROM dual
     ) src
     ON (
       o.id_usuario = src.id_usuario
       AND o.proveedor = src.proveedor
-      AND o.provider_id = src.provider_id
+      AND o.id_proveedor_usuario = src.id_proveedor_usuario
     )
     WHEN MATCHED THEN
       UPDATE SET
-        o.access_token  = p_access_token,
-        o.refresh_token = p_refresh_token,
-        o.scope         = p_scope,
-        o.expira        = p_expira
+        o.token_acceso   = p_access_token,
+        o.token_refresco = p_refresh_token,
+        o.alcance_token  = p_scope,
+        o.expira_token   = p_expira
     WHEN NOT MATCHED THEN
       INSERT (
         id_usuario,
         proveedor,
-        provider_id,
-        access_token,
-        refresh_token,
-        scope,
-        expira
+        id_proveedor_usuario,
+        token_acceso,
+        token_refresco,
+        alcance_token,
+        expira_token
       ) VALUES (
         p_id_usuario,
         v_proveedor,
