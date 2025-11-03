@@ -63,6 +63,8 @@ export class Welcome {
 
   protected openMenu(tab: AuthPanelTab = 'login'): void {
     this.isMenuOpen.set(true);
+    this.githubLoading.set(false);
+    this.githubErrorMessage.set(null);
     this.setActiveTab(tab);
   }
 
@@ -74,6 +76,8 @@ export class Welcome {
     this.loginForm.reset({ email: '', password: '' });
     this.registerForm.reset({ email: '', password: '', passwordConfirmation: '' });
     this.activeTab.set('login');
+    this.githubLoading.set(false);
+    this.githubErrorMessage.set(null);
   }
 
   protected switchToLogin(): void {
