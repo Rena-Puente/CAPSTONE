@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE sp_registrar_usuario (
+create or replace PROCEDURE sp_registrar_usuario (
     p_correo      IN VARCHAR2,
     p_password    IN VARCHAR2,
     p_password2   IN VARCHAR2,
@@ -23,14 +23,12 @@ BEGIN
         RETURN;
     END IF;
 
-    -- Insertar el nuevo usuario
+    -- Insertar el nuevo usuario (elige una de estas dos líneas según tu modelo)
     INSERT INTO usuarios (id_usuario, correo, contrasena_hash, activo)
-    VALUES (
-             (SELECT NVL(MAX(id_usuario), 0) + 1 FROM usuarios),
+    VALUES ( /* seq_usuarios.NEXTVAL */ (SELECT NVL(MAX(id_usuario),0)+1 FROM usuarios),
              p_correo,
-             fn_hash_pw(p_password),
-             1
-           );
+             fn_hash_pw(p_password),   -- <- mismo hash que usa fn_login
+             1 );
 
     COMMIT;
     p_resultado := 'OK';
@@ -39,4 +37,3 @@ EXCEPTION
         ROLLBACK;
         p_resultado := 'ERROR:' || SQLERRM;
 END sp_registrar_usuario;
-/
