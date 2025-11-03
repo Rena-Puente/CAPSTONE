@@ -1,0 +1,77 @@
+.github-callback {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(2rem, 5vw, 4rem) 1.5rem;
+  background: radial-gradient(circle at top, rgba(13, 17, 23, 0.85), rgba(13, 17, 23, 0.95));
+  color: #f0f6fc;
+}
+
+.github-callback__container {
+  width: min(480px, 100%);
+}
+
+.github-callback__card {
+  background: rgba(13, 17, 23, 0.9);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+  border-radius: 20px;
+  padding: clamp(1.75rem, 3vw, 2.5rem);
+  text-align: center;
+  box-shadow: 0 24px 48px rgba(2, 12, 27, 0.4);
+}
+
+.github-callback__spinner {
+  margin-inline: auto;
+  margin-bottom: 1.5rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 0.3rem solid rgba(88, 166, 255, 0.2);
+  border-top-color: #58a6ff;
+  animation: githubCallbackSpin 0.8s linear infinite;
+}
+
+@keyframes githubCallbackSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.github-callback__icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.github-callback__title {
+  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #f0f6fc;
+}
+
+.github-callback__message {
+  color: rgba(240, 246, 252, 0.75);
+  margin-bottom: 1.5rem;
+}
+
+.github-callback__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: #58a6ff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.github-callback__link:hover,
+.github-callback__link:focus-visible {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: rgba(88, 166, 255, 0.6);
+  color: #f0f6fc;
+}

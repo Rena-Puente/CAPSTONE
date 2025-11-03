@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import type { Signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { catchError, map } from 'rxjs/operators';
 import { Observable, of, throwError } from 'rxjs';
 
@@ -8,6 +8,7 @@ import { Observable, of, throwError } from 'rxjs';
 const STORAGE_KEY = 'infotex_is_logged_in';
 const STORAGE_USER_KEY = 'infotex_user_id';
 const STORAGE_SESSION_KEY = 'infotex_session';
+export const GITHUB_OAUTH_STATE_KEY = 'infotex_github_oauth_state';
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
 
@@ -31,6 +32,13 @@ interface LoginResponse {
   accessExpiresAt?: string | null;
   refreshExpiresAt?: string | null;
   isProfileComplete?: boolean | null;
+  error?: string;
+}
+
+interface GithubAuthorizeResponse {
+  ok: boolean;
+  authorizeUrl?: string | null;
+  url?: string | null;
   error?: string;
 }
 
@@ -165,6 +173,78 @@ export class AuthService {
         return throwError(() => new Error(message));
       })
     );
+  }
+
+  getGithubAuthorizeUrl(state: string): Observable<string> {
+    const params = new HttpParams().set('state', state);
+
+    return this.http
+      .get<GithubAuthorizeResponse>(`${this.apiUrl}/auth/github/authorize`, { params })
+      .pipe(
+        map((response) => {
+          if (!response.ok || !(response.authorizeUrl ?? response.url)) {
+            const message = response.error || 'No se pudo iniciar la autenticación con GitHub.';
+            throw new Error(message);
+          }
+
+          const authorizeUrl = response.authorizeUrl ?? response.url;
+
+          console.info('[AuthService] GitHub authorize URL received');
+
+          return authorizeUrl;
+        }),
+        catchError((error) => {
+          const message = error?.error?.error || error?.message || 'No se pudo iniciar la autenticación con GitHub.';
+          console.error('[AuthService] GitHub authorize URL failed', { error: message });
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  completeGithubLogin(code: string, state: string): Observable<{ userId: number; isProfileComplete: boolean | null }> {
+    return this.http
+      .post<LoginResponse>(`${this.apiUrl}/auth/github/callback`, { code, state })
+      .pipe(
+        map((response) => {
+          if (
+            !response.ok ||
+            !response.userId ||
+            !response.accessToken ||
+            !response.refreshToken
+          ) {
+            const message = response.error || 'No se pudo completar el inicio de sesión con GitHub.';
+            throw new Error(message);
+          }
+
+          this.persistSession({
+            userId: response.userId,
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken,
+            accessExpiresAt: response.accessExpiresAt ?? null,
+            refreshExpiresAt: response.refreshExpiresAt ?? null
+          });
+
+          console.info('[AuthService] GitHub login successful', {
+            userId: response.userId,
+            accessToken: summarizeToken(response.accessToken),
+            refreshToken: summarizeToken(response.refreshToken),
+            accessExpiresAt: response.accessExpiresAt ?? null,
+            refreshExpiresAt: response.refreshExpiresAt ?? null,
+            isProfileComplete: response.isProfileComplete ?? null
+          });
+
+          return {
+            userId: response.userId,
+            isProfileComplete: response.isProfileComplete ?? null
+          };
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error || error?.message || 'No se pudo completar el inicio de sesión con GitHub.';
+          console.error('[AuthService] GitHub login failed', { error: message });
+          return throwError(() => new Error(message));
+        })
+      );
   }
 
   logout(): void {

@@ -1,0 +1,29 @@
+<section class="github-callback" aria-labelledby="githubCallbackTitle">
+  <div class="github-callback__container">
+    <ng-container *ngIf="loading(); else callbackResult">
+      <article class="github-callback__card" role="status">
+        <div class="github-callback__spinner" aria-hidden="true"></div>
+        <h1 id="githubCallbackTitle" class="github-callback__title">Conectando con GitHub…</h1>
+        <p class="github-callback__message">Estamos finalizando tu inicio de sesión de forma segura.</p>
+      </article>
+    </ng-container>
+
+    <ng-template #callbackResult>
+      <article class="github-callback__card" *ngIf="errorMessage(); else githubFallback" role="alert">
+        <div class="github-callback__icon" aria-hidden="true">⚠️</div>
+        <h1 id="githubCallbackTitle" class="github-callback__title">No pudimos completar el acceso</h1>
+        <p class="github-callback__message">{{ errorMessage() }}</p>
+        <a class="github-callback__link" routerLink="/welcome">Volver a InfoTex</a>
+      </article>
+    </ng-template>
+
+    <ng-template #githubFallback>
+      <article class="github-callback__card" role="status">
+        <div class="github-callback__spinner" aria-hidden="true"></div>
+        <h1 id="githubCallbackTitle" class="github-callback__title">Redirigiendo…</h1>
+        <p class="github-callback__message">En segundos deberías ver tu panel personal.</p>
+        <a class="github-callback__link" routerLink="/welcome">Volver manualmente</a>
+      </article>
+    </ng-template>
+  </div>
+</section>
