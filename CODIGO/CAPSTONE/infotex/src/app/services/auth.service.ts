@@ -175,31 +175,49 @@ export class AuthService {
     );
   }
 
-  getGithubAuthorizeUrl(state: string): Observable<string> {
-    const params = new HttpParams().set('state', state);
+getGithubAuthorizeUrl(state: string): Observable<string> {
+  const params = new HttpParams().set('state', state);
 
-    return this.http
-      .get<GithubAuthorizeResponse>(`${this.apiUrl}/auth/github/authorize`, { params })
-      .pipe(
-        map((response) => {
-          if (!response.ok || !(response.authorizeUrl ?? response.url)) {
-            const message = response.error || 'No se pudo iniciar la autenticación con GitHub.';
-            throw new Error(message);
-          }
+  return this.http
+    .get<GithubAuthorizeResponse>(`${this.apiUrl}/auth/github/authorize`, { params })
+    .pipe(
+      map((response): string => {
+        // 1) Validación del OK del backend
+        if (!response.ok) {
+          throw new Error(response.error ?? 'No se pudo iniciar la autenticación con GitHub.');
+        }
 
-          const authorizeUrl = response.authorizeUrl ?? response.url;
+        // 2) Resolver URL y asegurar que sea string
+        const authorizeUrl = response.authorizeUrl ?? response.url;
+        if (!authorizeUrl) {
+          throw new Error(response.error ?? 'No se recibió la URL de autorización de GitHub.');
+        }
 
-          console.info('[AuthService] GitHub authorize URL received');
+        // 3) Sanity check de formato de URL (opcional pero útil)
+        try {
+          new URL(authorizeUrl);
+        } catch {
+          throw new Error('La URL de autorización recibida es inválida.');
+        }
 
-          return authorizeUrl;
-        }),
-        catchError((error) => {
-          const message = error?.error?.error || error?.message || 'No se pudo iniciar la autenticación con GitHub.';
-          console.error('[AuthService] GitHub authorize URL failed', { error: message });
-          return throwError(() => new Error(message));
-        })
-      );
-  }
+        console.info('[AuthService] GitHub authorize URL received');
+        return authorizeUrl; // ya es string garantizado
+      }),
+      catchError((error: unknown) => {
+        // Manejo de HttpErrorResponse o Error plano
+        const httpErr = error as { error?: any; message?: string };
+        const message =
+          httpErr?.error?.error ??
+          httpErr?.error?.message ??
+          httpErr?.message ??
+          'No se pudo iniciar la autenticación con GitHub.';
+
+        console.error('[AuthService] GitHub authorize URL failed', { error: message });
+        return throwError(() => new Error(message));
+      })
+    );
+}
+
 
   completeGithubLogin(code: string, state: string): Observable<{ userId: number; isProfileComplete: boolean | null }> {
     return this.http
