@@ -10,7 +10,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
-import { AuthService } from '../../services/auth.service';
+import { AuthService, GITHUB_OAUTH_STATE_KEY } from '../../services/auth.service';
 
 type AuthPanelTab = 'login' | 'register';
 
@@ -44,6 +44,8 @@ export class Welcome {
   protected readonly loginErrorMessage = signal<string | null>(null);
   protected readonly loginSuccessMessage = signal<string | null>(null);
   protected readonly registerErrorMessage = signal<string | null>(null);
+  protected readonly githubLoading = signal(false);
+  protected readonly githubErrorMessage = signal<string | null>(null);
 
   protected readonly loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -193,6 +195,62 @@ export class Welcome {
       this.registerErrorMessage.set(message);
     } finally {
       this.registerLoading.set(false);
+    }
+  }
+
+  protected async continueWithGithub(): Promise<void> {
+    if (this.githubLoading()) {
+      return;
+    }
+
+    this.githubErrorMessage.set(null);
+
+    if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+      this.githubErrorMessage.set('Tu navegador no soporta la autenticación segura con GitHub.');
+      return;
+    }
+
+    const state = crypto.randomUUID();
+    let redirected = false;
+
+    this.githubLoading.set(true);
+
+    try {
+      const authorizeUrl = await firstValueFrom(this.authService.getGithubAuthorizeUrl(state));
+
+      if (!authorizeUrl) {
+        throw new Error('No se recibió la URL de autenticación de GitHub.');
+      }
+
+      if (!this.storeGithubState(state)) {
+        throw new Error('No se pudo preparar la sesión segura. Habilita el almacenamiento de sesión e inténtalo de nuevo.');
+      }
+
+      redirected = true;
+      window.location.href = authorizeUrl;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo conectar con GitHub en este momento. Vuelve a intentarlo.';
+      this.githubErrorMessage.set(message);
+    } finally {
+      if (!redirected) {
+        this.githubLoading.set(false);
+      }
+    }
+  }
+
+  private storeGithubState(state: string): boolean {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return false;
+      }
+
+      sessionStorage.setItem(GITHUB_OAUTH_STATE_KEY, state);
+      return true;
+    } catch {
+      return false;
     }
   }
 }
