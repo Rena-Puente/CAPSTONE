@@ -13,6 +13,12 @@ export const routes: Routes = [
   { path: 'profile', component: Profile, canActivate: [authGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },
   { path: 'auth/github/callback', component: GithubCallback },
+  {
+    path: 'user/:slug',
+    loadComponent: () =>
+      import('./pages/profile/public-profile/public-profile').then((m) => m.PublicProfile),
+    data: { title: 'Perfil público' }
+  },
   { path: '', redirectTo: 'welcome', pathMatch: 'full' }
 ];
 

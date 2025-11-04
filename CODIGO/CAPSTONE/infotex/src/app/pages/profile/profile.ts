@@ -1,8 +1,9 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import {
   AfterViewInit,
   Component,
   ElementRef,
+  OnDestroy,
   OnInit,
   ViewChild,
   computed,
@@ -18,7 +19,8 @@ import {
   ValidatorFn,
   Validators
 } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, startWith, switchMap } from 'rxjs/operators';
 
 import { AuthService } from '../../services/auth.service';
 import {
@@ -66,6 +68,8 @@ const DEFAULT_COUNTRY = 'Chile';
 const FALLBACK_CAREER_CATEGORY = 'Otras carreras';
 const FALLBACK_SKILL_CATEGORY = 'Otras habilidades';
 const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
+type SlugAvailabilityStatus = 'idle' | 'checking' | 'available' | 'unavailable' | 'invalid' | 'error';
+type PublicLinkFeedback = { type: 'success' | 'error'; message: string };
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
@@ -107,11 +111,14 @@ function avatarUrlValidator(): ValidatorFn {
   templateUrl: './profile.html',
   styleUrl: './profile.css'
 })
-export class Profile implements OnInit, AfterViewInit {
+export class Profile implements OnInit, AfterViewInit, OnDestroy {
   private readonly profileService = inject(ProfileService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly PFService = inject(ProfileFieldsService);
+  private readonly document = inject(DOCUMENT);
+
+  private slugAvailabilitySubscription: Subscription | null = null;
 
   @ViewChild('alertPlaceholder', { static: true })
   private alertPlaceholderRef?: ElementRef<HTMLDivElement>;
@@ -159,6 +166,9 @@ export class Profile implements OnInit, AfterViewInit {
   protected readonly skillCatalog = signal<SkillCatalogItem[]>([]);
   protected readonly skillCatalogLoading = signal(false);
   protected readonly skillCatalogError = signal<string | null>(null);
+  protected readonly slugAvailabilityStatus = signal<SlugAvailabilityStatus>('idle');
+  protected readonly slugAvailabilityMessage = signal<string | null>(null);
+  protected readonly publicLinkFeedback = signal<PublicLinkFeedback | null>(null);
   protected readonly skillCatalogGroups = computed(() => {
     const groups = new Map<string, SkillCatalogItem[]>();
     const fallbackCategory = FALLBACK_SKILL_CATEGORY;
@@ -217,6 +227,16 @@ export class Profile implements OnInit, AfterViewInit {
   protected readonly isComplete = computed(() => this.profile()?.isComplete ?? false);
   protected readonly missingFields = computed(() => this.profile()?.missingFields ?? []);
   protected readonly defaultCountry = DEFAULT_COUNTRY;
+  protected readonly publicProfileBaseUrl = this.resolvePublicProfileBaseUrl();
+  protected readonly publicProfileUrl = computed(() => {
+    const slug = this.profile()?.slug;
+
+    if (!slug) {
+      return null;
+    }
+
+    return `${this.publicProfileBaseUrl}${slug}`;
+  });
 
   protected readonly profileForm = this.fb.nonNullable.group({
     displayName: ['', [Validators.required]],
@@ -258,7 +278,13 @@ export class Profile implements OnInit, AfterViewInit {
     this.initializeAlertEffects();
   }
 
+  ngOnDestroy(): void {
+    this.slugAvailabilitySubscription?.unsubscribe();
+    this.slugAvailabilitySubscription = null;
+  }
+
   async ngOnInit(): Promise<void> {
+    this.observeSlugChanges();
     await Promise.all([this.loadCities(), this.loadCareers(), this.loadSkillCatalog()]);
     await this.loadProfile();
     await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills()]);
@@ -277,6 +303,98 @@ export class Profile implements OnInit, AfterViewInit {
 
     this.editorOpen.set(true);
     this.profileForm.enable({ emitEvent: false });
+  }
+
+  private observeSlugChanges(): void {
+    const control = this.slugControl;
+
+    this.slugAvailabilitySubscription?.unsubscribe();
+
+    type SlugEvent =
+      | { type: 'empty' }
+      | { type: 'invalid' }
+      | { type: 'current' }
+      | { type: 'result'; available: boolean }
+      | { type: 'error'; message: string | null };
+
+    this.slugAvailabilitySubscription = control.valueChanges
+      .pipe(
+        startWith(control.value),
+        map((value) => (typeof value === 'string' ? value.trim().toLowerCase() : '')),
+        distinctUntilChanged(),
+        switchMap((value) => {
+          if (!value) {
+            this.slugAvailabilityStatus.set('idle');
+            this.slugAvailabilityMessage.set(null);
+            return of<SlugEvent>({ type: 'empty' });
+          }
+
+          if (control.invalid) {
+            this.slugAvailabilityStatus.set('invalid');
+            this.slugAvailabilityMessage.set(null);
+            return of<SlugEvent>({ type: 'invalid' });
+          }
+
+          const currentSlug = this.profile()?.slug?.trim().toLowerCase() ?? '';
+
+          if (currentSlug && currentSlug === value) {
+            this.slugAvailabilityStatus.set('available');
+            this.slugAvailabilityMessage.set('Esta es tu URL actual.');
+            return of<SlugEvent>({ type: 'current' });
+          }
+
+          this.slugAvailabilityStatus.set('checking');
+          this.slugAvailabilityMessage.set(null);
+
+          return of(value).pipe(
+            debounceTime(300),
+            switchMap(() =>
+              this.profileService.checkSlugAvailability(value).pipe(
+                map((available): SlugEvent => ({ type: 'result', available })),
+                catchError((error) =>
+                  of<SlugEvent>({
+                    type: 'error',
+                    message: error instanceof Error ? error.message : null
+                  })
+                )
+              )
+            )
+          );
+        })
+      )
+      .subscribe((event) => {
+        this.publicLinkFeedback.set(null);
+
+        switch (event.type) {
+          case 'empty':
+            this.slugAvailabilityStatus.set('idle');
+            this.slugAvailabilityMessage.set(null);
+            break;
+          case 'invalid':
+            this.slugAvailabilityStatus.set('invalid');
+            this.slugAvailabilityMessage.set(null);
+            break;
+          case 'current':
+            this.slugAvailabilityStatus.set('available');
+            this.slugAvailabilityMessage.set('Esta es tu URL actual.');
+            break;
+          case 'result':
+            if (event.available) {
+              this.slugAvailabilityStatus.set('available');
+              this.slugAvailabilityMessage.set('Esta URL está disponible.');
+            } else {
+              this.slugAvailabilityStatus.set('unavailable');
+              this.slugAvailabilityMessage.set('Esta URL ya está en uso. Elige otra diferente.');
+            }
+            break;
+          case 'error':
+            this.slugAvailabilityStatus.set('error');
+            this.slugAvailabilityMessage.set(
+              event.message ?? 'No se pudo verificar la disponibilidad de la URL personalizada.'
+            );
+            break;
+        }
+      });
   }
 
   private initializeAlertEffects(): void {
@@ -417,6 +535,7 @@ export class Profile implements OnInit, AfterViewInit {
     }
 
     this.editorOpen.set(false);
+    this.publicLinkFeedback.set(null);
 
     const currentProfile = this.profile();
 
@@ -498,12 +617,51 @@ export class Profile implements OnInit, AfterViewInit {
     return this.avatarUrlControl.value === url;
   }
 
+  protected async copyPublicProfileUrl(): Promise<void> {
+    const url = this.publicProfileUrl();
+
+    if (!url) {
+      return;
+    }
+
+    this.publicLinkFeedback.set(null);
+
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        throw new Error('Copia el enlace manualmente desde la barra de direcciones.');
+      }
+
+      await navigator.clipboard.writeText(url);
+      this.publicLinkFeedback.set({ type: 'success', message: 'Enlace copiado al portapapeles.' });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo copiar el enlace automáticamente. Copia la URL manualmente.';
+      this.publicLinkFeedback.set({ type: 'error', message });
+    }
+  }
+
   protected async save(): Promise<void> {
     this.submitError.set(null);
     this.successMessage.set(null);
 
     if (this.profileForm.invalid) {
       this.profileForm.markAllAsTouched();
+      return;
+    }
+
+    const slugStatus = this.slugAvailabilityStatus();
+
+    if (slugStatus === 'checking') {
+      this.submitError.set('Espera a que validemos la disponibilidad de tu URL personalizada.');
+      this.slugControl.markAsTouched();
+      return;
+    }
+
+    if (slugStatus === 'unavailable') {
+      this.submitError.set('La URL personalizada seleccionada ya está en uso. Elige otra antes de guardar.');
+      this.slugControl.markAsTouched();
       return;
     }
 
@@ -1002,8 +1160,10 @@ export class Profile implements OnInit, AfterViewInit {
         country: DEFAULT_COUNTRY,
         city: '',
         career: '',
-        avatarUrl: ''
+        avatarUrl: '',
+        slug: ''
       });
+      this.updateSlugAvailabilityForCurrentValue();
       this.educationSummary.set(null);
       this.experienceSummary.set(null);
       this.skillsSummary.set(null);
@@ -1136,6 +1296,7 @@ export class Profile implements OnInit, AfterViewInit {
     });
     this.profileForm.markAsPristine();
     this.profileForm.markAsUntouched();
+    this.updateSlugAvailabilityForCurrentValue();
     if (this.editorOpen()) {
       this.profileForm.enable({ emitEvent: false });
     } else {
@@ -1309,6 +1470,49 @@ export class Profile implements OnInit, AfterViewInit {
 
     this.careerOptionsByCategory.set(updatedMap);
     this.careerCategories.set(sortedCategories);
+  }
+
+  private resolvePublicProfileBaseUrl(): string {
+    const docLocation = this.document?.location ?? (typeof window !== 'undefined' ? window.location : null);
+    const origin = docLocation?.origin ?? '';
+    const normalizedOrigin = origin ? origin.replace(/\/$/, '') : '';
+
+    if (!normalizedOrigin) {
+      return '/user/';
+    }
+
+    return `${normalizedOrigin}/user/`;
+  }
+
+  private updateSlugAvailabilityForCurrentValue(): void {
+    const controlValue = this.slugControl.value;
+    const normalizedValue = typeof controlValue === 'string' ? controlValue.trim().toLowerCase() : '';
+    const currentSlug = this.profile()?.slug?.trim().toLowerCase() ?? '';
+
+    if (!normalizedValue) {
+      this.slugAvailabilityStatus.set('idle');
+      this.slugAvailabilityMessage.set(null);
+      return;
+    }
+
+    if (this.slugControl.invalid) {
+      this.slugAvailabilityStatus.set('invalid');
+      this.slugAvailabilityMessage.set(null);
+      return;
+    }
+
+    if (normalizedValue === currentSlug) {
+      this.slugAvailabilityStatus.set('available');
+      this.slugAvailabilityMessage.set('Esta es tu URL actual.');
+      return;
+    }
+
+    if (this.slugAvailabilityStatus() === 'unavailable') {
+      return;
+    }
+
+    this.slugAvailabilityStatus.set('idle');
+    this.slugAvailabilityMessage.set(null);
   }
 
   private hasBackendErrors(profile: ProfileData): boolean {

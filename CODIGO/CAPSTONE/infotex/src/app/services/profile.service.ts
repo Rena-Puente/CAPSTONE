@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { AuthService } from './auth.service';
@@ -136,6 +136,30 @@ export interface UpdateProfilePayload {
   slug: string;
 }
 
+export interface PublicProfileData {
+  profile: {
+    displayName: string | null;
+    biography: string | null;
+    country: string | null;
+    city: string | null;
+    career: string | null;
+    avatarUrl: string | null;
+    slug: string | null;
+  };
+  education: {
+    entries: EducationEntry[];
+    summary: EducationSummary | null;
+  };
+  experience: {
+    entries: ExperienceEntry[];
+    summary: ExperienceSummary | null;
+  };
+  skills: {
+    entries: SkillEntry[];
+    summary: SkillSummary | null;
+  };
+}
+
 interface ProfileResponseEnvelope {
   ok: boolean;
   data?: Partial<ProfileData & { profile?: ProfileValues }> | null;
@@ -197,6 +221,17 @@ interface SkillListResult {
 interface SkillMutationResult {
   skill: SkillEntry;
   skillsSummary: SkillSummary | null;
+}
+
+interface PublicProfileResponseEnvelope {
+  ok: boolean;
+  profile?: unknown;
+  education?: unknown;
+  experience?: unknown;
+  skills?: unknown;
+  error?: unknown;
+  message?: unknown;
+  [key: string]: unknown;
 }
 
 interface EducationListResult {
@@ -261,6 +296,72 @@ export class ProfileService {
         map((response) => this.normalizeProfileResponse(response, 'No fue posible actualizar el perfil.')),
         catchError((error) => this.handleRequestError('updateProfile', endpoint, error, 'No fue posible actualizar el perfil.'))
       );
+  }
+
+  getPublicProfile(slug: string): Observable<PublicProfileData> {
+    const normalizedSlug = this.normalizeSlug(slug);
+
+    if (!normalizedSlug) {
+      return throwError(() => new Error('La URL pública proporcionada no es válida.'));
+    }
+
+    const endpoint = `/profiles/${encodeURIComponent(normalizedSlug)}`;
+
+    return this.http
+      .get<PublicProfileResponseEnvelope>(`${this.apiUrl}${endpoint}`)
+      .pipe(
+        map((response) =>
+          this.normalizePublicProfileResponse(response, 'No fue posible obtener el perfil público.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'getPublicProfile',
+            endpoint,
+            error,
+            'No fue posible obtener el perfil público.'
+          )
+        )
+      );
+  }
+
+  checkSlugAvailability(slug: string): Observable<boolean> {
+    const normalizedSlug = this.normalizeSlug(slug);
+
+    if (!normalizedSlug) {
+      return of(false);
+    }
+
+    const endpoint = `/profiles/${encodeURIComponent(normalizedSlug)}`;
+
+    return this.http.get<PublicProfileResponseEnvelope>(`${this.apiUrl}${endpoint}`).pipe(
+      map(() => false),
+      catchError((error) => {
+        if (error instanceof HttpErrorResponse) {
+          if (error.status === 404) {
+            return of(true);
+          }
+
+          if (error.status === 400) {
+            return of(false);
+          }
+        }
+
+        console.error('[ProfileService] checkSlugAvailability failed', {
+          url: `${this.apiUrl}${endpoint}`,
+          status: (error as any)?.status ?? null,
+          message: (error as any)?.message ?? null,
+          error
+        });
+
+        const message =
+          (error as any)?.error?.error ||
+          (error as any)?.error?.message ||
+          (error as any)?.message ||
+          'No se pudo verificar la disponibilidad de la URL personalizada.';
+
+        return throwError(() => new Error(message));
+      })
+    );
   }
 
   getEducation(): Observable<EducationListResult> {
@@ -651,6 +752,72 @@ export class ProfileService {
     return result;
   }
 
+  private normalizePublicProfileResponse(
+    response: PublicProfileResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): PublicProfileData {
+    const errorMessage = this.toNullableString((response as any)?.error);
+    const fallbackMessage = this.toNullableString((response as any)?.message) ?? defaultMessage;
+
+    if (!response?.ok) {
+      throw new Error(errorMessage ?? fallbackMessage);
+    }
+
+    const profileRecord = this.toRecord(response.profile);
+
+    if (Object.keys(profileRecord).length === 0) {
+      throw new Error(errorMessage ?? fallbackMessage);
+    }
+
+    const educationRecord = this.toRecord(response.education);
+    const experienceRecord = this.toRecord(response.experience);
+    const skillsRecord = this.toRecord(response.skills);
+
+    const educationEntries = this.toEducationArray(
+      educationRecord['entries'] ?? educationRecord['list'] ?? educationRecord['education']
+    );
+    const experienceEntries = this.toExperienceArray(
+      experienceRecord['entries'] ?? experienceRecord['list'] ?? experienceRecord['experience']
+    );
+    const skillEntries = this.toSkillArray(
+      skillsRecord['entries'] ?? skillsRecord['list'] ?? skillsRecord['skills']
+    );
+
+    const educationSummary = this.toEducationSummary(
+      educationRecord['summary'] ?? educationRecord['status'] ?? educationRecord['educationSummary']
+    );
+    const experienceSummary = this.toExperienceSummary(
+      experienceRecord['summary'] ?? experienceRecord['status'] ?? experienceRecord['experienceSummary']
+    );
+    const skillsSummary = this.toSkillSummary(
+      skillsRecord['summary'] ?? skillsRecord['status'] ?? skillsRecord['skillsSummary']
+    );
+
+    return {
+      profile: {
+        displayName: this.toNullableString(profileRecord['displayName']),
+        biography: this.toNullableString(profileRecord['biography']),
+        country: this.toNullableString(profileRecord['country']),
+        city: this.toNullableString(profileRecord['city']),
+        career: this.toNullableString(profileRecord['career']),
+        avatarUrl: this.toNullableString(profileRecord['avatarUrl']),
+        slug: this.toNullableString(profileRecord['slug'])
+      },
+      education: {
+        entries: educationEntries,
+        summary: educationSummary
+      },
+      experience: {
+        entries: experienceEntries,
+        summary: experienceSummary
+      },
+      skills: {
+        entries: skillEntries,
+        summary: skillsSummary
+      }
+    } satisfies PublicProfileData;
+  }
+
   private mergeProfileSources(response: ProfileResponseEnvelope): Record<string, unknown> {
     const data = this.toRecord(response.data);
     const innerProfile = this.toRecord((response.data as any)?.profile);
@@ -709,6 +876,22 @@ export class ProfileService {
     }
 
     return value as Record<string, unknown>;
+  }
+
+  private normalizeSlug(slug: string | null | undefined): string {
+    if (typeof slug !== 'string') {
+      return '';
+    }
+
+    const normalized = slug.trim().toLowerCase();
+
+    if (!normalized) {
+      return '';
+    }
+
+    const slugPattern = /^[a-z0-9-]{3,40}$/;
+
+    return slugPattern.test(normalized) ? normalized : '';
   }
 
   private toNullableString(value: unknown): string | null {

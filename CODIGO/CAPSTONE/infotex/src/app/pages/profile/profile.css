@@ -198,6 +198,37 @@
   display: block;
 }
 
+.profile-public-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  word-break: break-all;
+}
+
+.profile-public-link__url {
+  font-family: var(--bs-font-monospace, 'Fira Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace);
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  color: #f8f9fa;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.profile-public-link__copy {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.profile-public-link__feedback {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
 .profile-section__title {
   font-size: 1.35rem;
   font-weight: 600;
