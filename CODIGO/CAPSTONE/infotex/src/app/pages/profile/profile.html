@@ -112,6 +112,19 @@
                                 </span>
                               </div>
                             </div>
+                            <div class="col">
+                              <div class="profile-detail">
+                                <span class="profile-detail-label">URL pública</span>
+                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.slug">
+                                  <ng-container *ngIf="profile()?.slug as slug; else noSlug">
+                                    infotex.com/perfil/{{ slug }}
+                                  </ng-container>
+                                </span>
+                                <ng-template #noSlug>
+                                  <span class="profile-detail-value text-secondary">Sin registrar</span>
+                                </ng-template>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -478,6 +491,40 @@
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
               {{ fieldState().displayName.error || 'El servidor reportó un problema con este campo.' }}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="profileSlug" class="form-label">URL personalizada</label>
+            <div class="input-group">
+              <span class="input-group-text text-secondary">infotex.com/perfil/</span>
+              <input
+                id="profileSlug"
+                type="text"
+                class="form-control"
+                formControlName="slug"
+                autocomplete="off"
+                [class.is-invalid]="
+                  (slugControl.invalid && (slugControl.dirty || slugControl.touched)) ||
+                  fieldState().slug.ok === false
+                "
+              />
+            </div>
+            <div class="form-text text-secondary">Usa solo minúsculas, números y guiones. Ej: mi-portafolio.</div>
+            <div
+              class="invalid-feedback"
+              *ngIf="slugControl.hasError('required') && (slugControl.dirty || slugControl.touched)"
+            >
+              La URL personalizada es obligatoria.
+            </div>
+            <div
+              class="invalid-feedback"
+              *ngIf="slugControl.hasError('pattern') && (slugControl.dirty || slugControl.touched)"
+            >
+              Ingresa de 3 a 40 caracteres válidos (minúsculas, números y guiones).
+            </div>
+            <div class="invalid-feedback" *ngIf="fieldState().slug.ok === false">
+              {{ fieldState().slug.error || 'El servidor reportó un problema con este campo.' }}
             </div>
           </div>
 

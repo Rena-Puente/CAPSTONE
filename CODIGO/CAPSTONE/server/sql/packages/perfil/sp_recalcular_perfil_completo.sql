@@ -10,7 +10,8 @@ BEGIN
     AND biografia IS NOT NULL AND LENGTH(biografia) >= 80
     AND pais IS NOT NULL
     AND ciudad IS NOT NULL
-    AND url_avatar IS NOT NULL;
+    AND url_avatar IS NOT NULL
+    AND slug IS NOT NULL;
 
   IF v_count > 0 THEN
     UPDATE perfiles

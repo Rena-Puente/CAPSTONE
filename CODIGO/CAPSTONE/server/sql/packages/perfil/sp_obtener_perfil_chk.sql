@@ -8,6 +8,7 @@ create or replace PROCEDURE sp_obtener_perfil_chk (
   o_pais              OUT VARCHAR2,
   o_ciudad            OUT VARCHAR2,
   o_url_avatar        OUT VARCHAR2,
+  o_slug              OUT VARCHAR2,
 
   -- estado global y existencia
   o_perfil_completo   OUT CHAR,     -- 'S' / 'N'
@@ -20,6 +21,7 @@ create or replace PROCEDURE sp_obtener_perfil_chk (
   o_ok_pais           OUT NUMBER,
   o_ok_ciudad         OUT NUMBER,
   o_ok_url_avatar     OUT NUMBER,
+  o_ok_slug           OUT NUMBER,
 
   -- resumen
   o_campos_requeridos OUT NUMBER,   -- siempre 6 (los requeridos)
@@ -32,11 +34,12 @@ create or replace PROCEDURE sp_obtener_perfil_chk (
   v_pais           VARCHAR2(4000);
   v_ciudad         VARCHAR2(4000);
   v_url_avatar     VARCHAR2(4000);
+  v_slug           VARCHAR2(4000);
 BEGIN
   -- Intento de lectura
   BEGIN
-    SELECT nombre_mostrar, titular, biografia, pais, ciudad, url_avatar
-      INTO v_nombre_mostrar, v_titular, v_biografia, v_pais, v_ciudad, v_url_avatar
+    SELECT nombre_mostrar, titular, biografia, pais, ciudad, url_avatar, slug
+      INTO v_nombre_mostrar, v_titular, v_biografia, v_pais, v_ciudad, v_url_avatar, v_slug
       FROM perfiles
      WHERE id_usuario = p_id_usuario;
 
@@ -49,6 +52,7 @@ BEGIN
       v_pais           := NULL;
       v_ciudad         := NULL;
       v_url_avatar     := NULL;
+      v_slug           := NULL;
       o_existe         := 0;
   END;
 
@@ -59,6 +63,7 @@ BEGIN
   o_pais           := NVL(v_pais, '');
   o_ciudad         := NVL(v_ciudad, '');
   o_url_avatar     := NVL(v_url_avatar, '');
+  o_slug           := NVL(v_slug, '');
 
   -- Checks por campo (1 ok / 0 vacío). Bio con regla de >= 80 chars
   o_ok_nombre_mostrar := CASE WHEN v_nombre_mostrar IS NOT NULL AND TRIM(v_nombre_mostrar) <> '' THEN 1 ELSE 0 END;
@@ -67,15 +72,17 @@ BEGIN
   o_ok_pais           := CASE WHEN v_pais           IS NOT NULL AND TRIM(v_pais)           <> '' THEN 1 ELSE 0 END;
   o_ok_ciudad         := CASE WHEN v_ciudad         IS NOT NULL AND TRIM(v_ciudad)         <> '' THEN 1 ELSE 0 END;
   o_ok_url_avatar     := CASE WHEN v_url_avatar     IS NOT NULL AND TRIM(v_url_avatar)     <> '' THEN 1 ELSE 0 END;
+  o_ok_slug           := CASE WHEN v_slug           IS NOT NULL AND TRIM(v_slug)           <> '' THEN 1 ELSE 0 END;
 
   -- Resumen
-  o_campos_requeridos := 6;
+  o_campos_requeridos := 7;
   o_campos_ok := o_ok_nombre_mostrar
                + o_ok_titular
                + o_ok_biografia
                + o_ok_pais
                + o_ok_ciudad
-               + o_ok_url_avatar;
+               + o_ok_url_avatar
+               + o_ok_slug;
 
   -- Estado global calculado (coherente con tu recalculador)
   o_perfil_completo := CASE

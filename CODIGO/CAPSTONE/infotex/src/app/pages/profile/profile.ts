@@ -65,6 +65,7 @@ function createEmptyFieldState(): FieldState {
 const DEFAULT_COUNTRY = 'Chile';
 const FALLBACK_CAREER_CATEGORY = 'Otras carreras';
 const FALLBACK_SKILL_CATEGORY = 'Otras habilidades';
+const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
@@ -223,7 +224,8 @@ export class Profile implements OnInit, AfterViewInit {
     country: [DEFAULT_COUNTRY, [Validators.required]],
     city: ['', [Validators.required]],
     career: ['', [Validators.required]],
-    avatarUrl: ['', [Validators.required, avatarUrlValidator()]]
+    avatarUrl: ['', [Validators.required, avatarUrlValidator()]],
+    slug: ['', [Validators.required, Validators.pattern(SLUG_PATTERN)]]
 
   });
 
@@ -427,7 +429,8 @@ export class Profile implements OnInit, AfterViewInit {
         country: DEFAULT_COUNTRY,
         city: '',
         career: '',
-        avatarUrl: ''
+        avatarUrl: '',
+        slug: ''
       });
       this.profileForm.markAsPristine();
       this.profileForm.markAsUntouched();
@@ -462,6 +465,10 @@ export class Profile implements OnInit, AfterViewInit {
 
   protected get avatarUrlControl() {
     return this.profileForm.controls.avatarUrl;
+  }
+
+  protected get slugControl() {
+    return this.profileForm.controls.slug;
   }
 
   protected openAvatarSelector(): void {
@@ -510,7 +517,8 @@ export class Profile implements OnInit, AfterViewInit {
       country: rawValue.country.trim(),
       city: rawValue.city.trim(),
       career: rawValue.career.trim(),
-      avatarUrl: rawValue.avatarUrl.trim()
+      avatarUrl: rawValue.avatarUrl.trim(),
+      slug: rawValue.slug.trim().toLowerCase()
     };
 
     try {
@@ -1123,7 +1131,8 @@ export class Profile implements OnInit, AfterViewInit {
       country: status.country?.trim() || DEFAULT_COUNTRY,
       city: this.normalizeCity(status.city),
       career: this.normalizeCareer(status.career),
-      avatarUrl: status.avatarUrl ?? ''
+      avatarUrl: status.avatarUrl ?? '',
+      slug: status.slug ?? ''
     });
     this.profileForm.markAsPristine();
     this.profileForm.markAsUntouched();
