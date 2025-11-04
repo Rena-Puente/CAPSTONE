@@ -115,11 +115,27 @@
                             <div class="col">
                               <div class="profile-detail">
                                 <span class="profile-detail-label">URL pública</span>
-                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.slug">
+                                <div class="profile-detail-value" [class.text-secondary]="!profile()?.slug">
                                   <ng-container *ngIf="profile()?.slug as slug; else noSlug">
-                                    infotex.com/perfil/{{ slug }}
+                                    <div class="profile-public-link">
+                                      <code class="profile-public-link__url" [title]="publicProfileBaseUrl + slug">
+                                        {{ publicProfileBaseUrl }}{{ slug }}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        class="btn btn-outline-light btn-sm profile-public-link__copy"
+                                        (click)="copyPublicProfileUrl()"
+                                        [disabled]="!publicProfileUrl()"
+                                        aria-label="Copiar enlace público"
+                                      >
+                                        <i class="bi bi-clipboard"></i>
+                                      </button>
+                                    </div>
+                                    <div *ngIf="publicLinkFeedback() as feedback" class="profile-public-link__feedback" [class.text-success]="feedback.type === 'success'" [class.text-warning]="feedback.type === 'error'">
+                                      {{ feedback.message }}
+                                    </div>
                                   </ng-container>
-                                </span>
+                                </div>
                                 <ng-template #noSlug>
                                   <span class="profile-detail-value text-secondary">Sin registrar</span>
                                 </ng-template>
@@ -497,7 +513,7 @@
           <div class="mb-3">
             <label for="profileSlug" class="form-label">URL personalizada</label>
             <div class="input-group">
-              <span class="input-group-text text-secondary">infotex.com/perfil/</span>
+              <span class="input-group-text text-secondary">{{ publicProfileBaseUrl }}</span>
               <input
                 id="profileSlug"
                 type="text"
@@ -511,6 +527,34 @@
               />
             </div>
             <div class="form-text text-secondary">Usa solo minúsculas, números y guiones. Ej: mi-portafolio.</div>
+            <div class="form-text text-muted" *ngIf="slugControl.value">
+              Vista previa: {{ publicProfileBaseUrl }}{{ (slugControl.value || '').trim().toLowerCase() }}
+            </div>
+            <div class="form-text text-info" *ngIf="slugAvailabilityStatus() === 'checking'">
+              Verificando disponibilidad…
+            </div>
+            <div
+              class="form-text text-success"
+              *ngIf="
+                slugAvailabilityStatus() === 'available' &&
+                slugControl.valid &&
+                slugAvailabilityMessage()
+              "
+            >
+              {{ slugAvailabilityMessage() }}
+            </div>
+            <div
+              class="form-text text-warning"
+              *ngIf="slugAvailabilityStatus() === 'error' && slugAvailabilityMessage()"
+            >
+              {{ slugAvailabilityMessage() }}
+            </div>
+            <div
+              class="invalid-feedback d-block"
+              *ngIf="slugAvailabilityStatus() === 'unavailable'"
+            >
+              {{ slugAvailabilityMessage() }}
+            </div>
             <div
               class="invalid-feedback"
               *ngIf="slugControl.hasError('required') && (slugControl.dirty || slugControl.touched)"
