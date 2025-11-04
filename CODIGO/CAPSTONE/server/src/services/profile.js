@@ -4,7 +4,8 @@ const PROFILE_FIELD_LABELS = {
   BIOGRAFIA: 'Biografía (mínimo 80 caracteres)',
   PAIS: 'País',
   CIUDAD: 'Ciudad',
-  URL_AVATAR: 'Foto de perfil'
+  URL_AVATAR: 'Foto de perfil',
+  SLUG: 'URL personalizada'
 };
 
 const EDUCATION_SECTION_LABEL = 'Historial educativo';
@@ -13,7 +14,7 @@ const EXPERIENCE_SECTION_LABEL = 'Experiencia laboral';
 const EXPERIENCE_DATES_NOTE = 'Experiencia laboral (revisa las fechas)';
 const SKILLS_SECTION_LABEL = 'Habilidades profesionales';
 
-const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'city', 'avatarUrl'];
+const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'city', 'avatarUrl', 'slug'];
 
 const PROFILE_FIELD_METADATA = {
   displayName: { column: 'NOMBRE_MOSTRAR', label: PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR },
@@ -21,8 +22,11 @@ const PROFILE_FIELD_METADATA = {
   biography: { column: 'BIOGRAFIA', label: PROFILE_FIELD_LABELS.BIOGRAFIA },
   country: { column: 'PAIS', label: PROFILE_FIELD_LABELS.PAIS },
   city: { column: 'CIUDAD', label: PROFILE_FIELD_LABELS.CIUDAD },
-  avatarUrl: { column: 'URL_AVATAR', label: PROFILE_FIELD_LABELS.URL_AVATAR }
+  avatarUrl: { column: 'URL_AVATAR', label: PROFILE_FIELD_LABELS.URL_AVATAR },
+  slug: { column: 'SLUG', label: PROFILE_FIELD_LABELS.SLUG }
 };
+
+const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
 
 function createEmptyProfileValues() {
   return PROFILE_FIELD_KEYS.reduce((acc, field) => {
@@ -134,6 +138,16 @@ function sanitizeProfileInput(value) {
   return String(value).trim();
 }
 
+function sanitizeSlugInput(value) {
+  const sanitized = sanitizeProfileInput(value);
+
+  if (!sanitized) {
+    return '';
+  }
+
+  return sanitized.toLowerCase();
+}
+
 function isValidUrl(value) {
   if (!value || typeof value !== 'string') {
     return false;
@@ -163,14 +177,21 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
   const values = createEmptyProfileValues();
 
   for (const field of PROFILE_FIELD_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(payload, field)) {
-      values[field] = sanitizeProfileInput(payload[field]);
+    const hasPayloadValue = Object.prototype.hasOwnProperty.call(payload, field);
+    let sourceValue;
+
+    if (hasPayloadValue) {
+      sourceValue = payload[field];
     } else if (currentProfile && hasMeaningfulValue(currentProfile[field])) {
-      const existingValue = currentProfile[field];
-      values[field] =
-        typeof existingValue === 'string' ? existingValue : sanitizeProfileInput(existingValue);
+      sourceValue = currentProfile[field];
     } else {
-      values[field] = sanitizeProfileInput(payload[field]);
+      sourceValue = payload[field];
+    }
+
+    if (field === 'slug') {
+      values[field] = sanitizeSlugInput(sourceValue);
+    } else {
+      values[field] = sanitizeProfileInput(sourceValue);
     }
   }
 
@@ -197,6 +218,15 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
 
   if (!values.city) {
     statuses.city = { ok: false, error: 'Ingresa tu ciudad.' };
+  }
+
+  if (!values.slug) {
+    statuses.slug = { ok: false, error: 'Ingresa tu URL personalizada.' };
+  } else if (!SLUG_PATTERN.test(values.slug)) {
+    statuses.slug = {
+      ok: false,
+      error: 'La URL personalizada solo puede tener minúsculas, números y guiones (3 a 40 caracteres).'
+    };
   }
 
   if (!values.avatarUrl) {
@@ -274,6 +304,10 @@ function computeProfileMissingFields(
     missing.push(PROFILE_FIELD_LABELS.URL_AVATAR);
   }
 
+  if (!row.SLUG) {
+    missing.push(PROFILE_FIELD_LABELS.SLUG);
+  }
+
   if (!educationStatus || !educationStatus.hasEducation) {
     missing.push(EDUCATION_SECTION_LABEL);
   } else if (educationStatus.invalidDateCount > 0) {
@@ -295,6 +329,7 @@ function computeProfileMissingFields(
 
 module.exports = {
   PROFILE_FIELD_KEYS,
+  PROFILE_FIELD_METADATA,
   createEmptyProfileValues,
   createDefaultFieldStatuses,
   mapRowToProfile,

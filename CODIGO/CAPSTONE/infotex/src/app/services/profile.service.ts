@@ -14,7 +14,8 @@ export type ProfileField =
   | 'country'
   | 'city'
   | 'career'
-  | 'avatarUrl';
+  | 'avatarUrl'
+  | 'slug';
 export type ProfileOkFlag = `ok_${ProfileField}`;
 export type ProfileErrorFlag = `error_${ProfileField}`;
 
@@ -24,7 +25,8 @@ export const PROFILE_FIELDS: readonly ProfileField[] = [
   'country',
   'city',
   'career',
-  'avatarUrl'
+  'avatarUrl',
+  'slug'
 ] as const;
 
 type ProfileValues = Record<ProfileField, string | null>;
@@ -131,6 +133,7 @@ export interface UpdateProfilePayload {
   city: string;
   career: string;
   avatarUrl: string;
+  slug: string;
 }
 
 interface ProfileResponseEnvelope {
@@ -597,18 +600,21 @@ export class ProfileService {
       city: this.toNullableString(baseData['city']),
       career: this.toNullableString(baseData['career']),
       avatarUrl: this.toNullableString(baseData['avatarUrl']),
+      slug: this.toNullableString(baseData['slug']),
       ok_displayName: this.toBoolean(this.pickValidationFlag('displayName', baseData, validations, response), true),
       ok_biography: this.toBoolean(this.pickValidationFlag('biography', baseData, validations, response), true),
       ok_country: this.toBoolean(this.pickValidationFlag('country', baseData, validations, response), true),
       ok_city: this.toBoolean(this.pickValidationFlag('city', baseData, validations, response), true),
       ok_career: this.toBoolean(this.pickValidationFlag('career', baseData, validations, response), true),
       ok_avatarUrl: this.toBoolean(this.pickValidationFlag('avatarUrl', baseData, validations, response), true),
+      ok_slug: this.toBoolean(this.pickValidationFlag('slug', baseData, validations, response), true),
       error_displayName: this.pickValidationError('displayName', baseData, validations, errors, response),
       error_biography: this.pickValidationError('biography', baseData, validations, errors, response),
       error_country: this.pickValidationError('country', baseData, validations, errors, response),
       error_city: this.pickValidationError('city', baseData, validations, errors, response),
       error_career: this.pickValidationError('career', baseData, validations, errors, response),
       error_avatarUrl: this.pickValidationError('avatarUrl', baseData, validations, errors, response),
+      error_slug: this.pickValidationError('slug', baseData, validations, errors, response),
       isComplete: this.toBoolean(
         response['isComplete'] ?? baseData['isComplete'] ?? validations['isComplete'],
         false

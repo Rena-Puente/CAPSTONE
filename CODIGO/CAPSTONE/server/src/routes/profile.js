@@ -9,12 +9,17 @@ const { getEducationStatus } = require('../services/education');
 const { getExperienceStatus } = require('../services/experience');
 const { getSkillStatus } = require('../services/skills');
 const {
+  PROFILE_FIELD_METADATA,
+  PROFILE_FIELD_KEYS,
   mapRowToProfile,
   buildProfileEnvelope,
+  createEmptyProfileValues,
   createDefaultFieldStatuses,
   validateProfilePayload,
   computeProfileMissingFields
 } = require('../services/profile');
+
+const SLUG_CONFLICT_MESSAGE = 'La URL personalizada ya está en uso. Elige otra distinta.';
 
 function registerProfileRoutes(app) {
   app.options('/profile/status/:userId', cors());
@@ -78,6 +83,7 @@ function registerProfileRoutes(app) {
                 pais,
                 ciudad,
                 url_avatar,
+                slug,
                 perfil_completo
            FROM perfiles
           WHERE id_usuario = :userId`,
@@ -119,7 +125,8 @@ function registerProfileRoutes(app) {
           biography: row.BIOGRAFIA ?? null,
           country: row.PAIS ?? null,
           city: row.CIUDAD ?? null,
-          avatarUrl: row.URL_AVATAR ?? null
+          avatarUrl: row.URL_AVATAR ?? null,
+          slug: row.SLUG ?? null
         },
         isComplete,
         missingFields,
@@ -185,6 +192,7 @@ function registerProfileRoutes(app) {
                 pais,
                 ciudad,
                 url_avatar,
+                slug,
                 perfil_completo
            FROM perfiles
           WHERE id_usuario = :userId`,
@@ -243,6 +251,7 @@ function registerProfileRoutes(app) {
   app.put('/profile/:userId', requireAccessToken, async (req, res) => {
     const startedAt = Date.now();
     const userId = Number.parseInt(req.params.userId, 10);
+    let validation = null;
 
     console.info('[Profile] Update request received', {
       method: req.method,
@@ -267,7 +276,8 @@ function registerProfileRoutes(app) {
                 biografia,
                 pais,
                 ciudad,
-                url_avatar
+                url_avatar,
+                slug
            FROM perfiles
           WHERE id_usuario = :userId`,
         { userId }
@@ -276,7 +286,7 @@ function registerProfileRoutes(app) {
       const existingRow = existingProfileResult.rows?.[0] ?? null;
       const existingProfileValues = existingRow ? mapRowToProfile(existingRow) : null;
 
-      const validation = validateProfilePayload(req.body || {}, existingProfileValues);
+      validation = validateProfilePayload(req.body || {}, existingProfileValues);
 
       if (!validation.isValid) {
         console.warn('[Profile] Update request validation failed', {
@@ -300,8 +310,42 @@ function registerProfileRoutes(app) {
         biography: validation.values.biography || null,
         country: validation.values.country || null,
         city: validation.values.city || null,
-        avatarUrl: validation.values.avatarUrl || null
+        avatarUrl: validation.values.avatarUrl || null,
+        slug: validation.values.slug || null
       };
+
+      if (dbPayload.slug) {
+        const slugConflict = await executeQuery(
+          `SELECT id_usuario
+             FROM perfiles
+            WHERE slug = :slug
+              AND id_usuario <> :userId`,
+          { slug: dbPayload.slug, userId }
+        );
+
+        if (Array.isArray(slugConflict.rows) && slugConflict.rows.length > 0) {
+          const statuses = {
+            ...validation.statuses,
+            slug: {
+              ok: false,
+              error: SLUG_CONFLICT_MESSAGE
+            }
+          };
+
+          const missingFields = PROFILE_FIELD_KEYS.filter((field) => !statuses[field].ok).map((field) => {
+            const metadata = PROFILE_FIELD_METADATA[field];
+            return metadata ? metadata.label : field;
+          });
+
+          const response = buildProfileEnvelope(validation.values, statuses, {
+            isComplete: false,
+            missingFields,
+            message: 'Corrige la información resaltada e inténtalo nuevamente.'
+          });
+
+          return res.json(response);
+        }
+      }
 
       await executeQuery(
         `MERGE INTO perfiles dest
@@ -311,7 +355,8 @@ function registerProfileRoutes(app) {
                        :biography AS biografia,
                        :country AS pais,
                        :city AS ciudad,
-                       :avatarUrl AS url_avatar
+                       :avatarUrl AS url_avatar,
+                       :slug AS slug
                   FROM dual) src
             ON (dest.id_usuario = src.id_usuario)
         WHEN MATCHED THEN
@@ -321,7 +366,8 @@ function registerProfileRoutes(app) {
                  dest.biografia = src.biografia,
                  dest.pais = src.pais,
                  dest.ciudad = src.ciudad,
-                 dest.url_avatar = src.url_avatar
+                 dest.url_avatar = src.url_avatar,
+                 dest.slug = src.slug
         WHEN NOT MATCHED THEN
           INSERT (
             id_usuario,
@@ -330,7 +376,8 @@ function registerProfileRoutes(app) {
             biografia,
             pais,
             ciudad,
-            url_avatar
+            url_avatar,
+            slug
           ) VALUES (
             src.id_usuario,
             src.nombre_mostrar,
@@ -338,7 +385,8 @@ function registerProfileRoutes(app) {
             src.biografia,
             src.pais,
             src.ciudad,
-            src.url_avatar
+            src.url_avatar,
+            src.slug
           )`,
         {
           userId,
@@ -360,6 +408,7 @@ function registerProfileRoutes(app) {
                 pais,
                 ciudad,
                 url_avatar,
+                slug,
                 perfil_completo
            FROM perfiles
           WHERE id_usuario = :userId`,
@@ -403,6 +452,33 @@ function registerProfileRoutes(app) {
 
       res.json(response);
     } catch (error) {
+      if (
+        error &&
+        (error.errorNum === 1 ||
+          (typeof error.message === 'string' && error.message.includes('ORA-00001')))
+      ) {
+        const baseStatuses = validation?.statuses
+          ? { ...createDefaultFieldStatuses(true), ...validation.statuses }
+          : createDefaultFieldStatuses(true);
+        const statuses = {
+          ...baseStatuses,
+          slug: { ok: false, error: SLUG_CONFLICT_MESSAGE }
+        };
+        const values = validation?.values ?? createEmptyProfileValues();
+        const missingFields = PROFILE_FIELD_KEYS.filter((field) => !statuses[field].ok).map((field) => {
+          const metadata = PROFILE_FIELD_METADATA[field];
+          return metadata ? metadata.label : field;
+        });
+
+        const response = buildProfileEnvelope(values, statuses, {
+          isComplete: false,
+          missingFields,
+          message: 'Corrige la información resaltada e inténtalo nuevamente.'
+        });
+
+        return res.json(response);
+      }
+
       console.error('[Profile] Update failed', {
         userId,
         path: req.originalUrl,
