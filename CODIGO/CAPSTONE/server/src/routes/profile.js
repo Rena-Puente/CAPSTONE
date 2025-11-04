@@ -5,9 +5,9 @@ const { requireAccessToken } = require('../middleware/auth');
 const { getClientIp, extractBearerToken } = require('../utils/request');
 const { handleOracleError } = require('../utils/errors');
 const { isAccessTokenValid } = require('../services/auth');
-const { getEducationStatus } = require('../services/education');
-const { getExperienceStatus } = require('../services/experience');
-const { getSkillStatus } = require('../services/skills');
+const { getEducationStatus, listEducation } = require('../services/education');
+const { getExperienceStatus, listExperience } = require('../services/experience');
+const { getSkillStatus, listSkills } = require('../services/skills');
 const {
   PROFILE_FIELD_METADATA,
   PROFILE_FIELD_KEYS,
@@ -16,7 +16,8 @@ const {
   createEmptyProfileValues,
   createDefaultFieldStatuses,
   validateProfilePayload,
-  computeProfileMissingFields
+  computeProfileMissingFields,
+  isSlugValid
 } = require('../services/profile');
 
 const SLUG_CONFLICT_MESSAGE = 'La URL personalizada ya está en uso. Elige otra distinta.';
@@ -24,6 +25,190 @@ const SLUG_CONFLICT_MESSAGE = 'La URL personalizada ya está en uso. Elige otra 
 function registerProfileRoutes(app) {
   app.options('/profile/status/:userId', cors());
   app.options('/profile/:userId', cors());
+
+  app.get('/profiles/:slug', async (req, res) => {
+    const startedAt = Date.now();
+    const rawSlug = typeof req.params.slug === 'string' ? req.params.slug.trim() : '';
+
+    console.info('[Profile] Public profile request received', {
+      method: req.method,
+      path: req.originalUrl,
+      slug: req.params.slug,
+      ip: getClientIp(req)
+    });
+
+    if (!rawSlug || !isSlugValid(rawSlug)) {
+      console.warn('[Profile] Public profile request rejected: invalid slug', {
+        path: req.originalUrl,
+        slug: req.params.slug
+      });
+      return res
+        .status(400)
+        .json({ ok: false, error: 'La URL personalizada proporcionada no es válida.' });
+    }
+
+    try {
+      const result = await executeQuery(
+        `SELECT id_usuario,
+                nombre_mostrar,
+                titular,
+                biografia,
+                pais,
+                ciudad,
+                url_avatar,
+                slug
+           FROM perfiles
+          WHERE slug = :slug`,
+        { slug: rawSlug }
+      );
+
+      const rows = Array.isArray(result.rows) ? result.rows : [];
+
+      if (rows.length === 0) {
+        console.warn('[Profile] Public profile request not found', {
+          path: req.originalUrl,
+          slug: rawSlug
+        });
+        return res
+          .status(404)
+          .json({ ok: false, error: 'No se encontró ningún perfil público con la URL proporcionada.' });
+      }
+
+      if (rows.length > 1) {
+        console.error('[Profile] Public profile request failed: duplicate slug', {
+          path: req.originalUrl,
+          slug: rawSlug,
+          matches: rows.length
+        });
+        return res.status(409).json({
+          ok: false,
+          error: 'Se encontraron múltiples perfiles con la misma URL personalizada.'
+        });
+      }
+
+      const row = rows[0];
+      const profileValues = mapRowToProfile(row);
+      const userIdValue = Number.parseInt(row.ID_USUARIO ?? row.id_usuario ?? null, 10);
+      const userId = Number.isInteger(userIdValue) && userIdValue > 0 ? userIdValue : null;
+
+      let educationEntries = [];
+      let experienceEntries = [];
+      let skillEntries = [];
+      let educationSummary = null;
+      let experienceSummary = null;
+      let skillsSummary = null;
+
+      if (userId) {
+        [
+          educationEntries,
+          experienceEntries,
+          skillEntries,
+          educationSummary,
+          experienceSummary,
+          skillsSummary
+        ] = await Promise.all([
+          listEducation(userId).catch((error) => {
+            console.error('[Profile] Failed to list education for public profile', {
+              userId,
+              error: error?.message || error
+            });
+            return [];
+          }),
+          listExperience(userId).catch((error) => {
+            console.error('[Profile] Failed to list experience for public profile', {
+              userId,
+              error: error?.message || error
+            });
+            return [];
+          }),
+          listSkills(userId).catch((error) => {
+            console.error('[Profile] Failed to list skills for public profile', {
+              userId,
+              error: error?.message || error
+            });
+            return [];
+          }),
+          getEducationStatus(userId).catch((error) => {
+            console.error('[Profile] Failed to compute education summary for public profile', {
+              userId,
+              error: error?.message || error
+            });
+            return null;
+          }),
+          getExperienceStatus(userId).catch((error) => {
+            console.error('[Profile] Failed to compute experience summary for public profile', {
+              userId,
+              error: error?.message || error
+            });
+            return null;
+          }),
+          getSkillStatus(userId).catch((error) => {
+            console.error('[Profile] Failed to compute skill summary for public profile', {
+              userId,
+              error: error?.message || error
+            });
+            return null;
+          })
+        ]);
+      }
+
+      const response = {
+        ok: true,
+        profile: profileValues,
+        education: {
+          entries: educationEntries,
+          summary: educationSummary
+            ? {
+                totalRecords: Number(educationSummary.totalRecords ?? educationEntries.length ?? 0),
+                hasEducation: Boolean(educationSummary.hasEducation),
+                invalidDateCount: Number(educationSummary.invalidDateCount ?? 0)
+              }
+            : null
+        },
+        experience: {
+          entries: experienceEntries,
+          summary: experienceSummary
+            ? {
+                totalRecords: Number(experienceSummary.totalRecords ?? experienceEntries.length ?? 0),
+                currentCount: Number(experienceSummary.currentCount ?? 0)
+              }
+            : null
+        },
+        skills: {
+          entries: skillEntries,
+          summary: skillsSummary
+            ? {
+                totalSkills: Number(skillsSummary.totalSkills ?? skillEntries.length ?? 0),
+                averageLevel: Number.isFinite(skillsSummary.averageLevel)
+                  ? skillsSummary.averageLevel
+                  : null,
+                maxLevel: Number.isFinite(skillsSummary.maxLevel) ? skillsSummary.maxLevel : null,
+                minLevel: Number.isFinite(skillsSummary.minLevel) ? skillsSummary.minLevel : null
+              }
+            : null
+        }
+      };
+
+      console.info('[Profile] Public profile response sent', {
+        slug: rawSlug,
+        userId,
+        educationCount: educationEntries.length,
+        experienceCount: experienceEntries.length,
+        skillsCount: skillEntries.length,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      return res.json(response);
+    } catch (error) {
+      console.error('[Profile] Public profile request failed', {
+        slug: rawSlug,
+        path: req.originalUrl,
+        elapsedMs: Date.now() - startedAt,
+        error: error?.message || error
+      });
+      return handleOracleError(error, res, 'No se pudo obtener el perfil público.');
+    }
+  });
 
   app.get('/profile/status/:userId', async (req, res) => {
     const startedAt = Date.now();
