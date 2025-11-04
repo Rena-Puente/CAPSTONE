@@ -28,6 +28,14 @@ const PROFILE_FIELD_METADATA = {
 
 const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
 
+function isSlugValid(slug) {
+  if (typeof slug !== 'string') {
+    return false;
+  }
+
+  return SLUG_PATTERN.test(slug);
+}
+
 function createEmptyProfileValues() {
   return PROFILE_FIELD_KEYS.reduce((acc, field) => {
     acc[field] = null;
@@ -222,7 +230,7 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
 
   if (!values.slug) {
     statuses.slug = { ok: false, error: 'Ingresa tu URL personalizada.' };
-  } else if (!SLUG_PATTERN.test(values.slug)) {
+  } else if (!isSlugValid(values.slug)) {
     statuses.slug = {
       ok: false,
       error: 'La URL personalizada solo puede tener minúsculas, números y guiones (3 a 40 caracteres).'
@@ -335,5 +343,6 @@ module.exports = {
   mapRowToProfile,
   buildProfileEnvelope,
   validateProfilePayload,
-  computeProfileMissingFields
+  computeProfileMissingFields,
+  isSlugValid
 };
