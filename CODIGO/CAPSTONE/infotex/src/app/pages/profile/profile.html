@@ -106,14 +106,6 @@
                             </div>
                             <div class="col">
                               <div class="profile-detail">
-                                <span class="profile-detail-label">Carrera</span>
-                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.career">
-                                  {{ profile()?.career || 'Sin registrar' }}
-                                </span>
-                              </div>
-                            </div>
-                            <div class="col">
-                              <div class="profile-detail">
                                 <span class="profile-detail-label">URL pública</span>
                                 <div class="profile-detail-value" [class.text-secondary]="!profile()?.slug">
                                   <ng-container *ngIf="profile()?.slug as slug; else noSlug">

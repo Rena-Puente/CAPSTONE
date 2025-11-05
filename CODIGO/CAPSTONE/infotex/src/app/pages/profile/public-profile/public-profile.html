@@ -28,7 +28,7 @@
                   <div class="public-profile__avatar">
                     <ng-container *ngIf="data.profile.avatarUrl; else avatarPlaceholder">
                       <img
-                        [src]="data.profile.avatarUrl ?? ''"
+                        [src]="data.profile.avatarUrl || ''"
                         alt="Foto de perfil pública"
                         class="public-profile__avatar-image"
                       />
@@ -55,7 +55,7 @@
                       <div *ngIf="data.profile.city || data.profile.country" class="public-profile__meta-item">
                         <dt class="visually-hidden">Ubicación</dt>
                         <dd class="mb-0">
-                          {{ [data.profile.city, data.profile.country].filter(Boolean).join(', ') }}
+                          {{ joinDefined([data.profile.city, data.profile.country], ', ') }}
                         </dd>
                       </div>
                       <div *ngIf="publicProfileUrl() as url" class="public-profile__meta-item">
@@ -103,7 +103,9 @@
                   >
                     <h4 class="h6 mb-1 text-white">{{ entry.institution }}</h4>
                     <p class="mb-1 text-secondary">
-                      {{ [entry.degree, entry.fieldOfStudy].filter(Boolean).join(' · ') || 'Estudios sin especificar' }}
+                      {{
+                        joinDefined([entry.degree, entry.fieldOfStudy], ' · ', 'Estudios sin especificar')
+                      }}
                     </p>
                     <p class="mb-2 text-secondary">
                       {{ entry.startDate || 'Sin fecha de inicio' }}
@@ -141,7 +143,9 @@
                   >
                     <h4 class="h6 mb-1 text-white">{{ entry.title }}</h4>
                     <p class="mb-1 text-secondary">
-                      {{ [entry.company, entry.location].filter(Boolean).join(' · ') || 'Organización no especificada' }}
+                      {{
+                        joinDefined([entry.company, entry.location], ' · ', 'Organización no especificada')
+                      }}
                     </p>
                     <p class="mb-2 text-secondary">
                       {{ entry.startDate || 'Sin fecha de inicio' }}

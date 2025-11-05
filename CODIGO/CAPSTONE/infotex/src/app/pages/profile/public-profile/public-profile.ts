@@ -61,6 +61,20 @@ export class PublicProfile implements OnInit, OnDestroy {
 
   protected trackBySkillId = (_: number, item: PublicProfileData['skills']['entries'][number]) =>
     item.id;
+  protected joinDefined(
+    values: ReadonlyArray<string | null | undefined>,
+    separator: string,
+    fallback = ''
+  ): string {
+    const filtered = values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+    if (filtered.length === 0) {
+      return fallback;
+    }
+
+    return filtered.join(separator);
+  }
+
 
   private async fetchPublicProfile(slugParam: string | null): Promise<void> {
     const slug = typeof slugParam === 'string' ? slugParam.trim().toLowerCase() : '';
