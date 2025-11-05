@@ -669,8 +669,11 @@ export class ProfileService {
       );
   }
 
-  private resolveSession(): { userId: number; accessToken: string; headers: HttpHeaders } | null {
+  private resolveSession():
+    | { userId: number; userType: number | null; accessToken: string; headers: HttpHeaders }
+    | null {
     const userId = this.authService.getUserId();
+    const userType = this.authService.getUserType();
     const accessToken = this.authService.getAccessToken();
 
     if (!userId || !accessToken) {
@@ -679,7 +682,7 @@ export class ProfileService {
 
     const headers = new HttpHeaders({ Authorization: `Bearer ${accessToken}` });
 
-    return { userId, accessToken, headers };
+    return { userId, userType, accessToken, headers };
   }
 
   private normalizeProfileResponse(
