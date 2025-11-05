@@ -53,6 +53,51 @@ function consumeGithubState(state) {
   return Date.now() - storedAt <= GITHUB_STATE_TTL_MS;
 }
 
+function normalizeUserType(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  const parsed = Number.parseInt(String(value), 10);
+
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+
+  return parsed;
+}
+
+async function fetchUserType(userId) {
+  try {
+    const result = await executeQuery(
+      `SELECT id_tipo_usuario AS user_type
+         FROM usuarios
+        WHERE id_usuario = :userId
+        FETCH FIRST 1 ROWS ONLY`,
+      { userId }
+    );
+
+    const row = result.rows?.[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return normalizeUserType(row.USER_TYPE ?? row.user_type ?? null);
+  } catch (error) {
+    console.error('[Auth] Failed to fetch user type', {
+      userId,
+      error: error?.message || error
+    });
+
+    return null;
+  }
+}
+
 async function calculateProfileStatus(userId) {
   try {
     await executeQuery(
@@ -180,11 +225,15 @@ function registerAuthRoutes(app) {
       );
 
       const outBinds = sessionResult.outBinds ?? {};
-      const profileStatus = await calculateProfileStatus(userId);
+      const [userType, profileStatus] = await Promise.all([
+        fetchUserType(userId),
+        calculateProfileStatus(userId)
+      ]);
       const isProfileComplete = profileStatus?.isProfileComplete ?? null;
 
       logAuthEvent('Login successful', {
         userId,
+        userType,
         accessToken: summarizeToken(outBinds.accessToken ?? null),
         refreshToken: summarizeToken(outBinds.refreshToken ?? null),
         accessExpiresAt: toIsoString(outBinds.accessExpires),
@@ -195,6 +244,7 @@ function registerAuthRoutes(app) {
       res.json({
         ok: true,
         userId,
+        userType,
         accessToken: outBinds.accessToken ?? null,
         refreshToken: outBinds.refreshToken ?? null,
         accessExpiresAt: toIsoString(outBinds.accessExpires),
@@ -350,12 +400,16 @@ function registerAuthRoutes(app) {
       );
 
       const outBinds = sessionResult.outBinds ?? {};
-      const profileStatus = await calculateProfileStatus(userId);
+      const [userType, profileStatus] = await Promise.all([
+        fetchUserType(userId),
+        calculateProfileStatus(userId)
+      ]);
       const isProfileComplete = profileStatus?.isProfileComplete ?? null;
 
       logAuthEvent('GitHub login successful', {
         userId,
         providerId: providerIdString,
+        userType,
         accessToken: summarizeToken(outBinds.accessToken ?? null),
         refreshToken: summarizeToken(outBinds.refreshToken ?? null),
         accessExpiresAt: toIsoString(outBinds.accessExpires),
@@ -366,6 +420,7 @@ function registerAuthRoutes(app) {
       res.json({
         ok: true,
         userId,
+        userType,
         accessToken: outBinds.accessToken ?? null,
         refreshToken: outBinds.refreshToken ?? null,
         accessExpiresAt: toIsoString(outBinds.accessExpires),
