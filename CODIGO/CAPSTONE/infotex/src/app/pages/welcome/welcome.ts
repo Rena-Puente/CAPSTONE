@@ -14,6 +14,8 @@ import { AuthService, GITHUB_OAUTH_STATE_KEY } from '../../services/auth.service
 
 type AuthPanelTab = 'login' | 'register';
 
+const COMPANY_USER_TYPE = 3;
+
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value ?? '';
   const confirmation = control.get('passwordConfirmation')?.value ?? '';
@@ -135,16 +137,20 @@ export class Welcome {
     const { email, password } = this.loginForm.getRawValue();
 
     try {
-      const { isProfileComplete } = await firstValueFrom(this.authService.login(email, password));
+      const { userType, isProfileComplete } = await firstValueFrom(
+        this.authService.login(email, password)
+      );
 
-      if (isProfileComplete === null) {
+      const destinationOverride = this.resolveDestinationForUserType(userType);
+
+      if (!destinationOverride && isProfileComplete === null) {
         this.isMenuOpen.set(true);
         this.setActiveTab('login');
         this.loginErrorMessage.set('No se pudo verificar el estado del perfil. Intenta nuevamente.');
         return;
       }
 
-      const destination = isProfileComplete ? '/home' : '/profile';
+      const destination = destinationOverride ?? (isProfileComplete ? '/home' : '/profile');
       let navigated = false;
 
       try {
@@ -243,6 +249,14 @@ export class Welcome {
         this.githubLoading.set(false);
       }
     }
+  }
+
+  private resolveDestinationForUserType(userType: number | null): string | null {
+    if (userType === COMPANY_USER_TYPE) {
+      return '/companies/create';
+    }
+
+    return null;
   }
 
   private storeGithubState(state: string): boolean {

@@ -1,0 +1,162 @@
+<section class="py-5 py-lg-6 bg-body-tertiary min-vh-100">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-12 col-lg-10 col-xl-8">
+        <div class="card shadow border-0">
+          <div class="card-body p-4 p-md-5">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
+              <div>
+                <h1 class="h3 mb-1">Registra tu empresa</h1>
+                <p class="text-muted mb-0">
+                  Completa la información para habilitar tu cuenta de empleador y publicar ofertas.
+                </p>
+              </div>
+            </div>
+
+            <div *ngIf="submitSuccess()" class="alert alert-success" role="status">
+              Tu solicitud fue registrada. Revisa tu correo para continuar con la activación.
+            </div>
+
+            <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+              <div class="row g-3">
+                <div class="col-12 col-md-6">
+                  <label for="company-name" class="form-label">Nombre de la empresa</label>
+                  <input
+                    id="company-name"
+                    type="text"
+                    formControlName="name"
+                    class="form-control"
+                    [class.is-invalid]="shouldShowError(form.controls.name)"
+                    autocomplete="organization" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('name') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-website" class="form-label">Sitio web</label>
+                  <input
+                    id="company-website"
+                    type="url"
+                    formControlName="website"
+                    class="form-control"
+                    placeholder="https://tuequipo.com"
+                    [class.is-invalid]="shouldShowError(form.controls.website)"
+                    autocomplete="url" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('website') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-country" class="form-label">País</label>
+                  <input
+                    id="company-country"
+                    type="text"
+                    formControlName="country"
+                    class="form-control"
+                    [class.is-invalid]="shouldShowError(form.controls.country)"
+                    autocomplete="country-name" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('country') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-city" class="form-label">Ciudad</label>
+                  <input
+                    id="company-city"
+                    type="text"
+                    formControlName="city"
+                    class="form-control"
+                    [class.is-invalid]="shouldShowError(form.controls.city)"
+                    autocomplete="address-level2" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('city') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-email" class="form-label">Correo de contacto</label>
+                  <input
+                    id="company-email"
+                    type="email"
+                    formControlName="email"
+                    class="form-control"
+                    [class.is-invalid]="shouldShowError(form.controls.email)"
+                    autocomplete="email" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('email') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-password" class="form-label">Contraseña</label>
+                  <input
+                    id="company-password"
+                    type="password"
+                    formControlName="password"
+                    class="form-control"
+                    [class.is-invalid]="shouldShowError(form.controls.password)"
+                    autocomplete="new-password" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('password') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-rut" class="form-label">RUT de la empresa</label>
+                  <input
+                    id="company-rut"
+                    type="text"
+                    formControlName="rut"
+                    class="form-control"
+                    placeholder="12345678-9"
+                    [class.is-invalid]="shouldShowError(form.controls.rut)" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('rut') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <label for="company-phone" class="form-label">Teléfono de contacto <span class="text-muted">(opcional)</span></label>
+                  <input
+                    id="company-phone"
+                    type="tel"
+                    formControlName="phone"
+                    class="form-control"
+                    placeholder="+56 9 9876 5432"
+                    [class.is-invalid]="shouldShowError(form.controls.phone)"
+                    autocomplete="tel" />
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('phone') as error">
+                    {{ error }}
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <label for="company-description" class="form-label">Descripción</label>
+                  <textarea
+                    id="company-description"
+                    rows="4"
+                    formControlName="description"
+                    class="form-control"
+                    placeholder="Cuéntanos en qué áreas trabaja tu empresa y qué perfiles busca."
+                    [class.is-invalid]="shouldShowError(form.controls.description)"></textarea>
+                  <div class="invalid-feedback" *ngIf="getControlErrorMessage('description') as error">
+                    {{ error }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex flex-column flex-md-row gap-3 justify-content-md-end mt-4">
+                <button type="submit" class="btn btn-primary btn-lg px-4" [disabled]="isSubmitting()">
+                  {{ isSubmitting() ? 'Enviando…' : 'Registrar empresa' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
