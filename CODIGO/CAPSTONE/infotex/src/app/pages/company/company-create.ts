@@ -6,6 +6,8 @@ import {
   ReactiveFormsModule,
   Validators
 } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
+import { CompanyService, CompanyRegistrationPayload } from '../../services/company.service';
 
 type CompanyFormControlName =
   | 'name'
@@ -42,6 +44,7 @@ export class CompanyCreate {
   protected readonly isSubmitting = signal(false);
   protected readonly submitAttempted = signal(false);
   protected readonly submitSuccess = signal(false);
+  protected readonly submitError = signal<string | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
@@ -69,9 +72,12 @@ export class CompanyCreate {
     description: ['', [Validators.maxLength(500)]]
   });
 
-  protected submit(): void {
+  private readonly companyService = inject(CompanyService);
+
+  protected async submit(): Promise<void> {
     this.submitAttempted.set(true);
     this.submitSuccess.set(false);
+    this.submitError.set(null);
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -80,14 +86,43 @@ export class CompanyCreate {
 
     this.isSubmitting.set(true);
 
-    const payload = this.form.getRawValue();
+    const raw = this.form.getRawValue();
+    const payload: CompanyRegistrationPayload = {
+      name: raw.name.trim(),
+      website: raw.website.trim(),
+      country: raw.country.trim(),
+      city: raw.city.trim(),
+      email: raw.email.trim(),
+      password: raw.password,
+      rut: raw.rut.trim()
+    };
 
-    console.info('[CompanyCreate] Submitting company registration', payload);
+    const trimmedPhone = raw.phone.trim();
+    const trimmedDescription = raw.description.trim();
 
-    this.form.reset(this.emptyFormValue);
-    this.submitAttempted.set(false);
-    this.submitSuccess.set(true);
-    this.isSubmitting.set(false);
+    if (trimmedPhone) {
+      payload.phone = trimmedPhone;
+    }
+
+    if (trimmedDescription) {
+      payload.description = trimmedDescription;
+    }
+
+    try {
+      const company = await firstValueFrom(this.companyService.registerCompany(payload));
+
+      console.info('[CompanyCreate] Company registered successfully', company);
+
+      this.form.reset(this.emptyFormValue);
+      this.submitAttempted.set(false);
+      this.submitSuccess.set(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo registrar la empresa.';
+      console.error('[CompanyCreate] Company registration failed', { error: message });
+      this.submitError.set(message);
+    } finally {
+      this.isSubmitting.set(false);
+    }
   }
 
   protected shouldShowError(control: AbstractControl | null): boolean {

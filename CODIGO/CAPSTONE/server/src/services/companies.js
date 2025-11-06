@@ -210,31 +210,20 @@ async function createCompany(payload, options = {}) {
   const normalizedPayload = shouldSkipValidation ? payload : normalizeCompanyPayload(payload);
 
   const result = await executeQuery(
-    `INSERT INTO EMPRESAS (
-       NOMBRE,
-       SITIO_WEB,
-       PAIS,
-       CIUDAD,
-       EMAIL,
-       "CONTRASEÑA",
-       RUT_EMPRESA,
-       FECHA_CREACION,
-       FECHA_ACTUALIZACION,
-       PW_SALT,
-       PW_ITERS
-     ) VALUES (
-       :name,
-       :website,
-       :country,
-       :city,
-       :email,
-       :password,
-       :rut,
-       SYSDATE,
-       NULL,
-       :passwordSalt,
-       :passwordIterations
-     ) RETURNING ID_EMPRESA INTO :companyId`,
+    `BEGIN
+       sp_empresas_pkg.sp_registrar_empresa(
+         p_nombre        => :name,
+         p_sitio_web     => :website,
+         p_pais          => :country,
+         p_ciudad        => :city,
+         p_email         => :email,
+         p_contrasena    => :password,
+         p_rut_empresa   => :rut,
+         p_pw_salt       => :passwordSalt,
+         p_pw_iters      => :passwordIterations,
+         o_id_empresa    => :companyId
+       );
+     END;`,
     {
       name: normalizedPayload.name,
       website: normalizedPayload.website,
@@ -243,8 +232,8 @@ async function createCompany(payload, options = {}) {
       email: normalizedPayload.email,
       password: normalizedPayload.password,
       rut: normalizedPayload.rut,
-      passwordSalt: normalizedPayload.passwordSalt,
-      passwordIterations: normalizedPayload.passwordIterations,
+      passwordSalt: normalizedPayload.passwordSalt ?? null,
+      passwordIterations: normalizedPayload.passwordIterations ?? null,
       companyId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     },
     { autoCommit: true }
