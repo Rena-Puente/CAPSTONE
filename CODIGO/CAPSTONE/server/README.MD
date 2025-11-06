@@ -88,3 +88,35 @@ Ejemplo de respuesta exitosa:
   }
 }
 ```
+
+### `GET /profiles/:slug/github/repositories`
+
+Expone los repositorios públicos de GitHub vinculados a un perfil. No requiere autenticación y comparte los mismos criterios de validación de `slug` que la ruta anterior.
+
+- Si el `slug` es inválido responde `400`.
+- Si no existe un perfil con ese `slug` responde `404`.
+- Si el perfil existe pero no tiene una cuenta de GitHub enlazada responde `204` sin cuerpo.
+- En caso de éxito (`200`) devuelve:
+  - `repositories`: lista acotada (hasta 50 elementos, por defecto 6) con campos normalizados (`name`, `description`, `htmlUrl`, `topics`, métricas de estrellas, forks, issues, timestamps, etc.).
+  - `languages`: resumen agregado de los lenguajes detectados en los repositorios (`totalBytes` y `breakdown` con porcentaje por lenguaje).
+
+Parámetros opcionales de consulta:
+
+- `limit`: número máximo de repositorios a devolver (1-50, valor por defecto 6).
+- `sort`: `recent` (último push) o `stars` (mayor número de estrellas).
+
+Las respuestas se cachean en memoria por unos minutos para mitigar los límites de la API pública de GitHub.
+
+## Rutas protegidas
+
+### `GET /profile/:userId/github/repositories`
+
+Versión autenticada para que el dueño del perfil consulte sus repositorios vinculados a GitHub. Requiere token Bearer válido y que el `userId` del token coincida con el parámetro.
+
+- Responde `400` cuando el `userId` es inválido.
+- Responde `403` cuando el token no pertenece al usuario solicitado.
+- Responde `404` si el perfil no tiene una cuenta de GitHub asociada.
+- Devuelve `200` con `{ ok, repositories, languages }` siguiendo el mismo formato que la ruta pública cuando la consulta al API de GitHub es exitosa.
+- Ante errores con GitHub (ej. límites de cuota agotados) responde con un código HTTP propagado por el servicio (`502`, `429`, etc.) y un mensaje genérico.
+
+Los resultados se cachean temporalmente para reducir llamadas redundantes y se implementan reintentos exponenciales ante errores transitorios o límites de cuota informados por GitHub.
