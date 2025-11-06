@@ -124,11 +124,80 @@ async function saveGithubTokens({
   );
 }
 
+async function getUserIdFromAccessToken(accessToken) {
+  if (!accessToken) {
+    return null;
+  }
+
+  const result = await executeQuery(
+    `SELECT id_usuario
+       FROM sesiones_usuario
+      WHERE token_acceso = :token
+        AND NVL(revocado, 'N') = 'N'
+        AND expira_token > SYSTIMESTAMP
+      FETCH FIRST 1 ROWS ONLY`,
+    { token: accessToken }
+  );
+
+  const row = result.rows?.[0];
+
+  if (!row) {
+    return null;
+  }
+
+  const rawValue = row.ID_USUARIO ?? row.id_usuario ?? row.USER_ID ?? row.user_id;
+  const parsed = Number.parseInt(String(rawValue), 10);
+
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+async function syncGithubProfileMetadata({ userId, displayName, avatarUrl, githubUsername }) {
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return;
+  }
+
+  await executeQuery(
+    `DECLARE
+       v_count NUMBER := 0;
+     BEGIN
+       SELECT COUNT(1)
+         INTO v_count
+         FROM perfiles
+        WHERE id_usuario = :userId;
+
+       IF v_count = 0 THEN
+         INSERT INTO perfiles (id_usuario, nombre_mostrar, url_avatar, usuario_github)
+         VALUES (
+           :userId,
+           :displayName,
+           :avatarUrl,
+           :githubUsername
+         );
+       ELSE
+         UPDATE perfiles
+            SET nombre_mostrar = COALESCE(nombre_mostrar, :displayName),
+                url_avatar = CASE WHEN url_avatar IS NULL THEN :avatarUrl ELSE url_avatar END,
+                usuario_github = CASE WHEN :githubUsername IS NOT NULL THEN :githubUsername ELSE usuario_github END
+          WHERE id_usuario = :userId;
+       END IF;
+     END;`,
+    {
+      userId,
+      displayName: displayName || null,
+      avatarUrl: avatarUrl || null,
+      githubUsername: githubUsername || null
+    },
+    { autoCommit: true }
+  );
+}
+
 module.exports = {
   summarizeToken,
   logAuthEvent,
   isAccessTokenValid,
   findUserByOAuth,
   createUserFromGithub,
-  saveGithubTokens
+  saveGithubTokens,
+  getUserIdFromAccessToken,
+  syncGithubProfileMetadata
 };

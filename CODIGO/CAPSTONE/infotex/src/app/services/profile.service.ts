@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
+export const GITHUB_LINK_FEEDBACK_KEY = 'infotex_github_link_feedback';
 
 export type ProfileField =
   | 'displayName'
@@ -117,6 +118,19 @@ export interface SkillCatalogItem {
   category: string | null;
 }
 
+export interface GithubAccountStatus {
+  linked: boolean;
+  username: string | null;
+  profileUrl: string | null;
+  providerId: string | null;
+  lastSyncedAt: string | null;
+}
+
+export interface GithubAccountResponse {
+  account: GithubAccountStatus;
+  message: string | null;
+}
+
 export interface ProfileData extends ProfileValues, ProfileValidationFlags, ProfileValidationErrors {
   isComplete: boolean;
   missingFields: string[];
@@ -124,6 +138,7 @@ export interface ProfileData extends ProfileValues, ProfileValidationFlags, Prof
   educationSummary: EducationSummary | null;
   experienceSummary: ExperienceSummary | null;
   skillsSummary: SkillSummary | null;
+  githubAccount: GithubAccountStatus;
 }
 
 export interface UpdateProfilePayload {
@@ -223,6 +238,21 @@ interface SkillMutationResult {
   skillsSummary: SkillSummary | null;
 }
 
+interface GithubAccountResponseEnvelope {
+  ok: boolean;
+  githubAccount?: unknown;
+  message?: unknown;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+interface GithubAuthorizeLinkResponse {
+  ok: boolean;
+  url?: string | null;
+  authorizeUrl?: string | null;
+  error?: unknown;
+}
+
 interface PublicProfileResponseEnvelope {
   ok: boolean;
   profile?: unknown;
@@ -295,6 +325,124 @@ export class ProfileService {
       .pipe(
         map((response) => this.normalizeProfileResponse(response, 'No fue posible actualizar el perfil.')),
         catchError((error) => this.handleRequestError('updateProfile', endpoint, error, 'No fue posible actualizar el perfil.'))
+      );
+  }
+
+  getGithubLinkAuthorizeUrl(state: string): Observable<string> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const normalizedState = typeof state === 'string' ? state.trim() : '';
+
+    if (!normalizedState) {
+      return throwError(() => new Error('El estado de seguridad es obligatorio.'));
+    }
+
+    const endpoint = `/profile/${session.userId}/github/authorize`;
+
+    return this.http
+      .post<GithubAuthorizeLinkResponse>(`${this.apiUrl}${endpoint}`, { state: normalizedState }, {
+        headers: session.headers
+      })
+      .pipe(
+        map((response) => {
+          if (!response?.ok) {
+            throw new Error(this.toNullableString(response?.error) || 'No se pudo preparar la vinculación con GitHub.');
+          }
+
+          const authorizeUrl =
+            (typeof response.authorizeUrl === 'string' && response.authorizeUrl.trim().length > 0
+              ? response.authorizeUrl.trim()
+              : null) ||
+            (typeof response.url === 'string' && response.url.trim().length > 0 ? response.url.trim() : null);
+
+          if (!authorizeUrl) {
+            throw new Error('No se recibió la URL de autorización de GitHub.');
+          }
+
+          try {
+            // Validate URL format
+            new URL(authorizeUrl);
+          } catch {
+            throw new Error('La URL de autorización recibida no es válida.');
+          }
+
+          return authorizeUrl;
+        }),
+        catchError((error) =>
+          this.handleRequestError(
+            'getGithubLinkAuthorizeUrl',
+            endpoint,
+            error,
+            'No se pudo generar la URL de autorización de GitHub.'
+          )
+        )
+      );
+  }
+
+  completeGithubLink(code: string, state: string): Observable<GithubAccountResponse> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const normalizedCode = typeof code === 'string' ? code.trim() : '';
+    const normalizedState = typeof state === 'string' ? state.trim() : '';
+
+    if (!normalizedCode || !normalizedState) {
+      return throwError(() => new Error('El código de autorización y el estado son obligatorios.'));
+    }
+
+    const endpoint = `/profile/${session.userId}/github/link`;
+
+    return this.http
+      .post<GithubAccountResponseEnvelope>(
+        `${this.apiUrl}${endpoint}`,
+        { code: normalizedCode, state: normalizedState },
+        { headers: session.headers }
+      )
+      .pipe(
+        map((response) =>
+          this.normalizeGithubAccountResponse(response, 'No se pudo vincular tu cuenta de GitHub.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'completeGithubLink',
+            endpoint,
+            error,
+            'No se pudo vincular tu cuenta de GitHub.'
+          )
+        )
+      );
+  }
+
+  unlinkGithubAccount(): Observable<GithubAccountResponse> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const endpoint = `/profile/${session.userId}/github/link`;
+
+    return this.http
+      .delete<GithubAccountResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers: session.headers })
+      .pipe(
+        map((response) =>
+          this.normalizeGithubAccountResponse(response, 'No se pudo desvincular tu cuenta de GitHub.')
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'unlinkGithubAccount',
+            endpoint,
+            error,
+            'No se pudo desvincular tu cuenta de GitHub.'
+          )
+        )
       );
   }
 
@@ -749,10 +897,34 @@ export class ProfileService {
           baseData['skillsSummary'] ??
           validations['skillsSummary'] ??
           errors['skillsSummary']
+      ),
+      githubAccount: this.toGithubAccount(
+        response['githubAccount'] ??
+          baseData['githubAccount'] ??
+          validations['githubAccount'] ??
+          errors['githubAccount']
       )
     } satisfies ProfileData;
 
     return result;
+  }
+
+  private normalizeGithubAccountResponse(
+    response: GithubAccountResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): GithubAccountResponse {
+    if (!response?.ok) {
+      const errorMessage = this.toNullableString(response?.error) || defaultMessage;
+      throw new Error(errorMessage);
+    }
+
+    const account = this.toGithubAccount(response.githubAccount);
+    const message = this.toNullableString(response.message);
+
+    return {
+      account,
+      message: message || null
+    } satisfies GithubAccountResponse;
   }
 
   private normalizePublicProfileResponse(
@@ -1601,6 +1773,42 @@ export class ProfileService {
       maxLevel: Number.isFinite(maxRaw) ? maxRaw : null,
       minLevel: Number.isFinite(minRaw) ? minRaw : null
     } satisfies SkillSummary;
+  }
+
+  private toGithubAccount(value: unknown): GithubAccountStatus {
+    const fallback: GithubAccountStatus = {
+      linked: false,
+      username: null,
+      profileUrl: null,
+      providerId: null,
+      lastSyncedAt: null
+    };
+
+    if (!value || typeof value !== 'object') {
+      return fallback;
+    }
+
+    const record = value as Record<string, unknown>;
+    const linked = this.toBoolean(record['linked'], false);
+    const username = this.toNullableString(record['username']);
+    const providerId = this.toNullableString(record['providerId']);
+    const profileUrl = this.toNullableString(record['profileUrl']);
+    const lastSyncedAt = this.toNullableString(record['lastSyncedAt']);
+
+    const normalizedUsername = username && username.length > 0 ? username : null;
+    const normalizedProfileUrl = profileUrl && profileUrl.length > 0
+      ? profileUrl
+      : normalizedUsername
+        ? `https://github.com/${normalizedUsername}`
+        : null;
+
+    return {
+      linked,
+      username: normalizedUsername,
+      profileUrl: normalizedProfileUrl,
+      providerId: providerId && providerId.length > 0 ? providerId : null,
+      lastSyncedAt: lastSyncedAt && lastSyncedAt.length > 0 ? lastSyncedAt : null
+    } satisfies GithubAccountStatus;
   }
 
   private extractErrorMessage(

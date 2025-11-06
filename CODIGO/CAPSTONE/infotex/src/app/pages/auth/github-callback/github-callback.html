@@ -3,8 +3,16 @@
     <ng-container *ngIf="loading(); else callbackResult">
       <article class="github-callback__card" role="status">
         <div class="github-callback__spinner" aria-hidden="true"></div>
-        <h1 id="githubCallbackTitle" class="github-callback__title">Conectando con GitHub…</h1>
-        <p class="github-callback__message">Estamos finalizando tu inicio de sesión de forma segura.</p>
+        <h1 id="githubCallbackTitle" class="github-callback__title">
+          {{ flowMode() === 'link' ? 'Vinculando tu cuenta de GitHub…' : 'Conectando con GitHub…' }}
+        </h1>
+        <p class="github-callback__message">
+          {{
+            flowMode() === 'link'
+              ? 'Estamos vinculando tu cuenta de GitHub de forma segura.'
+              : 'Estamos finalizando tu inicio de sesión de forma segura.'
+          }}
+        </p>
       </article>
     </ng-container>
 
@@ -21,7 +29,13 @@
       <article class="github-callback__card" role="status">
         <div class="github-callback__spinner" aria-hidden="true"></div>
         <h1 id="githubCallbackTitle" class="github-callback__title">Redirigiendo…</h1>
-        <p class="github-callback__message">En segundos deberías ver tu panel personal.</p>
+        <p class="github-callback__message">
+          {{
+            flowMode() === 'link'
+              ? 'Estamos preparando tu perfil con la nueva conexión a GitHub.'
+              : 'En segundos deberías ver tu panel personal.'
+          }}
+        </p>
         <a class="github-callback__link" routerLink="/welcome">Volver manualmente</a>
       </article>
     </ng-template>
