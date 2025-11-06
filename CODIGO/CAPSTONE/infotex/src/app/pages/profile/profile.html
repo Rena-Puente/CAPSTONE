@@ -529,6 +529,112 @@
                           </button>
                         </div>
                       </div>
+
+                      <div class="github-insights" *ngIf="githubAccount().linked">
+                        <div *ngIf="githubDataLoading()" class="github-insights__loading">
+                          <div class="spinner-border text-light" role="status">
+                            <span class="visually-hidden">Cargando repositorios de GitHub…</span>
+                          </div>
+                          <p class="mb-0 text-secondary">Sincronizando tu actividad pública…</p>
+                        </div>
+
+                        <div *ngIf="!githubDataLoading() && githubDataError()" class="alert alert-warning" role="alert">
+                          {{ githubDataError() }}
+                        </div>
+
+                        <ng-container *ngIf="!githubDataLoading() && !githubDataError()">
+                          <section class="github-repos" *ngIf="showGithubRepositories()">
+                            <div class="github-repos__header">
+                              <h4 class="github-repos__title">Repositorios destacados</h4>
+                              <p class="github-repos__subtitle text-secondary mb-0">
+                                Mostramos hasta seis proyectos públicos ordenados por estrellas.
+                              </p>
+                            </div>
+                            <div class="github-repos__grid">
+                              <article
+                                class="github-repo-card"
+                                *ngFor="let repo of githubTopRepositories(); trackBy: trackByRepositoryId"
+                              >
+                                <header class="github-repo-card__header">
+                                  <h5 class="github-repo-card__name mb-1">
+                                    <a
+                                      *ngIf="repo.htmlUrl; else repoName"
+                                      class="github-repo-card__link"
+                                      [href]="repo.htmlUrl || '#'"
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {{ repo.name }}
+                                    </a>
+                                    <ng-template #repoName>{{ repo.name }}</ng-template>
+                                  </h5>
+                                  <p class="github-repo-card__description text-secondary mb-0">
+                                    {{ repo.description || 'Repositorio sin descripción pública.' }}
+                                  </p>
+                                </header>
+                                <footer class="github-repo-card__meta">
+                                  <span class="github-repo-card__stat" aria-label="Estrellas">
+                                    <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
+                                    {{ repo.stars }}
+                                  </span>
+                                  <span class="github-repo-card__stat" aria-label="Forks">
+                                    <i class="bi bi-git" aria-hidden="true"></i>
+                                    {{ repo.forks }}
+                                  </span>
+                                  <span class="github-repo-card__language" *ngIf="repo.language">
+                                    <span class="github-repo-card__language-dot" aria-hidden="true"></span>
+                                    {{ repo.language }}
+                                  </span>
+                                </footer>
+                              </article>
+                            </div>
+                          </section>
+
+                          <section class="github-languages" *ngIf="showGithubLanguages()">
+                            <div class="github-languages__header">
+                              <h4 class="github-languages__title">Lenguajes más usados</h4>
+                              <p class="github-languages__subtitle text-secondary mb-0">
+                                Calculados a partir del tamaño del código público en GitHub.
+                              </p>
+                            </div>
+                            <div
+                              class="github-languages__bar"
+                              role="img"
+                              [attr.aria-label]="githubLanguagesAriaLabel()"
+                            >
+                              <div
+                                class="github-languages__bar-segment"
+                                *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByLanguageName"
+                                [style.flex-basis.%]="segment.percentage"
+                                [style.backgroundColor]="segment.color || '#586069'"
+                                aria-hidden="true"
+                              ></div>
+                            </div>
+                            <ul class="github-languages__legend">
+                              <li
+                                class="github-languages__legend-item"
+                                *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByLanguageName"
+                              >
+                                <span
+                                  class="github-languages__swatch"
+                                  [style.backgroundColor]="segment.color || '#586069'"
+                                ></span>
+                                <span class="github-languages__label">{{ segment.name }}</span>
+                                <span class="github-languages__percentage">
+                                  {{ segment.percentage | number: '1.0-1' }}%
+                                </span>
+                              </li>
+                            </ul>
+                          </section>
+
+                          <p
+                            *ngIf="!hasGithubInsights()"
+                            class="github-insights__empty text-secondary mb-0"
+                          >
+                            Aún no hay repositorios públicos destacados para mostrar.
+                          </p>
+                        </ng-container>
+                      </div>
                     </div>
                   </section>
                 </div>

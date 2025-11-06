@@ -118,6 +118,24 @@ export interface SkillCatalogItem {
   category: string | null;
 }
 
+export interface GithubRepositoryPreview {
+  id: string;
+  name: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  language: string | null;
+  htmlUrl: string | null;
+  updatedAt: string | null;
+}
+
+export interface GithubLanguageSegment {
+  name: string;
+  value: number;
+  percentage: number | null;
+  color: string | null;
+}
+
 export interface GithubAccountStatus {
   linked: boolean;
   username: string | null;
@@ -139,6 +157,8 @@ export interface ProfileData extends ProfileValues, ProfileValidationFlags, Prof
   experienceSummary: ExperienceSummary | null;
   skillsSummary: SkillSummary | null;
   githubAccount: GithubAccountStatus;
+  githubRepositories?: GithubRepositoryPreview[] | null;
+  githubLanguages?: GithubLanguageSegment[] | null;
 }
 
 export interface UpdateProfilePayload {
@@ -173,6 +193,8 @@ export interface PublicProfileData {
     entries: SkillEntry[];
     summary: SkillSummary | null;
   };
+  githubRepositories?: GithubRepositoryPreview[] | null;
+  githubLanguages?: GithubLanguageSegment[] | null;
 }
 
 interface ProfileResponseEnvelope {
@@ -251,6 +273,22 @@ interface GithubAuthorizeLinkResponse {
   url?: string | null;
   authorizeUrl?: string | null;
   error?: unknown;
+}
+
+interface GithubRepositoriesResponseEnvelope {
+  ok: boolean;
+  data?: unknown;
+  repositories?: unknown;
+  repos?: unknown;
+  languages?: unknown;
+  message?: unknown;
+  error?: unknown;
+  [key: string]: unknown;
+}
+
+export interface GithubRepositoryCollection {
+  repositories: GithubRepositoryPreview[];
+  languages: GithubLanguageSegment[];
 }
 
 interface PublicProfileResponseEnvelope {
@@ -437,10 +475,68 @@ export class ProfileService {
         ),
         catchError((error) =>
           this.handleRequestError(
-            'unlinkGithubAccount',
+          'unlinkGithubAccount',
+          endpoint,
+          error,
+          'No se pudo desvincular tu cuenta de GitHub.'
+        )
+      )
+    );
+  }
+
+  getGithubRepositories(): Observable<GithubRepositoryCollection> {
+    const session = this.resolveSession();
+
+    if (!session) {
+      return throwError(() => new Error('No hay una sesión activa.'));
+    }
+
+    const endpoint = `/profile/${session.userId}/github/repositories`;
+
+    return this.http
+      .get<GithubRepositoriesResponseEnvelope>(`${this.apiUrl}${endpoint}`, { headers: session.headers })
+      .pipe(
+        map((response) =>
+          this.normalizeGithubRepositoriesResponse(
+            response,
+            'No se pudo obtener la información de tus repositorios de GitHub.'
+          )
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'getGithubRepositories',
             endpoint,
             error,
-            'No se pudo desvincular tu cuenta de GitHub.'
+            'No se pudo obtener la información de tus repositorios de GitHub.'
+          )
+        )
+      );
+  }
+
+  getPublicGithubRepositories(slug: string): Observable<GithubRepositoryCollection> {
+    const normalizedSlug = this.normalizeSlug(slug);
+
+    if (!normalizedSlug) {
+      return throwError(() => new Error('La URL pública proporcionada no es válida.'));
+    }
+
+    const endpoint = `/profiles/${encodeURIComponent(normalizedSlug)}/github/repositories`;
+
+    return this.http
+      .get<GithubRepositoriesResponseEnvelope>(`${this.apiUrl}${endpoint}`)
+      .pipe(
+        map((response) =>
+          this.normalizeGithubRepositoriesResponse(
+            response,
+            'No se pudo obtener la actividad pública de GitHub.'
+          )
+        ),
+        catchError((error) =>
+          this.handleRequestError(
+            'getPublicGithubRepositories',
+            endpoint,
+            error,
+            'No se pudo obtener la actividad pública de GitHub.'
           )
         )
       );
@@ -903,6 +999,22 @@ export class ProfileService {
           baseData['githubAccount'] ??
           validations['githubAccount'] ??
           errors['githubAccount']
+      ),
+      githubRepositories: this.toGithubRepositoryArray(
+        response['githubRepositories'] ??
+          (response['github'] as any)?.['repositories'] ??
+          baseData['githubRepositories'] ??
+          (baseData['github'] as any)?.['repositories'] ??
+          validations['githubRepositories'] ??
+          errors['githubRepositories']
+      ),
+      githubLanguages: this.toGithubLanguageArray(
+        response['githubLanguages'] ??
+          (response['github'] as any)?.['languages'] ??
+          baseData['githubLanguages'] ??
+          (baseData['github'] as any)?.['languages'] ??
+          validations['githubLanguages'] ??
+          errors['githubLanguages']
       )
     } satisfies ProfileData;
 
@@ -925,6 +1037,33 @@ export class ProfileService {
       account,
       message: message || null
     } satisfies GithubAccountResponse;
+  }
+
+  private normalizeGithubRepositoriesResponse(
+    response: GithubRepositoriesResponseEnvelope | null | undefined,
+    defaultMessage: string
+  ): GithubRepositoryCollection {
+    if (!response?.ok) {
+      const errorMessage =
+        this.toNullableString(response?.error) ||
+        this.toNullableString(response?.message) ||
+        defaultMessage;
+      throw new Error(errorMessage);
+    }
+
+    const record = this.toRecord(response.data);
+    const repositoriesSource =
+      record['repositories'] ??
+      record['repos'] ??
+      response.repositories ??
+      response.repos ??
+      record['items'];
+    const languagesSource = record['languages'] ?? response.languages;
+
+    const repositories = this.toGithubRepositoryArray(repositoriesSource);
+    const languages = this.toGithubLanguageArray(languagesSource);
+
+    return { repositories, languages } satisfies GithubRepositoryCollection;
   }
 
   private normalizePublicProfileResponse(
@@ -989,7 +1128,17 @@ export class ProfileService {
       skills: {
         entries: skillEntries,
         summary: skillsSummary
-      }
+      },
+      githubRepositories: this.toGithubRepositoryArray(
+        profileRecord['githubRepositories'] ??
+          (response as any)?.githubRepositories ??
+          (response as any)?.github?.repositories
+      ),
+      githubLanguages: this.toGithubLanguageArray(
+        profileRecord['githubLanguages'] ??
+          (response as any)?.githubLanguages ??
+          (response as any)?.github?.languages
+      )
     } satisfies PublicProfileData;
   }
 
@@ -1773,6 +1922,132 @@ export class ProfileService {
       maxLevel: Number.isFinite(maxRaw) ? maxRaw : null,
       minLevel: Number.isFinite(minRaw) ? minRaw : null
     } satisfies SkillSummary;
+  }
+
+  private toGithubRepositoryArray(value: unknown): GithubRepositoryPreview[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value
+      .map((item) => this.toGithubRepository(item))
+      .filter((item): item is GithubRepositoryPreview => item !== null);
+  }
+
+  private toGithubRepository(value: unknown): GithubRepositoryPreview | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const rawName =
+      record['name'] ??
+      record['repoName'] ??
+      record['full_name'] ??
+      record['fullName'] ??
+      record['nombre'];
+    const name = this.normalizeRequiredString(rawName);
+
+    if (!name) {
+      return null;
+    }
+
+    const idCandidate =
+      this.toNullableString(record['id']) ??
+      this.toNullableString(record['node_id']) ??
+      this.toNullableString(record['repoId']) ??
+      this.toNullableString(record['repositoryId']) ??
+      this.toNullableString(record['slug']);
+    const id = idCandidate && idCandidate.length > 0 ? idCandidate : name;
+
+    const description = this.normalizeOptionalString(
+      record['description'] ?? record['descripcion'] ?? record['details'] ?? record['detail']
+    );
+    const starsRaw = this.normalizeOptionalNumber(
+      record['stargazersCount'] ??
+        record['stargazers_count'] ??
+        record['stars'] ??
+        record['stargazers'] ??
+        record['starCount']
+    );
+    const forksRaw = this.normalizeOptionalNumber(
+      record['forksCount'] ?? record['forks_count'] ?? record['forks'] ?? record['forkCount']
+    );
+    const language = this.normalizeOptionalString(record['language'] ?? record['primaryLanguage']);
+    const htmlUrl = this.toNullableString(
+      record['htmlUrl'] ?? record['html_url'] ?? record['url'] ?? record['webUrl'] ?? record['enlace']
+    );
+    const updatedAt = this.toNullableString(record['updatedAt'] ?? record['updated_at']);
+
+    const stars =
+      starsRaw !== null && Number.isFinite(starsRaw) ? Math.max(Math.floor(starsRaw), 0) : 0;
+    const forks =
+      forksRaw !== null && Number.isFinite(forksRaw) ? Math.max(Math.floor(forksRaw), 0) : 0;
+
+    return {
+      id,
+      name,
+      description: description ?? null,
+      stars,
+      forks,
+      language: language ?? null,
+      htmlUrl: htmlUrl && htmlUrl.length > 0 ? htmlUrl : null,
+      updatedAt: updatedAt && updatedAt.length > 0 ? updatedAt : null
+    } satisfies GithubRepositoryPreview;
+  }
+
+  private toGithubLanguageArray(value: unknown): GithubLanguageSegment[] {
+    if (!value) {
+      return [];
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => this.toGithubLanguageSegment(item))
+        .filter((item): item is GithubLanguageSegment => item !== null);
+    }
+
+    if (typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([key, item]) => this.toGithubLanguageSegment({ name: key, value: item }))
+        .filter((item): item is GithubLanguageSegment => item !== null);
+    }
+
+    return [];
+  }
+
+  private toGithubLanguageSegment(value: unknown): GithubLanguageSegment | null {
+    if (!value || typeof value !== 'object') {
+      return null;
+    }
+
+    const record = value as Record<string, unknown>;
+    const rawName = record['name'] ?? record['language'] ?? record['label'] ?? record['nombre'];
+    const name = this.normalizeRequiredString(rawName);
+
+    if (!name) {
+      return null;
+    }
+
+    const valueRaw = this.normalizeOptionalNumber(
+      record['value'] ?? record['bytes'] ?? record['size'] ?? record['count'] ?? record['total']
+    );
+    const percentageRaw = this.normalizeOptionalNumber(
+      record['percentage'] ?? record['percent'] ?? record['ratio'] ?? record['porcentaje']
+    );
+    const color = this.normalizeOptionalString(record['color'] ?? record['colour'] ?? record['hex']);
+
+    const valueNumber =
+      valueRaw !== null && Number.isFinite(valueRaw) ? Math.max(valueRaw, 0) : 0;
+    const percentageNumber =
+      percentageRaw !== null && Number.isFinite(percentageRaw) ? Math.max(percentageRaw, 0) : null;
+
+    return {
+      name,
+      value: valueNumber,
+      percentage: percentageNumber,
+      color: color ?? null
+    } satisfies GithubLanguageSegment;
   }
 
   private toGithubAccount(value: unknown): GithubAccountStatus {

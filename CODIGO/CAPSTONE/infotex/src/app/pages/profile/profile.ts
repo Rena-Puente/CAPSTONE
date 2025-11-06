@@ -41,7 +41,9 @@ import {
   SkillPayload,
   SkillSummary,
   GithubAccountStatus,
-  GithubAccountResponse
+  GithubAccountResponse,
+  GithubRepositoryPreview,
+  GithubLanguageSegment
 } from '../../services/profile.service';
 
 import { ProfileFieldsService } from '../../services/profilefields.service';
@@ -81,6 +83,8 @@ const DEFAULT_GITHUB_ACCOUNT: GithubAccountStatus = {
   providerId: null,
   lastSyncedAt: null
 };
+
+type GithubLanguageDisplaySegment = GithubLanguageSegment & { percentage: number };
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
@@ -266,6 +270,118 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   protected readonly githubLinkLoading = signal(false);
   protected readonly githubUnlinkLoading = signal(false);
   protected readonly githubErrorMessage = signal<string | null>(null);
+  protected readonly githubDataLoading = signal(false);
+  protected readonly githubDataError = signal<string | null>(null);
+  protected readonly githubRepositories = signal<GithubRepositoryPreview[]>([]);
+  protected readonly githubLanguages = signal<GithubLanguageSegment[]>([]);
+  protected readonly githubTopRepositories = computed(() => {
+    const repositories = this.githubRepositories();
+
+    return repositories
+      .filter((repo) => Boolean(repo && repo.name))
+      .slice()
+      .sort((a, b) => {
+        const starDiff = (b?.stars ?? 0) - (a?.stars ?? 0);
+
+        if (starDiff !== 0) {
+          return starDiff;
+        }
+
+        const forkDiff = (b?.forks ?? 0) - (a?.forks ?? 0);
+
+        if (forkDiff !== 0) {
+          return forkDiff;
+        }
+
+        return (a?.name ?? '').localeCompare(b?.name ?? '', 'es', { sensitivity: 'base' });
+      })
+      .slice(0, 6);
+  });
+  protected readonly githubLanguageBreakdown = computed<GithubLanguageDisplaySegment[]>(() => {
+    const segments = this.githubLanguages();
+
+    if (!segments || segments.length === 0) {
+      return [];
+    }
+
+    const sanitized = segments.map((segment) => {
+      const value = Number.isFinite(segment?.value) ? Math.max(segment.value, 0) : 0;
+      const percentage =
+        segment?.percentage !== null && Number.isFinite(segment?.percentage)
+          ? Math.max(segment.percentage ?? 0, 0)
+          : null;
+
+      return {
+        name: segment?.name ?? '',
+        color: segment?.color ?? null,
+        value,
+        percentage
+      } satisfies GithubLanguageSegment;
+    });
+
+    const totalValue = sanitized.reduce((acc, segment) => acc + (segment.value ?? 0), 0);
+
+    const computed = sanitized.map((segment) => {
+      const base =
+        segment.percentage !== null
+          ? segment.percentage
+          : totalValue > 0
+            ? (segment.value / totalValue) * 100
+            : 0;
+      const safe = Number.isFinite(base) ? Math.max(base, 0) : 0;
+
+      return {
+        name: segment.name,
+        color: segment.color ?? null,
+        value: segment.value,
+        percentage: safe
+      } satisfies GithubLanguageDisplaySegment;
+    });
+
+    const sum = computed.reduce((acc, segment) => acc + segment.percentage, 0);
+
+    if (computed.length > 0 && sum > 0) {
+      const difference = 100 - sum;
+      const lastIndex = computed.length - 1;
+      computed[lastIndex] = {
+        ...computed[lastIndex],
+        percentage: Math.max(computed[lastIndex].percentage + difference, 0)
+      } satisfies GithubLanguageDisplaySegment;
+    }
+
+    return computed.map((segment) => ({
+      ...segment,
+      percentage: Number.isFinite(segment.percentage)
+        ? Math.max(Math.min(segment.percentage, 100), 0)
+        : 0
+    }));
+  });
+  protected readonly showGithubRepositories = computed(
+    () => this.githubAccount().linked && this.githubTopRepositories().length > 0 && !this.githubDataLoading()
+  );
+  protected readonly showGithubLanguages = computed(
+    () => this.githubAccount().linked && this.githubLanguageBreakdown().length > 0 && !this.githubDataLoading()
+  );
+  protected readonly githubLanguagesAriaLabel = computed(() => {
+    const breakdown = this.githubLanguageBreakdown();
+
+    if (breakdown.length === 0) {
+      return 'No hay lenguajes de GitHub disponibles.';
+    }
+
+    const parts = breakdown.map((segment) => `${segment.name}: ${segment.percentage.toFixed(1)}%`);
+    return `Distribución de lenguajes en GitHub. ${parts.join(', ')}.`;
+  });
+  protected readonly hasGithubInsights = computed(
+    () => this.githubAccount().linked && (this.showGithubRepositories() || this.showGithubLanguages())
+  );
+  protected readonly trackByRepositoryId = (_: number, repo: GithubRepositoryPreview) => repo.id;
+  protected readonly trackByLanguageName = (_: number, segment: GithubLanguageDisplaySegment) => segment.name;
+
+  private fetchedGithubForUsername: string | null = null;
+  private readonly githubAccountWatcher = effect(() => {
+    this.handleGithubAccountChange(this.githubAccount());
+  });
 
   protected readonly profileForm = this.fb.nonNullable.group({
     displayName: ['', [Validators.required]],
@@ -1235,6 +1351,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.submitError.set(null);
     this.successMessage.set(null);
     this.githubErrorMessage.set(null);
+    this.githubDataError.set(null);
     this.profileForm.disable({ emitEvent: false });
     this.resetBackendValidation();
     this.avatarHasError.set(false);
@@ -1267,6 +1384,9 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
       this.educationSummary.set(null);
       this.experienceSummary.set(null);
       this.skillsSummary.set(null);
+      this.githubRepositories.set([]);
+      this.githubLanguages.set([]);
+      this.githubDataError.set(null);
       if (!this.editorOpen()) {
         this.profileForm.disable({ emitEvent: false });
       }
@@ -1385,6 +1505,8 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.educationSummary.set(status.educationSummary ?? null);
     this.experienceSummary.set(status.experienceSummary ?? null);
     this.skillsSummary.set(status.skillsSummary ?? null);
+    this.githubRepositories.set(status.githubRepositories ?? []);
+    this.githubLanguages.set(status.githubLanguages ?? []);
     this.profileForm.reset({
       displayName: status.displayName ?? '',
       biography: status.biography ?? '',
@@ -1421,6 +1543,68 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     };
 
     this.profile.set({ ...current, githubAccount: normalized });
+  }
+
+  private handleGithubAccountChange(account: GithubAccountStatus): void {
+    if (!account?.linked) {
+      this.githubDataLoading.set(false);
+      this.githubDataError.set(null);
+      this.githubRepositories.set([]);
+      this.githubLanguages.set([]);
+      this.fetchedGithubForUsername = null;
+      return;
+    }
+
+    const username = account.username?.trim();
+
+    if (!username) {
+      this.githubDataLoading.set(false);
+      this.githubRepositories.set([]);
+      this.githubLanguages.set([]);
+      this.githubDataError.set('No se pudo determinar el usuario de GitHub vinculado.');
+      this.fetchedGithubForUsername = null;
+      return;
+    }
+
+    const preloadedRepos = this.profile()?.githubRepositories ?? [];
+    const preloadedLanguages = this.profile()?.githubLanguages ?? [];
+
+    if (preloadedRepos.length > 0) {
+      this.githubRepositories.set(preloadedRepos);
+    }
+
+    if (preloadedLanguages.length > 0) {
+      this.githubLanguages.set(preloadedLanguages);
+    }
+
+    if (this.fetchedGithubForUsername === username && this.githubRepositories().length > 0) {
+      return;
+    }
+
+    this.fetchedGithubForUsername = username;
+    void this.loadGithubRepositories();
+  }
+
+  private async loadGithubRepositories(): Promise<void> {
+    this.githubDataLoading.set(true);
+    this.githubDataError.set(null);
+
+    try {
+      const result = await firstValueFrom(this.profileService.getGithubRepositories());
+      this.githubRepositories.set(result.repositories ?? []);
+      this.githubLanguages.set(result.languages ?? []);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo obtener la información de GitHub vinculada.';
+      this.githubDataError.set(message);
+      this.githubRepositories.set([]);
+      this.githubLanguages.set([]);
+      this.fetchedGithubForUsername = null;
+    } finally {
+      this.githubDataLoading.set(false);
+    }
   }
 
   private consumeGithubLinkFeedback(): void {

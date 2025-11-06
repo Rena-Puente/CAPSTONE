@@ -193,6 +193,111 @@
                     </li>
                   </ul>
                 </section>
+
+                <section
+                  class="public-profile__section public-profile__section--github"
+                  *ngIf="githubDataLoading() || githubDataError() || hasGithubInsights()"
+                >
+                  <div class="public-profile__section-header">
+                    <div>
+                      <h3 class="public-profile__section-title h5 mb-1">Actividad en GitHub</h3>
+                      <p class="mb-0 text-secondary">
+                        Repositorios y lenguajes públicos sincronizados desde la cuenta vinculada.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div *ngIf="githubDataLoading()" class="public-profile__github-loading">
+                    <div class="spinner-border text-light" role="status">
+                      <span class="visually-hidden">Cargando actividad de GitHub…</span>
+                    </div>
+                    <p class="mb-0 text-secondary">Consultando los datos públicos del perfil…</p>
+                  </div>
+
+                  <div *ngIf="!githubDataLoading() && githubDataError()" class="alert alert-warning" role="alert">
+                    {{ githubDataError() }}
+                  </div>
+
+                  <ng-container *ngIf="!githubDataLoading() && !githubDataError()">
+                    <div *ngIf="!hasGithubInsights()" class="public-profile__github-empty text-secondary">
+                      Este perfil aún no publica repositorios destacados en GitHub.
+                    </div>
+
+                    <div class="public-profile__github-repos" *ngIf="showGithubRepositories()">
+                      <h4 class="public-profile__github-title">Repositorios destacados</h4>
+                      <div class="public-profile__github-grid">
+                        <article
+                          class="public-profile__github-card"
+                          *ngFor="let repo of githubTopRepositories(); trackBy: trackByGithubRepoId"
+                        >
+                          <header class="public-profile__github-card-header">
+                            <h5 class="public-profile__github-card-name mb-1">
+                              <a
+                                *ngIf="repo.htmlUrl; else repoName"
+                                class="public-profile__github-card-link"
+                                [href]="repo.htmlUrl || '#'"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {{ repo.name }}
+                              </a>
+                              <ng-template #repoName>{{ repo.name }}</ng-template>
+                            </h5>
+                            <p class="public-profile__github-card-description text-secondary mb-0">
+                              {{ repo.description || 'Repositorio sin descripción pública.' }}
+                            </p>
+                          </header>
+                          <footer class="public-profile__github-card-meta">
+                            <span class="public-profile__github-card-stat" aria-label="Estrellas">
+                              <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
+                              {{ repo.stars }}
+                            </span>
+                            <span class="public-profile__github-card-stat" aria-label="Forks">
+                              <i class="bi bi-git" aria-hidden="true"></i>
+                              {{ repo.forks }}
+                            </span>
+                            <span class="public-profile__github-card-language" *ngIf="repo.language">
+                              <span class="public-profile__github-card-language-dot" aria-hidden="true"></span>
+                              {{ repo.language }}
+                            </span>
+                          </footer>
+                        </article>
+                      </div>
+                    </div>
+
+                    <div class="public-profile__github-languages" *ngIf="showGithubLanguages()">
+                      <h4 class="public-profile__github-title">Lenguajes más usados</h4>
+                      <div
+                        class="public-profile__github-bar"
+                        role="img"
+                        [attr.aria-label]="githubLanguagesAriaLabel()"
+                      >
+                        <div
+                          class="public-profile__github-bar-segment"
+                          *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByGithubLanguageName"
+                          [style.flex-basis.%]="segment.percentage"
+                          [style.backgroundColor]="segment.color || '#586069'"
+                          aria-hidden="true"
+                        ></div>
+                      </div>
+                      <ul class="public-profile__github-legend">
+                        <li
+                          class="public-profile__github-legend-item"
+                          *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByGithubLanguageName"
+                        >
+                          <span
+                            class="public-profile__github-swatch"
+                            [style.backgroundColor]="segment.color || '#586069'"
+                          ></span>
+                          <span class="public-profile__github-label">{{ segment.name }}</span>
+                          <span class="public-profile__github-percentage">
+                            {{ segment.percentage | number: '1.0-1' }}%
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  </ng-container>
+                </section>
               </ng-container>
             </ng-template>
           </ng-container>
