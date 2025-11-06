@@ -2,6 +2,7 @@ const { fetch } = require('undici');
 
 const { config } = require('../config');
 const { createMemoryCache } = require('../utils/cache');
+const { resolveLanguageColor } = require('../utils/github-language-colors');
 
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -12,6 +13,8 @@ const DEFAULT_REPOSITORY_LIMIT = 6;
 const MAX_REPOSITORY_LIMIT = 50;
 const DEFAULT_REPOSITORY_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 const DEFAULT_LANGUAGE_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+const DEFAULT_LANGUAGE_BREAKDOWN_LIMIT = 5;
+const MAX_LANGUAGE_BREAKDOWN_LIMIT = 20;
 const DEFAULT_RETRY_DELAY_MS = 500;
 const MAX_RETRY_DELAY_MS = 30_000;
 
@@ -412,6 +415,10 @@ async function fetchGithubLanguageSummary(owner, repositories, options = {}) {
 
   const limit = parseRepositoryLimit(options.limit ?? repositories?.length ?? DEFAULT_REPOSITORY_LIMIT);
   const repoList = Array.isArray(repositories) ? repositories.slice(0, limit) : [];
+  const languageLimitRaw = Number.parseInt(options.languageLimit, 10);
+  const languageLimit = Number.isInteger(languageLimitRaw) && languageLimitRaw > 0
+    ? Math.min(languageLimitRaw, MAX_LANGUAGE_BREAKDOWN_LIMIT)
+    : DEFAULT_LANGUAGE_BREAKDOWN_LIMIT;
   const languageTotals = new Map();
   let totalBytes = 0;
 
@@ -422,7 +429,18 @@ async function fetchGithubLanguageSummary(owner, repositories, options = {}) {
       continue;
     }
 
-    const languages = await fetchRepositoryLanguages(normalizedOwner, repoName, options);
+    let languages;
+
+    try {
+      languages = await fetchRepositoryLanguages(normalizedOwner, repoName, options);
+    } catch (error) {
+      console.warn('[GitHub] No se pudieron obtener los lenguajes del repositorio', {
+        owner: normalizedOwner,
+        repository: repoName,
+        error: error?.message || error
+      });
+      continue;
+    }
 
     for (const [language, bytes] of Object.entries(languages)) {
       const parsedBytes = Number.parseInt(bytes, 10);
@@ -440,9 +458,11 @@ async function fetchGithubLanguageSummary(owner, repositories, options = {}) {
     .map(([language, bytes]) => ({
       language,
       bytes,
-      percentage: totalBytes > 0 ? bytes / totalBytes : 0
+      percentage: totalBytes > 0 ? (bytes / totalBytes) * 100 : 0,
+      color: resolveLanguageColor(language)
     }))
-    .sort((a, b) => b.bytes - a.bytes);
+    .sort((a, b) => b.bytes - a.bytes)
+    .slice(0, languageLimit);
 
   return { totalBytes, breakdown };
 }
