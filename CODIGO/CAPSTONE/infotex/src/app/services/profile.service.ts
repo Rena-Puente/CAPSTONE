@@ -2008,8 +2008,39 @@ export class ProfileService {
     }
 
     if (typeof value === 'object') {
-      return Object.entries(value as Record<string, unknown>)
-        .map(([key, item]) => this.toGithubLanguageSegment({ name: key, value: item }))
+            const record = value as Record<string, unknown>;
+      const nestedKeys = ['breakdown', 'languages', 'items', 'segments', 'data'];
+
+      for (const key of nestedKeys) {
+        if (key in record && record[key] !== value) {
+          const nested = this.toGithubLanguageArray(record[key]);
+
+          if (nested.length > 0) {
+            return nested;
+          }
+        }
+      }
+
+      const metadataKeys = new Set([
+        'total',
+        'totalbytes',
+        'total_size',
+        'totalsize',
+        'totalcount',
+        'total_count',
+        'sum',
+        'overall',
+        'breakdown'
+      ]);
+
+      return Object.entries(record)
+        .map(([key, item]) => {
+          if (metadataKeys.has(key.trim().toLowerCase())) {
+            return null;
+          }
+
+          return this.toGithubLanguageSegment({ name: key, value: item });
+        })
         .filter((item): item is GithubLanguageSegment => item !== null);
     }
 
