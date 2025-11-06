@@ -488,7 +488,7 @@ function registerProfileRoutes(app) {
       const isCompleteFlag = row ? String(row.PERFIL_COMPLETO ?? '').toUpperCase() === 'S' : false;
       const isComplete = isCompleteFlag && missingFields.length === 0;
       const message = row ? null : 'Aún no has configurado tu perfil.';
-
+      const githubAccount = await fetchGithubAccountStatus(userId);
       const response = buildProfileEnvelope(profileValues, createDefaultFieldStatuses(true), {
         isComplete,
         missingFields,
@@ -839,7 +839,8 @@ function registerProfileRoutes(app) {
           const response = buildProfileEnvelope(validation.values, statuses, {
             isComplete: false,
             missingFields,
-            message: 'Corrige la información resaltada e inténtalo nuevamente.'
+            message: 'Corrige la información resaltada e inténtalo nuevamente.',
+            githubAccount
           });
 
           return res.json(response);

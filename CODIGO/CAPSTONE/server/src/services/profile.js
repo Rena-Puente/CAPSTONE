@@ -98,7 +98,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
   const educationSummary = options.educationSummary ?? null;
   const experienceSummary = options.experienceSummary ?? null;
   const skillsSummary = options.skillsSummary ?? null;
-
+  const githubAccount = options.githubAccount ?? null;
   const data = {
     ...baseValues,
     ...flags,
@@ -109,6 +109,7 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     educationSummary,
     experienceSummary,
     skillsSummary,
+    githubAccount,
     profile: baseValues
   };
 
@@ -130,7 +131,8 @@ function buildProfileEnvelope(values, statuses, options = {}) {
     message,
     educationSummary,
     experienceSummary,
-    skillsSummary
+    skillsSummary,
+    githubAccount
   };
 }
 
