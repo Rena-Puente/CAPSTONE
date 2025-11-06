@@ -29,9 +29,12 @@ const {
 } = require('../services/profile');
 const {
   GithubOAuthError,
+  GithubApiError,
   buildGithubAuthorizeUrl,
   exchangeCodeForToken,
-  fetchGithubUserProfile
+  fetchGithubUserProfile,
+  fetchGithubRepositories,
+  fetchGithubLanguageSummary
 } = require('../services/github');
 const { rememberGithubState, consumeGithubState } = require('../services/github-state');
 const { toIsoString } = require('../utils/format');
@@ -46,6 +49,22 @@ function registerProfileRoutes(app) {
     providerId: null,
     lastSyncedAt: null
   });
+
+  function parseRepositoryLimitParam(rawLimit) {
+    const parsed = Number.parseInt(rawLimit, 10);
+
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return 6;
+    }
+
+    return Math.min(parsed, 50);
+  }
+
+  function parseRepositorySortParam(rawSort) {
+    const normalized = typeof rawSort === 'string' ? rawSort.trim().toLowerCase() : '';
+
+    return normalized === 'stars' ? 'stars' : 'recent';
+  }
 
   async function fetchGithubAccountStatus(userId) {
     if (!Number.isInteger(userId) || userId <= 0) {
@@ -110,6 +129,7 @@ function registerProfileRoutes(app) {
   app.options('/profile/:userId', cors());
   app.options('/profile/:userId/github/authorize', cors());
   app.options('/profile/:userId/github/link', cors());
+  app.options('/profile/:userId/github/repositories', cors());
 
   app.get('/profiles/:slug', async (req, res) => {
     const startedAt = Date.now();
@@ -292,6 +312,123 @@ function registerProfileRoutes(app) {
         error: error?.message || error
       });
       return handleOracleError(error, res, 'No se pudo obtener el perfil público.');
+    }
+  });
+
+  app.get('/profile/:userId/github/repositories', requireAccessToken, async (req, res) => {
+    const startedAt = Date.now();
+    const userId = Number.parseInt(req.params.userId, 10);
+    const accessToken = req.auth?.accessToken ?? extractBearerToken(req);
+    const limit = parseRepositoryLimitParam(req.query?.limit);
+    const sort = parseRepositorySortParam(req.query?.sort);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+    }
+
+    try {
+      const sessionUserId = await getUserIdFromAccessToken(accessToken);
+
+      if (!sessionUserId || sessionUserId !== userId) {
+        return res.status(403).json({ ok: false, error: 'No estás autorizado para consultar los repositorios de GitHub de este usuario.' });
+      }
+
+      const githubAccount = await fetchGithubAccountStatus(userId);
+
+      if (!githubAccount.linked || !githubAccount.username) {
+        return res.status(404).json({ ok: false, error: 'El usuario no tiene una cuenta de GitHub vinculada.' });
+      }
+
+      const repositories = await fetchGithubRepositories(githubAccount.username, { limit, sort });
+      const languages = await fetchGithubLanguageSummary(githubAccount.username, repositories, { limit });
+
+      console.info('[Profile] GitHub repositories fetched (private)', {
+        userId,
+        githubUsername: githubAccount.username,
+        repositoryCount: repositories.length,
+        totalLanguageBytes: languages.totalBytes ?? 0,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      return res.json({ ok: true, repositories, languages });
+    } catch (error) {
+      console.error('[Profile] Failed to fetch GitHub repositories (private)', {
+        userId,
+        error: error?.message || error,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      if (error instanceof GithubApiError) {
+        const status = error.status >= 400 && error.status < 600 ? error.status : 502;
+        return res.status(status).json({ ok: false, error: 'No se pudo obtener los repositorios de GitHub.' });
+      }
+
+      return res.status(500).json({ ok: false, error: 'No se pudo obtener los repositorios de GitHub.' });
+    }
+  });
+
+  app.get('/profiles/:slug/github/repositories', async (req, res) => {
+    const startedAt = Date.now();
+    const rawSlug = typeof req.params.slug === 'string' ? req.params.slug.trim() : '';
+    const limit = parseRepositoryLimitParam(req.query?.limit);
+    const sort = parseRepositorySortParam(req.query?.sort);
+
+    if (!rawSlug || !isSlugValid(rawSlug)) {
+      return res.status(400).json({ ok: false, error: 'La URL personalizada proporcionada no es válida.' });
+    }
+
+    try {
+      const result = await executeQuery(
+        `SELECT id_usuario
+           FROM perfiles
+          WHERE slug = :slug`,
+        { slug: rawSlug }
+      );
+
+      const row = Array.isArray(result.rows) ? result.rows[0] : null;
+
+      if (!row) {
+        return res.status(404).json({ ok: false, error: 'No se encontró ningún perfil público con la URL proporcionada.' });
+      }
+
+      const rawUserId = row.ID_USUARIO ?? row.id_usuario ?? null;
+      const userId = Number.parseInt(String(rawUserId ?? ''), 10);
+
+      if (!Number.isInteger(userId) || userId <= 0) {
+        return res.status(204).end();
+      }
+
+      const githubAccount = await fetchGithubAccountStatus(userId);
+
+      if (!githubAccount.linked || !githubAccount.username) {
+        return res.status(204).end();
+      }
+
+      const repositories = await fetchGithubRepositories(githubAccount.username, { limit, sort });
+      const languages = await fetchGithubLanguageSummary(githubAccount.username, repositories, { limit });
+
+      console.info('[Profile] GitHub repositories fetched (public)', {
+        slug: rawSlug,
+        githubUsername: githubAccount.username,
+        repositoryCount: repositories.length,
+        totalLanguageBytes: languages.totalBytes ?? 0,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      return res.json({ ok: true, repositories, languages });
+    } catch (error) {
+      console.error('[Profile] Failed to fetch GitHub repositories (public)', {
+        slug: rawSlug,
+        error: error?.message || error,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      if (error instanceof GithubApiError) {
+        const status = error.status >= 400 && error.status < 600 ? error.status : 502;
+        return res.status(status).json({ ok: false, error: 'No se pudo obtener los repositorios públicos de GitHub.' });
+      }
+
+      return res.status(500).json({ ok: false, error: 'No se pudo obtener los repositorios públicos de GitHub.' });
     }
   });
 
