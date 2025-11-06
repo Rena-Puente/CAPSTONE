@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { resolveDefaultRouteForUserType } from '../constants/user-type-routing';
 import { AuthService } from '../services/auth.service';
 
 export const guestGuard: CanActivateFn = () => {
@@ -10,7 +11,10 @@ export const guestGuard: CanActivateFn = () => {
 
   if (isLoggedIn) {
     // si el usuario ya está logueado, redirígelo al home
-    router.navigate(['/home']);
+    const userType = authService.getUserType();
+    const destination = resolveDefaultRouteForUserType(userType) ?? '/home';
+
+    router.navigate([destination]);
     return false;
   }
 

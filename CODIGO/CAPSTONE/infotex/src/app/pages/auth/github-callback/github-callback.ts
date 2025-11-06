@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { resolveDefaultRouteForUserType } from '../../../constants/user-type-routing';
 import { AuthService, GITHUB_OAUTH_STATE_KEY } from '../../../services/auth.service';
 
 @Component({
@@ -42,8 +43,11 @@ export class GithubCallback implements OnInit {
 
       this.clearStoredState();
 
-      const { isProfileComplete } = await firstValueFrom(this.authService.completeGithubLogin(code, state));
-      const destination = isProfileComplete ? '/home' : '/profile';
+      const { userType, isProfileComplete } = await firstValueFrom(
+        this.authService.completeGithubLogin(code, state)
+      );
+      const destinationOverride = resolveDefaultRouteForUserType(userType);
+      const destination = destinationOverride ?? (isProfileComplete ? '/home' : '/profile');
       const navigated = await this.router.navigate([destination]);
 
       if (!navigated) {

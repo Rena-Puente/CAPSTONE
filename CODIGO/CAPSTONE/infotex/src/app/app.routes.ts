@@ -10,7 +10,7 @@ import { GithubCallback } from './pages/auth/github-callback/github-callback';
 
 export const routes: Routes = [
   { path: 'home', component: Home, canActivate: [authGuard] },
-  { path: 'about', component: About, canActivate: [authGuard] },
+  { path: 'about', component: About },
   { path: 'profile', component: Profile, canActivate: [authGuard] },
   { path: 'companies/create', component: CompanyCreate, canActivate: [authGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },

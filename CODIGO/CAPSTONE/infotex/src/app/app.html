@@ -1,47 +1,26 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top px-3">
   <img src="infotex-navbar.png" routerLink="/home" width="100" height="56" class="profile-icon" />
   <div class="ms-auto d-flex align-items-center gap-3">
-    <a
-      *ngIf="isAuthenticated()"
-      class="nav-link text-light"
-      routerLink="/home"
-      >Proyectos</a
-    >
-    <a
-      *ngIf="isAuthenticated()"
-      class="nav-link text-light"
-      routerLink="/about"
-      >Nosotros</a
-    >
-    <a *ngIf="!isAuthenticated()" class="nav-link text-light" routerLink="/welcome">Welcome</a>
-    <div
-      *ngIf="isAuthenticated()"
-      class="dropdown profile-dropdown"
-      [class.show]="isDropdownOpen()"
-    >
-      <button
-        class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2 profile-button"
-        type="button"
-        id="profileDropdown"
-        (click)="toggleDropdown($event)"
-        [attr.aria-expanded]="isDropdownOpen()"
-      >
-        <img src="profile.ico" alt="Perfil" width="25" height="25" class="profile-icon" />
-        <span>Perfil</span>
-      </button>
-      <ul
-        class="dropdown-menu dropdown-menu-end"
-        [class.show]="isDropdownOpen()"
-        aria-labelledby="profileDropdown"
-      >
-        <li>
-          <a class="dropdown-item" routerLink="/profile" (click)="closeDropdown()">Ver perfil</a>
-        </li>
-        <li>
-          <button class="dropdown-item" type="button" (click)="logout()">Cerrar sesión</button>
-        </li>
-      </ul>
-    </div>
+    <ng-container *ngIf="!isAuthenticated(); else authenticatedLinks">
+      <a class="nav-link text-light" routerLink="/welcome">Welcome</a>
+      <a class="nav-link text-light" routerLink="/about">Nosotros</a>
+    </ng-container>
+    <ng-template #authenticatedLinks>
+      <ng-container *ngIf="isUser1(); else otherAuthenticatedLinks">
+        <a class="nav-link text-light" routerLink="/about">Nosotros</a>
+        <a class="nav-link text-light" routerLink="/home">Home</a>
+        <a class="nav-link text-light" routerLink="/profile">Perfil</a>
+      </ng-container>
+      <ng-template #otherAuthenticatedLinks>
+        <a
+          *ngIf="isUser2()"
+          class="nav-link text-light"
+          routerLink="/companies/create"
+          >Crear empresa</a
+        >
+      </ng-template>
+      <button class="btn btn-outline-light" type="button" (click)="logout()">Cerrar sesión</button>
+    </ng-template>
   </div>
 </nav>
 

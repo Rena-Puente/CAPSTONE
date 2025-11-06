@@ -10,11 +10,10 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { resolveDefaultRouteForUserType } from '../../constants/user-type-routing';
 import { AuthService, GITHUB_OAUTH_STATE_KEY } from '../../services/auth.service';
 
 type AuthPanelTab = 'login' | 'register';
-
-const COMPANY_USER_TYPE = 3;
 
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value ?? '';
@@ -141,7 +140,7 @@ export class Welcome {
         this.authService.login(email, password)
       );
 
-      const destinationOverride = this.resolveDestinationForUserType(userType);
+      const destinationOverride = resolveDefaultRouteForUserType(userType);
 
       if (!destinationOverride && isProfileComplete === null) {
         this.isMenuOpen.set(true);
@@ -251,13 +250,6 @@ export class Welcome {
     }
   }
 
-  private resolveDestinationForUserType(userType: number | null): string | null {
-    if (userType === COMPANY_USER_TYPE) {
-      return '/companies/create';
-    }
-
-    return null;
-  }
 
   private storeGithubState(state: string): boolean {
     try {
