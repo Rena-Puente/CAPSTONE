@@ -320,6 +320,104 @@ test('GET /profiles/:slug/github/repositories returns 204 when GitHub account is
   assert.equal(body, null);
 });
 
+test('GET /profiles/:slug/github/repositories returns data when username exists without OAuth link', { concurrency: false }, async () => {
+  oracleMock.__setExecuteQueryMock(async (sql) => {
+    if (/WHERE\s+slug\s*=\s*:slug/i.test(sql)) {
+      return {
+        rows: [
+          {
+            ID_USUARIO: 303
+          }
+        ]
+      };
+    }
+
+    if (/FROM\s+dual/i.test(sql) && /usuario_github/i.test(sql)) {
+      return {
+        rows: [
+          {
+            USUARIO_GITHUB: 'demo-user',
+            PROVIDER_ID: null,
+            EXPIRA_TOKEN: null
+          }
+        ]
+      };
+    }
+
+    throw new Error(`Unexpected query: ${sql}`);
+  });
+
+  undiciMock.__setFetchMock(async (input) => {
+    const url = typeof input === 'string' ? input : input?.href ?? input?.toString();
+
+    if (!url) {
+      throw new Error('Invalid URL passed to fetch');
+    }
+
+    if (url.includes('/users/demo-user/repos')) {
+      return createJsonResponse(200, [
+        {
+          id: 1,
+          name: 'alpha',
+          full_name: 'demo-user/alpha',
+          stargazers_count: 7,
+          forks_count: 2,
+          language: 'JavaScript',
+          html_url: 'https://github.com/demo-user/alpha',
+          pushed_at: '2024-05-01T00:00:00Z',
+          updated_at: '2024-05-01T00:00:00Z'
+        }
+      ]);
+    }
+
+    if (url.includes('/repos/demo-user/alpha/languages')) {
+      return createJsonResponse(200, {
+        JavaScript: 1000,
+        HTML: 250
+      });
+    }
+
+    throw new Error(`Unexpected fetch request: ${url}`);
+  });
+
+  const app = createApp();
+  const { status, body } = await makeRequest(app, '/profiles/demo-slug/github/repositories');
+
+  assert.equal(status, 200);
+  assert.deepEqual(body.repositories, [
+    {
+      id: 1,
+      nodeId: null,
+      name: 'alpha',
+      fullName: 'demo-user/alpha',
+      description: null,
+      htmlUrl: 'https://github.com/demo-user/alpha',
+      homepage: null,
+      language: 'JavaScript',
+      topics: [],
+      stargazersCount: 7,
+      watchersCount: 0,
+      forksCount: 2,
+      openIssuesCount: 0,
+      visibility: 'public',
+      license: null,
+      createdAt: null,
+      updatedAt: '2024-05-01T00:00:00Z',
+      pushedAt: '2024-05-01T00:00:00Z',
+      archived: false,
+      disabled: false,
+      size: 0
+    }
+  ]);
+  assert.deepEqual(body.languages, {
+    totalBytes: 1250,
+    breakdown: [
+      { language: 'JavaScript', bytes: 1000, percentage: 1000 / 1250 },
+      { language: 'HTML', bytes: 250, percentage: 250 / 1250 }
+    ]
+  });
+});
+
 test('GET /profiles/:slug/github/repositories propagates GitHub failures', { concurrency: false }, async () => {
   oracleMock.__setExecuteQueryMock(async (sql) => {
     if (/WHERE\s+slug\s*=\s*:slug/i.test(sql)) {

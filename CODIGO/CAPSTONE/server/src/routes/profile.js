@@ -399,17 +399,20 @@ function registerProfileRoutes(app) {
       }
 
       const githubAccount = await fetchGithubAccountStatus(userId);
+      const githubUsername = typeof githubAccount.username === 'string'
+        ? githubAccount.username.trim()
+        : '';
 
-      if (!githubAccount.linked || !githubAccount.username) {
+      if (!githubUsername) {
         return res.status(204).end();
       }
 
-      const repositories = await fetchGithubRepositories(githubAccount.username, { limit, sort });
-      const languages = await fetchGithubLanguageSummary(githubAccount.username, repositories, { limit });
+      const repositories = await fetchGithubRepositories(githubUsername, { limit, sort });
+      const languages = await fetchGithubLanguageSummary(githubUsername, repositories, { limit });
 
       console.info('[Profile] GitHub repositories fetched (public)', {
         slug: rawSlug,
-        githubUsername: githubAccount.username,
+        githubUsername,
         repositoryCount: repositories.length,
         totalLanguageBytes: languages.totalBytes ?? 0,
         elapsedMs: Date.now() - startedAt
