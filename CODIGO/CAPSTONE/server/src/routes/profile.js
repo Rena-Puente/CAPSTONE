@@ -4,7 +4,15 @@ const { executeQuery } = require('../db/oracle');
 const { requireAccessToken } = require('../middleware/auth');
 const { getClientIp, extractBearerToken } = require('../utils/request');
 const { handleOracleError } = require('../utils/errors');
-const { isAccessTokenValid } = require('../services/auth');
+const {
+  isAccessTokenValid,
+  logAuthEvent,
+  summarizeToken,
+  findUserByOAuth,
+  saveGithubTokens,
+  getUserIdFromAccessToken,
+  syncGithubProfileMetadata
+} = require('../services/auth');
 const { getEducationStatus, listEducation } = require('../services/education');
 const { getExperienceStatus, listExperience } = require('../services/experience');
 const { getSkillStatus, listSkills } = require('../services/skills');
@@ -19,12 +27,89 @@ const {
   computeProfileMissingFields,
   isSlugValid
 } = require('../services/profile');
+const {
+  GithubOAuthError,
+  buildGithubAuthorizeUrl,
+  exchangeCodeForToken,
+  fetchGithubUserProfile
+} = require('../services/github');
+const { rememberGithubState, consumeGithubState } = require('../services/github-state');
+const { toIsoString } = require('../utils/format');
 
 const SLUG_CONFLICT_MESSAGE = 'La URL personalizada ya está en uso. Elige otra distinta.';
 
 function registerProfileRoutes(app) {
+  const emptyGithubAccount = Object.freeze({
+    linked: false,
+    username: null,
+    profileUrl: null,
+    providerId: null,
+    lastSyncedAt: null
+  });
+
+  async function fetchGithubAccountStatus(userId) {
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return { ...emptyGithubAccount };
+    }
+
+    try {
+      const result = await executeQuery(
+        `SELECT
+           (SELECT usuario_github FROM perfiles WHERE id_usuario = :userId) AS usuario_github,
+           (SELECT id_proveedor_usuario
+              FROM (
+                SELECT id_proveedor_usuario, id_oauth
+                  FROM cuentas_oauth
+                 WHERE id_usuario = :userId
+                   AND proveedor = 'GITHUB'
+                 ORDER BY id_oauth DESC
+              )
+             WHERE ROWNUM = 1) AS provider_id,
+           (SELECT expira_token
+              FROM (
+                SELECT expira_token, id_oauth
+                  FROM cuentas_oauth
+                 WHERE id_usuario = :userId
+                   AND proveedor = 'GITHUB'
+                 ORDER BY id_oauth DESC
+              )
+             WHERE ROWNUM = 1) AS expira_token
+         FROM dual`,
+        { userId }
+      );
+
+      const row = result.rows?.[0] ?? {};
+      const usernameRaw = row.USUARIO_GITHUB ?? row.usuario_github ?? null;
+      const providerIdRaw = row.PROVIDER_ID ?? row.provider_id ?? null;
+      const expiresRaw = row.EXPIRA_TOKEN ?? row.expira_token ?? null;
+
+      const username = typeof usernameRaw === 'string' ? usernameRaw.trim() : '';
+      const providerId = providerIdRaw !== undefined && providerIdRaw !== null
+        ? String(providerIdRaw)
+        : null;
+      const lastSyncedAt = expiresRaw ? toIsoString(expiresRaw) : null;
+
+      return {
+        linked: Boolean(providerId),
+        username: username || null,
+        profileUrl: username ? `https://github.com/${username}` : null,
+        providerId,
+        lastSyncedAt
+      };
+    } catch (error) {
+      console.error('[Profile] Failed to resolve GitHub account status', {
+        userId,
+        error: error?.message || error
+      });
+
+      return { ...emptyGithubAccount };
+    }
+  }
+
   app.options('/profile/status/:userId', cors());
   app.options('/profile/:userId', cors());
+  app.options('/profile/:userId/github/authorize', cors());
+  app.options('/profile/:userId/github/link', cors());
 
   app.get('/profiles/:slug', async (req, res) => {
     const startedAt = Date.now();
@@ -287,6 +372,7 @@ function registerProfileRoutes(app) {
         experienceSummary,
         skillsSummary
       );
+      const githubAccount = await fetchGithubAccountStatus(userId);
 
       if (!row) {
         return res.json({
@@ -296,7 +382,8 @@ function registerProfileRoutes(app) {
           missingFields,
           educationSummary,
           experienceSummary,
-          skillsSummary
+          skillsSummary,
+          githubAccount
         });
       }
 
@@ -317,7 +404,8 @@ function registerProfileRoutes(app) {
         missingFields,
         educationSummary,
         experienceSummary,
-        skillsSummary
+        skillsSummary,
+        githubAccount
       });
     } catch (error) {
       console.error('[Profile] Status request failed', {
@@ -407,7 +495,8 @@ function registerProfileRoutes(app) {
         message,
         educationSummary,
         experienceSummary,
-        skillsSummary
+        skillsSummary,
+        githubAccount
       });
 
       console.info('[Profile] Detail response sent', {
@@ -430,6 +519,229 @@ function registerProfileRoutes(app) {
         error: error?.message || error
       });
       handleOracleError(error, res, 'No se pudo obtener el perfil.');
+    }
+  });
+
+  app.post('/profile/:userId/github/authorize', requireAccessToken, async (req, res) => {
+    const startedAt = Date.now();
+    const userId = Number.parseInt(req.params.userId, 10);
+    const rawState = typeof req.body?.state === 'string' ? req.body.state.trim() : '';
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+    }
+
+    if (!rawState) {
+      return res.status(400).json({ ok: false, error: 'El parámetro state es obligatorio.' });
+    }
+
+    if (rawState.length > 512) {
+      return res.status(400).json({ ok: false, error: 'El parámetro state es demasiado largo.' });
+    }
+
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const sessionUserId = await getUserIdFromAccessToken(accessToken);
+
+      if (!sessionUserId || sessionUserId !== userId) {
+        return res.status(403).json({ ok: false, error: 'No estás autorizado para vincular GitHub para este usuario.' });
+      }
+
+      const authorizeUrl = buildGithubAuthorizeUrl(rawState);
+
+      rememberGithubState(rawState, { purpose: 'link', userId });
+
+      logAuthEvent('GitHub link authorization URL generated', {
+        userId,
+        stateLength: rawState.length,
+        authorizeUrl
+      });
+
+      res.json({ ok: true, url: authorizeUrl });
+    } catch (error) {
+      console.error('[Profile] GitHub link authorize failed', {
+        userId,
+        stateLength: rawState.length,
+        error: error?.message || error,
+        elapsedMs: Date.now() - startedAt
+      });
+
+      if (error instanceof GithubOAuthError && error.status >= 400 && error.status < 500) {
+        return res.status(error.status).json({ ok: false, error: error.message });
+      }
+
+      return res.status(500).json({ ok: false, error: 'No se pudo generar la URL de autorización de GitHub.' });
+    }
+  });
+
+  app.post('/profile/:userId/github/link', requireAccessToken, async (req, res) => {
+    const startedAt = Date.now();
+    const userId = Number.parseInt(req.params.userId, 10);
+    const { code, state } = req.body ?? {};
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+    }
+
+    if (!code || typeof code !== 'string' || !state || typeof state !== 'string') {
+      return res.status(400).json({ ok: false, error: 'El código de autorización y el estado son obligatorios.' });
+    }
+
+    const normalizedState = state.trim();
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const sessionUserId = await getUserIdFromAccessToken(accessToken);
+
+      if (!sessionUserId || sessionUserId !== userId) {
+        return res.status(403).json({ ok: false, error: 'No estás autorizado para vincular GitHub para este usuario.' });
+      }
+
+      const stateContext = consumeGithubState(normalizedState);
+
+      if (!stateContext || stateContext.purpose !== 'link' || stateContext.userId !== userId) {
+        logAuthEvent('GitHub link rejected (invalid state)', {
+          userId,
+          normalizedState,
+          context: stateContext ?? null
+        });
+
+        return res.status(400).json({ ok: false, error: 'La validación de seguridad para vincular GitHub falló. Intenta nuevamente.' });
+      }
+
+      const tokenResponse = await exchangeCodeForToken({ code, state: normalizedState });
+
+      logAuthEvent('GitHub link token exchange successful', {
+        userId,
+        scope: tokenResponse.scope,
+        expiresIn: tokenResponse.expiresIn ?? null
+      });
+
+      const { profile, primaryEmail } = await fetchGithubUserProfile(tokenResponse.accessToken);
+      const providerId = profile?.id ?? profile?.node_id ?? null;
+
+      if (!providerId) {
+        throw new GithubOAuthError('GitHub no devolvió un identificador de usuario.', 500, profile);
+      }
+
+      const providerIdString = String(providerId);
+      const existingLinkedUserId = await findUserByOAuth('GITHUB', providerIdString);
+
+      if (existingLinkedUserId && existingLinkedUserId !== userId) {
+        return res.status(409).json({
+          ok: false,
+          error: 'Esta cuenta de GitHub ya está vinculada a otro usuario de InfoTex.'
+        });
+      }
+
+      const displayName = profile?.name || profile?.login || primaryEmail?.email || null;
+      const avatarUrl = profile?.avatar_url || null;
+      const githubUsername = typeof profile?.login === 'string' ? profile.login : null;
+      const expiresAt = tokenResponse.expiresIn
+        ? new Date(Date.now() + Number(tokenResponse.expiresIn) * 1000)
+        : null;
+
+      await saveGithubTokens({
+        userId,
+        providerId: providerIdString,
+        accessToken: tokenResponse.accessToken,
+        refreshToken: tokenResponse.refreshToken,
+        scope: tokenResponse.scope,
+        expiresAt
+      });
+
+      await syncGithubProfileMetadata({
+        userId,
+        displayName,
+        avatarUrl,
+        githubUsername
+      });
+
+      const githubAccount = await fetchGithubAccountStatus(userId);
+
+      logAuthEvent('GitHub account linked', {
+        userId,
+        providerId: providerIdString,
+        scope: tokenResponse.scope,
+        accessToken: summarizeToken(tokenResponse.accessToken),
+        refreshToken: summarizeToken(tokenResponse.refreshToken)
+      });
+
+      res.json({
+        ok: true,
+        githubAccount,
+        message: 'Tu cuenta de GitHub se vinculó correctamente.'
+      });
+    } catch (error) {
+      console.error('[Profile] GitHub link failed', {
+        userId,
+        path: req.originalUrl,
+        elapsedMs: Date.now() - startedAt,
+        error: error?.message || error
+      });
+
+      if (error instanceof GithubOAuthError) {
+        const status = error.status >= 400 && error.status < 500 ? error.status : 500;
+
+        return res.status(status).json({ ok: false, error: error.message });
+      }
+
+      return res.status(500).json({ ok: false, error: 'No se pudo vincular tu cuenta de GitHub.' });
+    }
+  });
+
+  app.delete('/profile/:userId/github/link', requireAccessToken, async (req, res) => {
+    const startedAt = Date.now();
+    const userId = Number.parseInt(req.params.userId, 10);
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de usuario no es válido.' });
+    }
+
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const sessionUserId = await getUserIdFromAccessToken(accessToken);
+
+      if (!sessionUserId || sessionUserId !== userId) {
+        return res.status(403).json({ ok: false, error: 'No estás autorizado para desvincular GitHub para este usuario.' });
+      }
+
+      await executeQuery(
+        `DELETE FROM cuentas_oauth
+          WHERE id_usuario = :userId
+            AND proveedor = 'GITHUB'`,
+        { userId },
+        { autoCommit: true }
+      );
+
+      await executeQuery(
+        `UPDATE perfiles
+            SET usuario_github = NULL
+          WHERE id_usuario = :userId`,
+        { userId },
+        { autoCommit: true }
+      );
+
+      const githubAccount = await fetchGithubAccountStatus(userId);
+
+      logAuthEvent('GitHub account unlinked', { userId });
+
+      res.json({
+        ok: true,
+        githubAccount,
+        message: 'Tu cuenta de GitHub se desvinculó correctamente.'
+      });
+    } catch (error) {
+      console.error('[Profile] GitHub unlink failed', {
+        userId,
+        path: req.originalUrl,
+        elapsedMs: Date.now() - startedAt,
+        error: error?.message || error
+      });
+
+      return handleOracleError(error, res, 'No se pudo desvincular tu cuenta de GitHub.');
     }
   });
 
@@ -470,6 +782,7 @@ function registerProfileRoutes(app) {
 
       const existingRow = existingProfileResult.rows?.[0] ?? null;
       const existingProfileValues = existingRow ? mapRowToProfile(existingRow) : null;
+      const githubAccount = await fetchGithubAccountStatus(userId);
 
       validation = validateProfilePayload(req.body || {}, existingProfileValues);
 
@@ -483,7 +796,8 @@ function registerProfileRoutes(app) {
         const response = buildProfileEnvelope(validation.values, validation.statuses, {
           isComplete: false,
           missingFields: validation.missingFields,
-          message: 'Corrige la información resaltada e inténtalo nuevamente.'
+          message: 'Corrige la información resaltada e inténtalo nuevamente.',
+          githubAccount
         });
 
         return res.json(response);
@@ -622,7 +936,8 @@ function registerProfileRoutes(app) {
         message: 'Perfil actualizado correctamente.',
         educationSummary,
         experienceSummary,
-        skillsSummary
+        skillsSummary,
+        githubAccount
       });
 
       console.info('[Profile] Update successful', {
@@ -658,7 +973,8 @@ function registerProfileRoutes(app) {
         const response = buildProfileEnvelope(values, statuses, {
           isComplete: false,
           missingFields,
-          message: 'Corrige la información resaltada e inténtalo nuevamente.'
+          message: 'Corrige la información resaltada e inténtalo nuevamente.',
+          githubAccount
         });
 
         return res.json(response);

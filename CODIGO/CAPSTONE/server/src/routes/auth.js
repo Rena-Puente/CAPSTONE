@@ -9,7 +9,8 @@ const {
   isAccessTokenValid,
   findUserByOAuth,
   createUserFromGithub,
-  saveGithubTokens
+  saveGithubTokens,
+  syncGithubProfileMetadata
 } = require('../services/auth');
 const { getEducationStatus } = require('../services/education');
 const { getExperienceStatus } = require('../services/experience');
@@ -21,37 +22,7 @@ const {
   exchangeCodeForToken,
   fetchGithubUserProfile
 } = require('../services/github');
-
-const GITHUB_STATE_TTL_MS = 10 * 60 * 1000;
-const pendingGithubStates = new Map();
-
-function cleanupExpiredGithubStates() {
-  const now = Date.now();
-
-  for (const [state, storedAt] of pendingGithubStates.entries()) {
-    if (now - storedAt > GITHUB_STATE_TTL_MS) {
-      pendingGithubStates.delete(state);
-    }
-  }
-}
-
-function rememberGithubState(state) {
-  cleanupExpiredGithubStates();
-  pendingGithubStates.set(state, Date.now());
-}
-
-function consumeGithubState(state) {
-  cleanupExpiredGithubStates();
-
-  if (!pendingGithubStates.has(state)) {
-    return false;
-  }
-
-  const storedAt = pendingGithubStates.get(state);
-  pendingGithubStates.delete(state);
-
-  return Date.now() - storedAt <= GITHUB_STATE_TTL_MS;
-}
+const { rememberGithubState, consumeGithubState } = require('../services/github-state');
 
 function normalizeUserType(value) {
   if (value === null || value === undefined) {
@@ -271,7 +242,7 @@ function registerAuthRoutes(app) {
     }
 
     try {
-      rememberGithubState(normalizedState);
+      rememberGithubState(normalizedState, { purpose: 'login' });
       const authorizationUrl = buildGithubAuthorizeUrl(normalizedState);
 
       logAuthEvent('GitHub authorization URL generated', {
@@ -302,9 +273,14 @@ function registerAuthRoutes(app) {
 
     const normalizedState = state.trim();
 
-    if (!consumeGithubState(normalizedState)) {
-      logAuthEvent('GitHub callback rejected (invalid state)', { state: normalizedState });
-      return res.status(400).json({ ok: false, error: 'El estado recibido no es válido o expiró.' });
+    const stateContext = consumeGithubState(normalizedState);
+
+    if (!stateContext || stateContext.purpose !== 'login') {
+      logAuthEvent('GitHub callback rejected (unexpected context)', {
+        state: normalizedState,
+        context: stateContext ?? null
+      });
+      return res.status(400).json({ ok: false, error: 'La solicitud de autenticación no es válida o expiró.' });
     }
 
     try {
@@ -341,6 +317,7 @@ function registerAuthRoutes(app) {
 
       const displayName = profile?.name || profile?.login || email;
       const avatarUrl = profile?.avatar_url || null;
+      const githubUsername = typeof profile?.login === 'string' ? profile.login : null;
       const providerIdString = String(providerId);
 
       let userId = await findUserByOAuth('GITHUB', providerIdString);
@@ -361,6 +338,13 @@ function registerAuthRoutes(app) {
       const expiresAt = tokenResponse.expiresIn
         ? new Date(Date.now() + Number(tokenResponse.expiresIn) * 1000)
         : null;
+
+      await syncGithubProfileMetadata({
+        userId,
+        displayName,
+        avatarUrl,
+        githubUsername
+      });
 
       await saveGithubTokens({
         userId,

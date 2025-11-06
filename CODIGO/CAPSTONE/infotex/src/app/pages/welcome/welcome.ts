@@ -11,7 +11,7 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { resolveDefaultRouteForUserType } from '../../constants/user-type-routing';
-import { AuthService, GITHUB_OAUTH_STATE_KEY } from '../../services/auth.service';
+import { AuthService } from '../../services/auth.service';
 
 type AuthPanelTab = 'login' | 'register';
 
@@ -231,7 +231,7 @@ export class Welcome {
         throw new Error('No se recibió la URL de autenticación de GitHub.');
       }
 
-      if (!this.storeGithubState(state)) {
+      if (!this.authService.storeGithubOAuthState({ state, mode: 'login' })) {
         throw new Error('No se pudo preparar la sesión segura. Habilita el almacenamiento de sesión e inténtalo de nuevo.');
       }
 
@@ -251,16 +251,4 @@ export class Welcome {
   }
 
 
-  private storeGithubState(state: string): boolean {
-    try {
-      if (typeof sessionStorage === 'undefined') {
-        return false;
-      }
-
-      sessionStorage.setItem(GITHUB_OAUTH_STATE_KEY, state);
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }

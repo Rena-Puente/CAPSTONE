@@ -446,6 +446,91 @@
                       </ng-container>
                     </div>
                   </section>
+
+                  <section class="profile-section profile-section--github">
+                    <div class="profile-section__header">
+                      <div>
+                        <span class="profile-section__eyebrow">Integraciones</span>
+                        <h3 class="profile-section__title mb-1">Cuenta de GitHub</h3>
+                        <p class="profile-section__subtitle text-secondary mb-0">
+                          Vincula tu cuenta de GitHub para compartir tus proyectos e identidad profesional en InfoTex.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="profile-section__body">
+                      <div *ngIf="githubErrorMessage()" class="alert alert-danger" role="alert">
+                        {{ githubErrorMessage() }}
+                      </div>
+
+                      <div class="github-connect">
+                        <div class="github-connect__info">
+                          <span
+                            class="github-connect__badge"
+                            [class.github-connect__badge--linked]="githubAccount().linked"
+                            [class.github-connect__badge--unlinked]="!githubAccount().linked"
+                          >
+                            {{ githubAccount().linked ? 'Vinculada' : 'No vinculada' }}
+                          </span>
+
+                          <ng-container *ngIf="githubAccount().linked; else githubLinkHint">
+                            <a
+                              class="github-connect__username"
+                              [href]="githubAccount().profileUrl || '#'"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <i class="bi bi-github me-1"></i>
+                              {{ githubAccount().username || 'Cuenta vinculada' }}
+                            </a>
+                          </ng-container>
+                          <ng-template #githubLinkHint>
+                            <span class="github-connect__username github-connect__username--placeholder">
+                              Conecta tu cuenta para mostrar tu usuario de GitHub en tu perfil.
+                            </span>
+                          </ng-template>
+
+                          <p class="github-connect__meta text-secondary mb-0" *ngIf="githubAccount().lastSyncedAt">
+                            Última actualización: {{ githubAccount().lastSyncedAt | date: 'short' }}
+                          </p>
+                        </div>
+
+                        <div class="github-connect__actions">
+                          <button
+                            type="button"
+                            class="btn btn-outline-light"
+                            *ngIf="!githubAccount().linked"
+                            (click)="startGithubLink()"
+                            [disabled]="githubLinkLoading()"
+                          >
+                            <span
+                              *ngIf="githubLinkLoading()"
+                              class="spinner-border spinner-border-sm me-2"
+                              role="status"
+                              aria-hidden="true"
+                            ></span>
+                            {{ githubLinkLoading() ? 'Conectando…' : 'Vincular con GitHub' }}
+                          </button>
+
+                          <button
+                            type="button"
+                            class="btn btn-outline-danger"
+                            *ngIf="githubAccount().linked"
+                            (click)="unlinkGithubAccount()"
+                            [disabled]="githubUnlinkLoading()"
+                          >
+                            <span
+                              *ngIf="githubUnlinkLoading()"
+                              class="spinner-border spinner-border-sm me-2"
+                              role="status"
+                              aria-hidden="true"
+                            ></span>
+                            {{ githubUnlinkLoading() ? 'Desvinculando…' : 'Desvincular cuenta' }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               </ng-container>
 

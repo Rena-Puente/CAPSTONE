@@ -24,6 +24,7 @@ import { catchError, debounceTime, distinctUntilChanged, map, startWith, switchM
 
 import { AuthService } from '../../services/auth.service';
 import {
+  GITHUB_LINK_FEEDBACK_KEY,
   PROFILE_FIELDS,
   ProfileData,
   ProfileField,
@@ -38,7 +39,9 @@ import {
   SkillCatalogItem,
   SkillEntry,
   SkillPayload,
-  SkillSummary
+  SkillSummary,
+  GithubAccountStatus,
+  GithubAccountResponse
 } from '../../services/profile.service';
 
 import { ProfileFieldsService } from '../../services/profilefields.service';
@@ -70,6 +73,14 @@ const FALLBACK_SKILL_CATEGORY = 'Otras habilidades';
 const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
 type SlugAvailabilityStatus = 'idle' | 'checking' | 'available' | 'unavailable' | 'invalid' | 'error';
 type PublicLinkFeedback = { type: 'success' | 'error'; message: string };
+
+const DEFAULT_GITHUB_ACCOUNT: GithubAccountStatus = {
+  linked: false,
+  username: null,
+  profileUrl: null,
+  providerId: null,
+  lastSyncedAt: null
+};
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
@@ -237,6 +248,24 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
     return `${this.publicProfileBaseUrl}${slug}`;
   });
+  protected readonly githubAccount = computed<GithubAccountStatus>(() => {
+    const account = this.profile()?.githubAccount;
+
+    if (!account) {
+      return { ...DEFAULT_GITHUB_ACCOUNT };
+    }
+
+    return {
+      linked: Boolean(account.linked),
+      username: account.username ?? null,
+      profileUrl: account.profileUrl ?? (account.username ? `https://github.com/${account.username}` : null),
+      providerId: account.providerId ?? null,
+      lastSyncedAt: account.lastSyncedAt ?? null
+    } satisfies GithubAccountStatus;
+  });
+  protected readonly githubLinkLoading = signal(false);
+  protected readonly githubUnlinkLoading = signal(false);
+  protected readonly githubErrorMessage = signal<string | null>(null);
 
   protected readonly profileForm = this.fb.nonNullable.group({
     displayName: ['', [Validators.required]],
@@ -639,6 +668,75 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
           ? error.message
           : 'No se pudo copiar el enlace automáticamente. Copia la URL manualmente.';
       this.publicLinkFeedback.set({ type: 'error', message });
+    }
+  }
+
+  protected async startGithubLink(): Promise<void> {
+    if (this.githubLinkLoading()) {
+      return;
+    }
+
+    this.githubErrorMessage.set(null);
+
+    if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+      this.githubErrorMessage.set('Tu navegador no soporta la autenticación segura con GitHub.');
+      return;
+    }
+
+    const state = crypto.randomUUID();
+    let redirected = false;
+
+    this.githubLinkLoading.set(true);
+
+    try {
+      const authorizeUrl = await firstValueFrom(this.profileService.getGithubLinkAuthorizeUrl(state));
+      const userId = this.authService.getUserId();
+
+      if (!userId) {
+        throw new Error('No se pudo identificar tu sesión. Vuelve a iniciar sesión e inténtalo nuevamente.');
+      }
+
+      if (!this.authService.storeGithubOAuthState({ state, mode: 'link', userId })) {
+        throw new Error('No se pudo preparar la sesión segura. Habilita el almacenamiento de sesión e inténtalo de nuevo.');
+      }
+
+      redirected = true;
+      window.location.href = authorizeUrl;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo iniciar la vinculación con GitHub. Vuelve a intentarlo más tarde.';
+      this.githubErrorMessage.set(message);
+    } finally {
+      if (!redirected) {
+        this.githubLinkLoading.set(false);
+      }
+    }
+  }
+
+  protected async unlinkGithubAccount(): Promise<void> {
+    if (this.githubUnlinkLoading()) {
+      return;
+    }
+
+    this.githubErrorMessage.set(null);
+    this.githubUnlinkLoading.set(true);
+
+    try {
+      const response = await firstValueFrom(this.profileService.unlinkGithubAccount());
+      this.setGithubAccount(response.account);
+      this.successMessage.set(
+        response.message || 'Tu cuenta de GitHub se desvinculó correctamente.'
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo desvincular tu cuenta de GitHub en este momento.';
+      this.githubErrorMessage.set(message);
+    } finally {
+      this.githubUnlinkLoading.set(false);
     }
   }
 
@@ -1136,6 +1234,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.loadError.set(null);
     this.submitError.set(null);
     this.successMessage.set(null);
+    this.githubErrorMessage.set(null);
     this.profileForm.disable({ emitEvent: false });
     this.resetBackendValidation();
     this.avatarHasError.set(false);
@@ -1149,6 +1248,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
       const profile = await firstValueFrom(this.profileService.getProfile());
       this.applyProfile(profile);
+      this.consumeGithubLinkFeedback();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo consultar el perfil.';
       this.loadError.set(message);
@@ -1301,6 +1401,44 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
       this.profileForm.enable({ emitEvent: false });
     } else {
       this.profileForm.disable({ emitEvent: false });
+    }
+  }
+
+  private setGithubAccount(account: GithubAccountStatus): void {
+    const current = this.profile();
+
+    if (!current) {
+      return;
+    }
+
+    const normalized: GithubAccountStatus = {
+      linked: Boolean(account?.linked),
+      username: account?.username ?? null,
+      profileUrl:
+        account?.profileUrl ?? (account?.username ? `https://github.com/${account.username}` : null),
+      providerId: account?.providerId ?? null,
+      lastSyncedAt: account?.lastSyncedAt ?? null
+    };
+
+    this.profile.set({ ...current, githubAccount: normalized });
+  }
+
+  private consumeGithubLinkFeedback(): void {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return;
+      }
+
+      const message = sessionStorage.getItem(GITHUB_LINK_FEEDBACK_KEY);
+
+      if (!message) {
+        return;
+      }
+
+      sessionStorage.removeItem(GITHUB_LINK_FEEDBACK_KEY);
+      this.successMessage.set(message);
+    } catch {
+      // Ignored
     }
   }
 

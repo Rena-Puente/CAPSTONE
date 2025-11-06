@@ -9,6 +9,13 @@ const STORAGE_KEY = 'infotex_is_logged_in';
 const STORAGE_USER_KEY = 'infotex_user_id';
 const STORAGE_SESSION_KEY = 'infotex_session';
 export const GITHUB_OAUTH_STATE_KEY = 'infotex_github_oauth_state';
+export type GithubOAuthMode = 'login' | 'link';
+
+export interface GithubOAuthSession {
+  state: string;
+  mode: GithubOAuthMode;
+  userId?: number | null;
+}
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
 
@@ -110,6 +117,110 @@ export class AuthService {
         return of(false);
       })
     );
+  }
+
+  storeGithubOAuthState(value: GithubOAuthSession): boolean {
+    if (!value || typeof value.state !== 'string' || !value.state.trim()) {
+      return false;
+    }
+
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return false;
+      }
+
+      const normalizedState = value.state.trim();
+      const mode: GithubOAuthMode = value.mode === 'link' ? 'link' : 'login';
+      let normalizedUserId: number | null = null;
+
+      if (value.userId !== undefined && value.userId !== null) {
+        if (Number.isFinite(value.userId)) {
+          normalizedUserId = Number(value.userId);
+        } else {
+          const parsed = Number.parseInt(String(value.userId), 10);
+          normalizedUserId = Number.isNaN(parsed) ? null : parsed;
+        }
+      }
+
+      const payload: GithubOAuthSession = {
+        state: normalizedState,
+        mode,
+        userId: normalizedUserId
+      };
+
+      sessionStorage.setItem(GITHUB_OAUTH_STATE_KEY, JSON.stringify(payload));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  readGithubOAuthState(): GithubOAuthSession | null {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return null;
+      }
+
+      const raw = sessionStorage.getItem(GITHUB_OAUTH_STATE_KEY);
+
+      if (!raw) {
+        return null;
+      }
+
+      const trimmed = raw.trim();
+
+      if (!trimmed) {
+        return null;
+      }
+
+      if (trimmed.startsWith('{')) {
+        const parsed = JSON.parse(trimmed) as Partial<GithubOAuthSession> & Record<string, unknown>;
+
+        if (!parsed || typeof parsed !== 'object' || typeof parsed.state !== 'string') {
+          return null;
+        }
+
+        const state = parsed.state.trim();
+
+        if (!state) {
+          return null;
+        }
+
+        const parsedUserId = parsed.userId;
+        let userId: number | null = null;
+
+        if (parsedUserId !== undefined && parsedUserId !== null) {
+          if (Number.isFinite(parsedUserId)) {
+            userId = Number(parsedUserId);
+          } else {
+            const extracted = Number.parseInt(String(parsedUserId), 10);
+            userId = Number.isNaN(extracted) ? null : extracted;
+          }
+        }
+
+        return {
+          state,
+          mode: parsed.mode === 'link' ? 'link' : 'login',
+          userId
+        };
+      }
+
+      return { state: trimmed, mode: 'login', userId: null };
+    } catch {
+      return null;
+    }
+  }
+
+  clearGithubOAuthState(): void {
+    try {
+      if (typeof sessionStorage === 'undefined') {
+        return;
+      }
+
+      sessionStorage.removeItem(GITHUB_OAUTH_STATE_KEY);
+    } catch {
+      // Swallow storage errors silently.
+    }
   }
 
   register(email: string, password: string, passwordConfirmation: string): Observable<void> {
