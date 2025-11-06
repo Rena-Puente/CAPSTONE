@@ -233,22 +233,26 @@ test('GET /profile/:userId/github/repositories returns repositories for linked a
     {
       language: 'TypeScript',
       bytes: 2000,
-      percentage: 2000 / 4200
+      percentage: (2000 / 4200) * 100,
+      color: '#3178c6'
     },
     {
       language: 'JavaScript',
       bytes: 1500,
-      percentage: 1500 / 4200
+      percentage: (1500 / 4200) * 100,
+      color: '#f1e05a'
     },
     {
       language: 'HTML',
       bytes: 500,
-      percentage: 500 / 4200
+      percentage: (500 / 4200) * 100,
+      color: '#e34c26'
     },
     {
       language: 'Shell',
       bytes: 200,
-      percentage: 200 / 4200
+      percentage: (200 / 4200) * 100,
+      color: '#89e051'
     }
   ]);
 });
@@ -412,8 +416,8 @@ test('GET /profiles/:slug/github/repositories returns data when username exists 
   assert.deepEqual(body.languages, {
     totalBytes: 1250,
     breakdown: [
-      { language: 'JavaScript', bytes: 1000, percentage: 1000 / 1250 },
-      { language: 'HTML', bytes: 250, percentage: 250 / 1250 }
+      { language: 'JavaScript', bytes: 1000, percentage: (1000 / 1250) * 100, color: '#f1e05a' },
+      { language: 'HTML', bytes: 250, percentage: (250 / 1250) * 100, color: '#e34c26' }
     ]
   });
 });
