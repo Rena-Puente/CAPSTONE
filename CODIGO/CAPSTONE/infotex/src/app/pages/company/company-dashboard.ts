@@ -9,7 +9,8 @@ import { CompanyService, CompanyProfile } from '../../services/company.service';
   selector: 'app-company-dashboard',
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
-  templateUrl: './company-dashboard.html'
+  templateUrl: './company-dashboard.html',
+  styleUrl: './company-dashboard.css'
 })
 export class CompanyDashboard {
   private readonly companyService = inject(CompanyService);

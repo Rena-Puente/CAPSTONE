@@ -1,36 +1,56 @@
 <section class="company-profile">
-  <div *ngIf="loading()" class="alert alert-info" role="status">Cargando perfil de la empresa...</div>
-  <div *ngIf="error()" class="alert alert-danger" role="alert">{{ error() }}</div>
-
-  <div *ngIf="profile() as company">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h2 class="h4 card-title mb-3">{{ company.name }}</h2>
-        <dl class="row mb-0">
-          <dt class="col-sm-4">Correo de contacto</dt>
-          <dd class="col-sm-8">{{ company.email }}</dd>
-
-          <dt class="col-sm-4">Sitio web</dt>
-          <dd class="col-sm-8">
-            <a *ngIf="company.website; else noWebsite" [href]="company.website" target="_blank" rel="noopener">
-              {{ company.website }}
-            </a>
-            <ng-template #noWebsite>—</ng-template>
-          </dd>
-
-          <dt class="col-sm-4">Ubicación</dt>
-          <dd class="col-sm-8">{{ company.city }}, {{ company.country }}</dd>
-
-          <dt class="col-sm-4">RUT</dt>
-          <dd class="col-sm-8">{{ company.rut }}</dd>
-
-          <dt class="col-sm-4">Fecha de registro</dt>
-          <dd class="col-sm-8">{{ company.createdAt ? (company.createdAt | date: 'medium') : '—' }}</dd>
-
-          <dt class="col-sm-4">Última actualización</dt>
-          <dd class="col-sm-8">{{ company.updatedAt ? (company.updatedAt | date: 'medium') : '—' }}</dd>
-        </dl>
-      </div>
-    </div>
+  <div *ngIf="loading()" class="company-profile__alert company-profile__alert--info" role="status">
+    Cargando perfil de la empresa...
   </div>
+
+  <div *ngIf="error()" class="company-profile__alert company-profile__alert--error" role="alert">
+    {{ error() }}
+  </div>
+
+  <ng-container *ngIf="profile() as company">
+    <header class="company-profile__header">
+      <h2 class="company-profile__name">{{ company.name }}</h2>
+      <p class="company-profile__meta" *ngIf="company.city || company.country">
+        {{ company.city || 'Ubicación desconocida' }}, {{ company.country || '—' }}
+      </p>
+    </header>
+
+    <dl class="company-profile__details">
+      <div class="company-profile__detail">
+        <dt>Correo de contacto</dt>
+        <dd>{{ company.email || '—' }}</dd>
+      </div>
+
+      <div class="company-profile__detail">
+        <dt>Sitio web</dt>
+        <dd>
+          <a
+            *ngIf="company.website; else noWebsite"
+            [href]="company.website"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="company-profile__link"
+          >
+            {{ company.website }}
+          </a>
+          <ng-template #noWebsite>—</ng-template>
+        </dd>
+      </div>
+
+      <div class="company-profile__detail">
+        <dt>RUT</dt>
+        <dd>{{ company.rut || '—' }}</dd>
+      </div>
+
+      <div class="company-profile__detail">
+        <dt>Fecha de registro</dt>
+        <dd>{{ company.createdAt ? (company.createdAt | date: 'medium') : '—' }}</dd>
+      </div>
+
+      <div class="company-profile__detail">
+        <dt>Última actualización</dt>
+        <dd>{{ company.updatedAt ? (company.updatedAt | date: 'medium') : '—' }}</dd>
+      </div>
+    </dl>
+  </ng-container>
 </section>
