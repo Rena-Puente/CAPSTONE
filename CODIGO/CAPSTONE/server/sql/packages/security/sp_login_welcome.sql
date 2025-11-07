@@ -11,6 +11,7 @@ CREATE OR REPLACE PROCEDURE sp_login_welcome(
   o_expira_access   OUT TIMESTAMP,
   o_expira_refresh  OUT TIMESTAMP
 ) AS
+  c_tipo_usuario_empresa CONSTANT NUMBER := 3;
   v_email_normal    usuarios.correo%TYPE;
   v_password_input  VARCHAR2(4000);
   v_sync_usuario    usuarios.id_usuario%TYPE;
@@ -61,7 +62,7 @@ BEGIN
     o_expira_refresh  => o_expira_refresh
   );
 
-  IF o_id_tipo_usuario = 2 AND o_id_empresa IS NULL THEN
+  IF o_id_tipo_usuario = c_tipo_usuario_empresa AND o_id_empresa IS NULL THEN
     BEGIN
       SELECT e.id_empresa
         INTO o_id_empresa

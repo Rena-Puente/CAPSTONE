@@ -1,6 +1,14 @@
 const { getClientIp } = require('../utils/request');
 const { handleOracleError } = require('../utils/errors');
-const { normalizeCompanyPayload, createCompany } = require('../services/companies');
+const {
+  normalizeCompanyPayload,
+  createCompany,
+  getCompanyForUser,
+  createOffer,
+  listApplicants
+} = require('../services/companies');
+const { getUserIdFromAccessToken } = require('../services/auth');
+const { requireAccessToken } = require('../middleware/auth');
 
 function registerCompanyRoutes(app) {
   app.post('/companies', async (req, res) => {
@@ -56,6 +64,102 @@ function registerCompanyRoutes(app) {
       });
 
       return handleOracleError(error, res, 'No se pudo registrar la empresa.');
+    }
+  });
+
+  app.get('/companies/me', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      return res.json({ ok: true, company });
+    } catch (error) {
+      console.error('[Companies] Failed to fetch company profile', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo obtener la información de la empresa.' });
+    }
+  });
+
+  app.post('/companies/offers', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      let offer;
+
+      try {
+        offer = await createOffer(company.id, req.body || {});
+      } catch (validationError) {
+        const message = validationError instanceof Error ? validationError.message : 'Los datos de la oferta no son válidos.';
+        return res.status(400).json({ ok: false, error: message });
+      }
+
+      return res.status(201).json({
+        ok: true,
+        message: 'Oferta creada correctamente.',
+        offer
+      });
+    } catch (error) {
+      console.error('[Companies] Failed to create offer', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo crear la oferta.' });
+    }
+  });
+
+  app.get('/companies/me/applicants', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      const applicants = await listApplicants(company.id);
+
+      return res.json({ ok: true, applicants });
+    } catch (error) {
+      console.error('[Companies] Failed to list applicants', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo obtener la lista de postulantes.' });
     }
   });
 }
