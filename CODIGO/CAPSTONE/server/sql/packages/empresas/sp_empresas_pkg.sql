@@ -159,6 +159,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
              pw_salt            = v_salt_db,
              pw_iters           = v_iters_db,
              activo             = 1,
+             id_tipo_usuario    = 2,
              fecha_actualizacion = SYSTIMESTAMP
        WHERE id_usuario = v_id_usuario;
     EXCEPTION
@@ -169,6 +170,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
           pw_salt,
           pw_iters,
           activo,
+          id_tipo_usuario,
           fecha_creacion
         ) VALUES (
           v_email_normal,
@@ -176,6 +178,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
           v_salt_db,
           v_iters_db,
           1,
+          2,
           SYSTIMESTAMP
         )
         RETURNING id_usuario INTO v_id_usuario;
