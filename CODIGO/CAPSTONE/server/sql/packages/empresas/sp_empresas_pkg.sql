@@ -11,17 +11,60 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     p_pw_iters      IN  EMPRESAS.PW_ITERS%TYPE DEFAULT NULL,
     o_id_empresa    OUT EMPRESAS.ID_EMPRESA%TYPE
   );
-  
+
   PROCEDURE sp_preparar_login_empresa(
     p_email         IN  EMPRESAS.EMAIL%TYPE,
     p_contrasena    IN  EMPRESAS."CONTRASEÑA"%TYPE,
     o_id_usuario    OUT USUARIOS.ID_USUARIO%TYPE,
     o_id_empresa    OUT EMPRESAS.ID_EMPRESA%TYPE
   );
+
+  PROCEDURE sp_obtener_empresa_usuario(
+    p_id_usuario IN  USUARIOS.ID_USUARIO%TYPE,
+    o_empresa    OUT SYS_REFCURSOR
+  );
+
+  PROCEDURE sp_crear_oferta(
+    p_id_empresa     IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_titulo         IN OFERTAS.TITULO%TYPE,
+    p_descripcion    IN OFERTAS.DESCRIPCION%TYPE,
+    p_tipo_ubicacion IN OFERTAS.TIPO_UBICACION%TYPE,
+    p_ciudad         IN OFERTAS.CIUDAD%TYPE,
+    p_pais           IN OFERTAS.PAIS%TYPE,
+    p_seniority      IN OFERTAS.SENIORITY%TYPE,
+    p_tipo_contrato  IN OFERTAS.TIPO_CONTRATO%TYPE,
+    o_id_oferta      OUT OFERTAS.ID_OFERTA%TYPE
+  );
+
+  PROCEDURE sp_listar_postulantes(
+    p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
+    o_postulantes OUT SYS_REFCURSOR
+  );
 END sp_empresas_pkg;
 /
 
 CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
+  c_tipo_usuario_empresa CONSTANT NUMBER := 3;
+
+  PROCEDURE ensure_tipo_usuario_empresa IS
+    v_exists NUMBER := 0;
+  BEGIN
+    SELECT COUNT(1)
+      INTO v_exists
+      FROM tipo_usuario
+     WHERE id_tipo_usuario = c_tipo_usuario_empresa;
+
+    IF v_exists = 0 THEN
+      BEGIN
+        INSERT INTO tipo_usuario (id_tipo_usuario, descripcion)
+        VALUES (c_tipo_usuario_empresa, 'Empresa');
+      EXCEPTION
+        WHEN DUP_VAL_ON_INDEX THEN
+          NULL;
+      END;
+    END IF;
+  END ensure_tipo_usuario_empresa;
+
   PROCEDURE sp_registrar_empresa(
     p_nombre        IN  EMPRESAS.NOMBRE%TYPE,
     p_sitio_web     IN  EMPRESAS.SITIO_WEB%TYPE,
@@ -93,7 +136,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
     )
     RETURNING ID_EMPRESA INTO o_id_empresa;
   END sp_registrar_empresa;
-  
+
   PROCEDURE sp_preparar_login_empresa(
     p_email         IN  EMPRESAS.EMAIL%TYPE,
     p_contrasena    IN  EMPRESAS."CONTRASEÑA"%TYPE,
@@ -147,6 +190,8 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       RETURN;
     END IF;
 
+    ensure_tipo_usuario_empresa;
+
     BEGIN
       SELECT id_usuario
         INTO v_id_usuario
@@ -155,11 +200,11 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
        FETCH FIRST 1 ROWS ONLY;
 
       UPDATE usuarios
-         SET contrasena_hash    = v_hash_db,
-             pw_salt            = v_salt_db,
-             pw_iters           = v_iters_db,
-             activo             = 1,
-             id_tipo_usuario    = 2,
+         SET contrasena_hash     = v_hash_db,
+             pw_salt             = v_salt_db,
+             pw_iters            = v_iters_db,
+             activo              = 1,
+             id_tipo_usuario     = c_tipo_usuario_empresa,
              fecha_actualizacion = SYSTIMESTAMP
        WHERE id_usuario = v_id_usuario;
     EXCEPTION
@@ -178,7 +223,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
           v_salt_db,
           v_iters_db,
           1,
-          2,
+          c_tipo_usuario_empresa,
           SYSTIMESTAMP
         )
         RETURNING id_usuario INTO v_id_usuario;
@@ -187,5 +232,188 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
     o_id_usuario := v_id_usuario;
     o_id_empresa := v_id_empresa;
   END sp_preparar_login_empresa;
+
+  PROCEDURE sp_obtener_empresa_usuario(
+    p_id_usuario IN  USUARIOS.ID_USUARIO%TYPE,
+    o_empresa    OUT SYS_REFCURSOR
+  ) IS
+    v_email_normal EMPRESAS.EMAIL%TYPE;
+  BEGIN
+    IF p_id_usuario IS NULL THEN
+      OPEN o_empresa FOR
+        SELECT NULL AS id_empresa,
+               NULL AS nombre,
+               NULL AS sitio_web,
+               NULL AS pais,
+               NULL AS ciudad,
+               NULL AS email,
+               NULL AS rut_empresa,
+               NULL AS fecha_creacion,
+               NULL AS fecha_actualizacion
+          FROM DUAL
+         WHERE 1 = 0;
+      RETURN;
+    END IF;
+
+    BEGIN
+      SELECT LOWER(TRIM(correo))
+        INTO v_email_normal
+        FROM usuarios
+       WHERE id_usuario = p_id_usuario;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        OPEN o_empresa FOR
+          SELECT NULL AS id_empresa,
+                 NULL AS nombre,
+                 NULL AS sitio_web,
+                 NULL AS pais,
+                 NULL AS ciudad,
+                 NULL AS email,
+                 NULL AS rut_empresa,
+                 NULL AS fecha_creacion,
+                 NULL AS fecha_actualizacion
+            FROM DUAL
+           WHERE 1 = 0;
+        RETURN;
+    END;
+
+    OPEN o_empresa FOR
+      SELECT e.id_empresa,
+             e.nombre,
+             e.sitio_web,
+             e.pais,
+             e.ciudad,
+             e.email,
+             e.rut_empresa,
+             e.fecha_creacion,
+             e.fecha_actualizacion
+        FROM empresas e
+       WHERE LOWER(TRIM(e.email)) = v_email_normal
+       FETCH FIRST 1 ROWS ONLY;
+  END sp_obtener_empresa_usuario;
+
+  PROCEDURE sp_crear_oferta(
+    p_id_empresa     IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_titulo         IN OFERTAS.TITULO%TYPE,
+    p_descripcion    IN OFERTAS.DESCRIPCION%TYPE,
+    p_tipo_ubicacion IN OFERTAS.TIPO_UBICACION%TYPE,
+    p_ciudad         IN OFERTAS.CIUDAD%TYPE,
+    p_pais           IN OFERTAS.PAIS%TYPE,
+    p_seniority      IN OFERTAS.SENIORITY%TYPE,
+    p_tipo_contrato  IN OFERTAS.TIPO_CONTRATO%TYPE,
+    o_id_oferta      OUT OFERTAS.ID_OFERTA%TYPE
+  ) IS
+    v_titulo         OFERTAS.TITULO%TYPE;
+    v_descripcion    OFERTAS.DESCRIPCION%TYPE;
+    v_tipo_ubicacion OFERTAS.TIPO_UBICACION%TYPE;
+    v_ciudad         OFERTAS.CIUDAD%TYPE;
+    v_pais           OFERTAS.PAIS%TYPE;
+    v_seniority      OFERTAS.SENIORITY%TYPE;
+    v_tipo_contrato  OFERTAS.TIPO_CONTRATO%TYPE;
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20070, 'El identificador de la empresa es obligatorio.');
+    END IF;
+
+    v_titulo := TRIM(p_titulo);
+    v_descripcion := p_descripcion;
+    v_tipo_ubicacion := TRIM(p_tipo_ubicacion);
+    v_ciudad := TRIM(p_ciudad);
+    v_pais := TRIM(p_pais);
+    v_seniority := TRIM(p_seniority);
+    v_tipo_contrato := TRIM(p_tipo_contrato);
+
+    IF v_titulo IS NULL OR v_titulo = '' THEN
+      RAISE_APPLICATION_ERROR(-20071, 'El título de la oferta es obligatorio.');
+    END IF;
+
+    IF v_descripcion IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20072, 'La descripción de la oferta es obligatoria.');
+    END IF;
+
+    IF v_tipo_ubicacion IS NULL OR v_tipo_ubicacion = '' THEN
+      RAISE_APPLICATION_ERROR(-20073, 'Debes indicar el tipo de ubicación de la oferta.');
+    END IF;
+
+    IF v_ciudad IS NULL OR v_ciudad = '' THEN
+      RAISE_APPLICATION_ERROR(-20074, 'La ciudad de la oferta es obligatoria.');
+    END IF;
+
+    IF v_pais IS NULL OR v_pais = '' THEN
+      RAISE_APPLICATION_ERROR(-20075, 'El país de la oferta es obligatorio.');
+    END IF;
+
+    IF v_seniority IS NULL OR v_seniority = '' THEN
+      RAISE_APPLICATION_ERROR(-20076, 'Debes indicar la seniority de la posición.');
+    END IF;
+
+    IF v_tipo_contrato IS NULL OR v_tipo_contrato = '' THEN
+      RAISE_APPLICATION_ERROR(-20077, 'Debes indicar el tipo de contrato.');
+    END IF;
+
+    INSERT INTO ofertas (
+      id_empresa,
+      titulo,
+      descripcion,
+      tipo_ubicacion,
+      ciudad,
+      pais,
+      seniority,
+      tipo_contrato,
+      fecha_creacion,
+      activa
+    ) VALUES (
+      p_id_empresa,
+      v_titulo,
+      v_descripcion,
+      v_tipo_ubicacion,
+      v_ciudad,
+      v_pais,
+      v_seniority,
+      v_tipo_contrato,
+      SYSTIMESTAMP,
+      1
+    ) RETURNING id_oferta INTO o_id_oferta;
+  END sp_crear_oferta;
+
+  PROCEDURE sp_listar_postulantes(
+    p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
+    o_postulantes OUT SYS_REFCURSOR
+  ) IS
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      OPEN o_postulantes FOR
+        SELECT NULL AS id_postulacion,
+               NULL AS id_oferta,
+               NULL AS titulo_oferta,
+               NULL AS id_usuario,
+               NULL AS nombre_postulante,
+               NULL AS correo_postulante,
+               NULL AS estado,
+               NULL AS fecha_creacion
+          FROM DUAL
+         WHERE 1 = 0;
+      RETURN;
+    END IF;
+
+    OPEN o_postulantes FOR
+      SELECT p.id_postulacion,
+             p.id_oferta,
+             o.titulo AS titulo_oferta,
+             p.id_usuario,
+             pr.nombre_mostrar AS nombre_postulante,
+             u.correo AS correo_postulante,
+             p.estado,
+             p.fecha_creacion
+        FROM postulaciones p
+        JOIN ofertas o
+          ON o.id_oferta = p.id_oferta
+        JOIN usuarios u
+          ON u.id_usuario = p.id_usuario
+        LEFT JOIN perfiles pr
+          ON pr.id_usuario = p.id_usuario
+       WHERE o.id_empresa = p_id_empresa
+       ORDER BY p.fecha_creacion DESC;
+  END sp_listar_postulantes;
 END sp_empresas_pkg;
 /

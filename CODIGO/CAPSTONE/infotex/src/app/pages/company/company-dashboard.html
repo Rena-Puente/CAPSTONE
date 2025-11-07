@@ -1,0 +1,22 @@
+<section class="company-dashboard container py-4">
+  <header class="mb-4">
+    <h1 class="h3 mb-1">Panel de empresa</h1>
+    <p class="text-muted mb-0" *ngIf="company(); else dashboardStatus">{{ company()?.name }}</p>
+  </header>
+
+  <ng-template #dashboardStatus>
+    <p class="text-muted mb-0" *ngIf="loading(); else dashboardError">Cargando información de la empresa...</p>
+  </ng-template>
+
+  <ng-template #dashboardError>
+    <p class="text-danger" *ngIf="error()">{{ error() }}</p>
+  </ng-template>
+
+  <nav class="mb-4 d-flex flex-wrap gap-2">
+    <a routerLink="profile" routerLinkActive="active" class="btn btn-outline-primary">Perfil de la empresa</a>
+    <a routerLink="offers/new" routerLinkActive="active" class="btn btn-outline-primary">Crear oferta</a>
+    <a routerLink="applicants" routerLinkActive="active" class="btn btn-outline-primary">Ver postulantes</a>
+  </nav>
+
+  <router-outlet></router-outlet>
+</section>

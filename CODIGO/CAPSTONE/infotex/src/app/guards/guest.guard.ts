@@ -7,17 +7,12 @@ export const guestGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  const isLoggedIn = authService.isAuthenticated(); // o tu método equivalente
-
-  if (isLoggedIn) {
-    // si el usuario ya está logueado, redirígelo al home
-    const userType = authService.getUserType();
-    const destination = resolveDefaultRouteForUserType(userType) ?? '/home';
-
-    router.navigate([destination]);
-    return false;
+  if (!authService.isAuthenticated()) {
+    return true;
   }
 
-  // si NO está logueado, puede ver el welcome
-  return true;
+  const userType = authService.getUserType();
+  const destination = resolveDefaultRouteForUserType(userType) ?? '/home';
+
+  return router.createUrlTree([destination]);
 };

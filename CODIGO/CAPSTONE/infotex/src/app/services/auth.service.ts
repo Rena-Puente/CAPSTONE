@@ -35,6 +35,7 @@ interface LoginResponse {
   ok: boolean;
   userId?: number | null;
   userType?: number | null;
+  companyId?: number | null;
   accessToken?: string | null;
   refreshToken?: string | null;
   accessExpiresAt?: string | null;
@@ -65,6 +66,7 @@ interface RegisterResponse {
 interface AuthSession {
   userId: number;
   userType: number | null;
+  companyId: number | null;
   accessToken: string;
   refreshToken: string;
   accessExpiresAt: string | null;
@@ -248,7 +250,7 @@ export class AuthService {
   login(
     email: string,
     password: string
-  ): Observable<{ userId: number; userType: number | null; isProfileComplete: boolean | null }> {
+  ): Observable<{ userId: number; userType: number | null; companyId: number | null; isProfileComplete: boolean | null }> {
     return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, { email, password }).pipe(
       map((response) => {
         if (
@@ -262,10 +264,12 @@ export class AuthService {
         }
 
         const userType = this.normalizeUserType(response.userType);
+        const companyId = this.normalizeId(response.companyId);
 
         this.persistSession({
           userId: response.userId,
           userType,
+          companyId,
           accessToken: response.accessToken,
           refreshToken: response.refreshToken,
           accessExpiresAt: response.accessExpiresAt ?? null,
@@ -275,6 +279,7 @@ export class AuthService {
         console.info('[AuthService] Login successful', {
           userId: response.userId,
           userType,
+          companyId,
           accessToken: summarizeToken(response.accessToken),
           refreshToken: summarizeToken(response.refreshToken),
           accessExpiresAt: response.accessExpiresAt ?? null,
@@ -285,6 +290,7 @@ export class AuthService {
         return {
           userId: response.userId,
           userType,
+          companyId,
           isProfileComplete: response.isProfileComplete ?? null
         };
       }),
@@ -343,7 +349,12 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
   completeGithubLogin(
     code: string,
     state: string
-  ): Observable<{ userId: number; userType: number | null; isProfileComplete: boolean | null }> {
+  ): Observable<{
+    userId: number;
+    userType: number | null;
+    companyId: number | null;
+    isProfileComplete: boolean | null;
+  }> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/github/callback`, { code, state })
       .pipe(
@@ -359,10 +370,12 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
           }
 
           const userType = this.normalizeUserType(response.userType);
+          const companyId = this.normalizeId(response.companyId);
 
           this.persistSession({
             userId: response.userId,
             userType,
+            companyId,
             accessToken: response.accessToken,
             refreshToken: response.refreshToken,
             accessExpiresAt: response.accessExpiresAt ?? null,
@@ -382,6 +395,7 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
           return {
             userId: response.userId,
             userType,
+            companyId,
             isProfileComplete: response.isProfileComplete ?? null
           };
         }),
@@ -421,6 +435,10 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
 
   getUserType(): number | null {
     return this.session()?.userType ?? null;
+  }
+
+  getCompanyId(): number | null {
+    return this.session()?.companyId ?? null;
   }
 
   private refreshAccessToken(refreshToken: string): Observable<void> {
@@ -498,6 +516,7 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
       const normalized: AuthSession = {
         userId: parsedUserId,
         userType: this.normalizeUserType(parsed.userType),
+        companyId: this.normalizeId(parsed.companyId),
         accessToken,
         refreshToken,
         accessExpiresAt:
@@ -513,6 +532,7 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
       console.info('[AuthService] Session restored from storage', {
         userId: normalized.userId,
         userType: normalized.userType,
+        companyId: normalized.companyId,
         accessExpiresAt: normalized.accessExpiresAt,
         refreshExpiresAt: normalized.refreshExpiresAt
       });
@@ -535,6 +555,7 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
     console.info('[AuthService] Session persisted', {
       userId: session.userId,
       userType: session.userType,
+      companyId: session.companyId,
       accessExpiresAt: session.accessExpiresAt,
       refreshExpiresAt: session.refreshExpiresAt
     });
@@ -569,6 +590,23 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
 
   private storageAvailable(): boolean {
     return typeof localStorage !== 'undefined';
+  }
+
+  private normalizeId(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const normalized = Math.trunc(value);
+      return normalized > 0 ? normalized : null;
+    }
+
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number.parseInt(value, 10);
+
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+
+    return null;
   }
 
   private normalizeUserType(value: unknown): number | null {

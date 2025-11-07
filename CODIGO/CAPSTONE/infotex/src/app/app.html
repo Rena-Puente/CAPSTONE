@@ -6,18 +6,25 @@
       <a class="nav-link text-light" routerLink="/about">Nosotros</a>
     </ng-container>
     <ng-template #authenticatedLinks>
-      <ng-container *ngIf="isUser1(); else otherAuthenticatedLinks">
+      <ng-container *ngIf="isCandidate(); else otherAuthenticatedLinks">
         <a class="nav-link text-light" routerLink="/about">Nosotros</a>
         <a class="nav-link text-light" routerLink="/home">Home</a>
         <a class="nav-link text-light" routerLink="/profile">Perfil</a>
       </ng-container>
       <ng-template #otherAuthenticatedLinks>
-        <a
-          *ngIf="isUser2()"
-          class="nav-link text-light"
-          routerLink="/companies/create"
-          >Crear empresa</a
-        >
+        <ng-container *ngIf="isCompany(); else adminLinks">
+          <a class="nav-link text-light" routerLink="/companies/profile">Perfil empresa</a>
+          <a class="nav-link text-light" routerLink="/companies/offers/new">Crear oferta</a>
+          <a class="nav-link text-light" routerLink="/companies/applicants">Postulantes</a>
+        </ng-container>
+        <ng-template #adminLinks>
+          <a
+            *ngIf="isAdmin()"
+            class="nav-link text-light"
+            routerLink="/companies/create"
+            >Crear empresa</a
+          >
+        </ng-template>
       </ng-template>
       <button class="btn btn-outline-light" type="button" (click)="logout()">Cerrar sesión</button>
     </ng-template>
