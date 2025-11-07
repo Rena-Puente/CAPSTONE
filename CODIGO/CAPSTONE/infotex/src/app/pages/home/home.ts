@@ -81,6 +81,12 @@ export class Home {
   }
 
   protected getCompanyLogoUrl(offer: PublicOffer): string | null {
+    const explicitAvatar = offer?.company?.avatarUrl?.trim();
+
+    if (explicitAvatar) {
+      return explicitAvatar;
+    }
+
     const explicitLogo = offer?.company?.logoUrl?.trim();
 
     if (explicitLogo) {

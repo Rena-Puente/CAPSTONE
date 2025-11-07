@@ -43,7 +43,10 @@ function mapOfferRow(row) {
       city: toNullableTrimmedString(row.CIUDAD_EMPRESA ?? row.ciudad_empresa),
       country: toNullableTrimmedString(row.PAIS_EMPRESA ?? row.pais_empresa),
       website: toNullableTrimmedString(row.SITIO_WEB_EMPRESA ?? row.sitio_web_empresa),
-      logoUrl: toNullableTrimmedString(row.LOGO_URL ?? row.logo_url)
+      logoUrl: toNullableTrimmedString(row.LOGO_URL ?? row.logo_url),
+      avatarUrl: toNullableTrimmedString(
+        row.URL_AVATAR_EMPRESA ?? row.url_avatar_empresa ?? row.URL_AVATAR ?? row.url_avatar
+      )
     }
   };
 }

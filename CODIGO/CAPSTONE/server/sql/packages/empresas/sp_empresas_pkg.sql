@@ -445,7 +445,8 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
              e.nombre      AS nombre_empresa,
              e.sitio_web   AS sitio_web_empresa,
              e.pais        AS pais_empresa,
-             e.ciudad      AS ciudad_empresa
+             e.ciudad      AS ciudad_empresa,
+             e.url_avatar  AS url_avatar_empresa
         FROM ofertas o
         JOIN empresas e
           ON e.id_empresa = o.id_empresa
