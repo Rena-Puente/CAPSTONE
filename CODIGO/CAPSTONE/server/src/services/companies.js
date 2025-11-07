@@ -1,4 +1,4 @@
-const { executeQuery, fetchCursorRows, oracledb } = require('../db/oracle');
+const { executeQuery, withConnection, fetchCursorRows, oracledb } = require('../db/oracle');
 const { toNullableTrimmedString, toIsoString } = require('../utils/format');
 
 const MAX_NAME_LENGTH = 150;
@@ -358,25 +358,27 @@ async function getCompanyForUser(userId) {
     return null;
   }
 
-  const result = await executeQuery(
-    `BEGIN sp_empresas_pkg.sp_obtener_empresa_usuario(
-       p_id_usuario => :userId,
-       o_empresa    => :cursor
-     ); END;`,
-    {
-      userId,
-      cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+  return withConnection(async (connection) => {
+    const result = await connection.execute(
+      `BEGIN sp_empresas_pkg.sp_obtener_empresa_usuario(
+         p_id_usuario => :userId,
+         o_empresa    => :cursor
+       ); END;`,
+      {
+        userId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.cursor || null;
+    const rows = await fetchCursorRows(cursor);
+
+    if (!rows || rows.length === 0) {
+      return null;
     }
-  );
 
-  const cursor = result.outBinds?.cursor || null;
-  const rows = await fetchCursorRows(cursor);
-
-  if (!rows || rows.length === 0) {
-    return null;
-  }
-
-  return mapCompanyRow(rows[0]);
+    return mapCompanyRow(rows[0]);
+  });
 }
 
 async function createOffer(companyId, payload) {
@@ -453,23 +455,25 @@ async function listApplicants(companyId) {
     return [];
   }
 
-  const result = await executeQuery(
-    `BEGIN sp_empresas_pkg.sp_listar_postulantes(
-       p_id_empresa  => :companyId,
-       o_postulantes => :cursor
-     ); END;`,
-    {
-      companyId,
-      cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
-    }
-  );
+  return withConnection(async (connection) => {
+    const result = await connection.execute(
+      `BEGIN sp_empresas_pkg.sp_listar_postulantes(
+         p_id_empresa  => :companyId,
+         o_postulantes => :cursor
+       ); END;`,
+      {
+        companyId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
 
-  const cursor = result.outBinds?.cursor || null;
-  const rows = await fetchCursorRows(cursor);
+    const cursor = result.outBinds?.cursor || null;
+    const rows = await fetchCursorRows(cursor);
 
-  return rows
-    .map((row) => mapApplicantRow(row))
-    .filter((item) => item && item.applicationId);
+    return rows
+      .map((row) => mapApplicantRow(row))
+      .filter((item) => item && item.applicationId);
+  });
 }
 
 module.exports = {
