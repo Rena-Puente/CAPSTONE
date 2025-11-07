@@ -2,7 +2,11 @@ import { CommonModule, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
-import { COMPANY_USER_TYPE } from './constants/user-type-routing';
+import {
+  ADMIN_USER_TYPE,
+  CANDIDATE_USER_TYPE,
+  COMPANY_USER_TYPE
+} from './constants/user-type-routing';
 
 @Component({
   selector: 'app-root',
@@ -19,9 +23,9 @@ export class App {
   protected readonly isAuthenticated = computed(() => this.authService.isAuthenticated());
   protected readonly session = computed(() => this.sessionState());
   protected readonly userType = computed(() => this.session()?.userType ?? null);
-  protected readonly isCandidate = computed(() => this.userType() === 1);
+  protected readonly isCandidate = computed(() => this.userType() === CANDIDATE_USER_TYPE);
   protected readonly isCompany = computed(() => this.userType() === COMPANY_USER_TYPE);
-  protected readonly isAdmin = computed(() => this.userType() === 2);
+  protected readonly isAdmin = computed(() => this.userType() === ADMIN_USER_TYPE);
   protected readonly companyUserType = COMPANY_USER_TYPE;
   protected logout(): void {
     this.authService.logout();
