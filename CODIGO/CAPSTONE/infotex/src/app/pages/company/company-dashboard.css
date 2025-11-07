@@ -1,0 +1,108 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background-color: #0d1117;
+  background-image: radial-gradient(circle at 20% 20%, rgba(56, 139, 253, 0.18), transparent 60%),
+    radial-gradient(circle at 80% 0%, rgba(88, 166, 255, 0.12), transparent 55%);
+  color: #c9d1d9;
+}
+
+.company-dashboard {
+  position: relative;
+  padding: clamp(3rem, 5vw, 5rem) clamp(1.5rem, 4vw, 4rem) clamp(4rem, 6vw, 5.5rem);
+}
+
+.company-dashboard__inner {
+  width: min(960px, 100%);
+  margin: 0 auto;
+}
+
+.company-dashboard__header {
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+
+.company-dashboard__title {
+  font-size: clamp(1.75rem, 3.4vw, 2.5rem);
+  color: #f0f6fc;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.company-dashboard__subtitle {
+  color: #8b949e;
+  margin: 0;
+  font-size: clamp(1rem, 1.8vw, 1.125rem);
+}
+
+.company-dashboard__error {
+  color: #ffa198;
+  background: rgba(45, 24, 29, 0.8);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin: -1.25rem 0 2rem;
+}
+
+.company-dashboard__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: clamp(2rem, 3vw, 2.5rem);
+}
+
+.company-dashboard__nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 1.6rem;
+  border-radius: 999px;
+  border: 1px solid #30363d;
+  background-color: #161b22;
+  color: #c9d1d9;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.company-dashboard__nav-link:hover,
+.company-dashboard__nav-link:focus-visible {
+  border-color: #2f81f7;
+  color: #f0f6fc;
+  background-color: rgba(47, 129, 247, 0.15);
+  box-shadow: 0 8px 24px rgba(47, 129, 247, 0.25);
+  transform: translateY(-1px);
+}
+
+.company-dashboard__nav-link.active,
+.company-dashboard__nav-link[aria-current='page'] {
+  background: linear-gradient(135deg, #2f81f7, #1f6feb);
+  border-color: #2f81f7;
+  color: #f0f6fc;
+  box-shadow: 0 12px 30px rgba(47, 129, 247, 0.35);
+}
+
+.company-dashboard__content {
+  background-color: rgba(22, 27, 34, 0.92);
+  border: 1px solid rgba(48, 54, 61, 0.9);
+  border-radius: 1rem;
+  box-shadow: 0 32px 80px rgba(1, 4, 9, 0.7);
+  padding: clamp(1.75rem, 3vw, 2.75rem);
+  backdrop-filter: blur(6px);
+}
+
+@media (max-width: 768px) {
+  .company-dashboard {
+    padding: 2.5rem 1.25rem 3.5rem;
+  }
+
+  .company-dashboard__nav {
+    gap: 0.5rem;
+  }
+
+  .company-dashboard__nav-link {
+    flex: 1 1 100%;
+  }
+}

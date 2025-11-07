@@ -8,7 +8,8 @@ import { CompanyService, CompanyProfile as CompanyProfileModel } from '../../ser
   selector: 'app-company-profile',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './company-profile.html'
+  templateUrl: './company-profile.html',
+  styleUrl: './company-profile.css'
 })
 export class CompanyProfile {
   private readonly companyService = inject(CompanyService);

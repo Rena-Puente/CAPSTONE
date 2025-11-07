@@ -18,7 +18,8 @@ type OfferControlName =
   selector: 'app-company-offer-create',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './company-offer-create.html'
+  templateUrl: './company-offer-create.html',
+  styleUrl: './company-offer-create.css'
 })
 export class CompanyOfferCreate {
   private readonly fb = inject(FormBuilder);

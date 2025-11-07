@@ -1,99 +1,131 @@
 <section class="company-offer-create">
-  <h2 class="h4 mb-3">Crear nueva oferta laboral</h2>
+  <header class="company-offer-create__header">
+    <h2 class="company-offer-create__title">Crear nueva oferta laboral</h2>
+    <p class="company-offer-create__subtitle">
+      Comparte una vacante detallada para atraer al mejor talento.
+    </p>
+  </header>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <div class="mb-3">
-      <label for="offerTitle" class="form-label">Título</label>
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="company-offer-create__form">
+    <div class="company-offer-create__field">
+      <label for="offerTitle" class="company-offer-create__label">Título</label>
       <input
         type="text"
         id="offerTitle"
-        class="form-control"
+        class="company-offer-create__control"
         formControlName="title"
         [class.is-invalid]="shouldShowError('title')"
+        placeholder="Ej. Diseñador UX Senior"
       />
-      <div class="invalid-feedback" *ngIf="getControlError('title')">{{ getControlError('title') }}</div>
+      <div class="company-offer-create__error" *ngIf="getControlError('title')">
+        {{ getControlError('title') }}
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label for="offerDescription" class="form-label">Descripción</label>
+    <div class="company-offer-create__field">
+      <label for="offerDescription" class="company-offer-create__label">Descripción</label>
       <textarea
         id="offerDescription"
-        class="form-control"
+        class="company-offer-create__control company-offer-create__control--textarea"
         rows="6"
         formControlName="description"
         [class.is-invalid]="shouldShowError('description')"
+        placeholder="Detalla responsabilidades, beneficios y requisitos esenciales"
       ></textarea>
-      <div class="invalid-feedback" *ngIf="getControlError('description')">{{ getControlError('description') }}</div>
+      <div class="company-offer-create__error" *ngIf="getControlError('description')">
+        {{ getControlError('description') }}
+      </div>
     </div>
 
-    <div class="row g-3">
-      <div class="col-md-4">
-        <label for="offerLocationType" class="form-label">Modalidad</label>
+    <div class="company-offer-create__grid">
+      <div class="company-offer-create__field">
+        <label for="offerLocationType" class="company-offer-create__label">Modalidad</label>
         <input
           type="text"
           id="offerLocationType"
-          class="form-control"
+          class="company-offer-create__control"
           formControlName="locationType"
           [class.is-invalid]="shouldShowError('locationType')"
+          placeholder="Remoto, híbrido, presencial"
         />
-        <div class="invalid-feedback" *ngIf="getControlError('locationType')">{{ getControlError('locationType') }}</div>
+        <div class="company-offer-create__error" *ngIf="getControlError('locationType')">
+          {{ getControlError('locationType') }}
+        </div>
       </div>
-      <div class="col-md-4">
-        <label for="offerCity" class="form-label">Ciudad</label>
+
+      <div class="company-offer-create__field">
+        <label for="offerCity" class="company-offer-create__label">Ciudad</label>
         <input
           type="text"
           id="offerCity"
-          class="form-control"
+          class="company-offer-create__control"
           formControlName="city"
           [class.is-invalid]="shouldShowError('city')"
+          placeholder="Ej. Santiago"
         />
-        <div class="invalid-feedback" *ngIf="getControlError('city')">{{ getControlError('city') }}</div>
+        <div class="company-offer-create__error" *ngIf="getControlError('city')">
+          {{ getControlError('city') }}
+        </div>
       </div>
-      <div class="col-md-4">
-        <label for="offerCountry" class="form-label">País</label>
+
+      <div class="company-offer-create__field">
+        <label for="offerCountry" class="company-offer-create__label">País</label>
         <input
           type="text"
           id="offerCountry"
-          class="form-control"
+          class="company-offer-create__control"
           formControlName="country"
           [class.is-invalid]="shouldShowError('country')"
+          placeholder="Ej. Chile"
         />
-        <div class="invalid-feedback" *ngIf="getControlError('country')">{{ getControlError('country') }}</div>
+        <div class="company-offer-create__error" *ngIf="getControlError('country')">
+          {{ getControlError('country') }}
+        </div>
       </div>
-    </div>
 
-    <div class="row g-3 mt-0">
-      <div class="col-md-6">
-        <label for="offerSeniority" class="form-label">Seniority</label>
+      <div class="company-offer-create__field">
+        <label for="offerSeniority" class="company-offer-create__label">Seniority</label>
         <input
           type="text"
           id="offerSeniority"
-          class="form-control"
+          class="company-offer-create__control"
           formControlName="seniority"
           [class.is-invalid]="shouldShowError('seniority')"
+          placeholder="Junior, Semi Senior, Senior"
         />
-        <div class="invalid-feedback" *ngIf="getControlError('seniority')">{{ getControlError('seniority') }}</div>
+        <div class="company-offer-create__error" *ngIf="getControlError('seniority')">
+          {{ getControlError('seniority') }}
+        </div>
       </div>
-      <div class="col-md-6">
-        <label for="offerContractType" class="form-label">Tipo de contrato</label>
+
+      <div class="company-offer-create__field">
+        <label for="offerContractType" class="company-offer-create__label">Tipo de contrato</label>
         <input
           type="text"
           id="offerContractType"
-          class="form-control"
+          class="company-offer-create__control"
           formControlName="contractType"
           [class.is-invalid]="shouldShowError('contractType')"
+          placeholder="Indefinido, honorarios, plazo fijo"
         />
-        <div class="invalid-feedback" *ngIf="getControlError('contractType')">{{ getControlError('contractType') }}</div>
+        <div class="company-offer-create__error" *ngIf="getControlError('contractType')">
+          {{ getControlError('contractType') }}
+        </div>
       </div>
     </div>
 
-    <div class="d-flex align-items-center gap-3 mt-4">
-      <button type="submit" class="btn btn-primary" [disabled]="isSubmitting()">
-        <span class="spinner-border spinner-border-sm me-2" *ngIf="isSubmitting()" role="status" aria-hidden="true"></span>
+    <div class="company-offer-create__actions">
+      <button type="submit" class="company-offer-create__submit" [disabled]="isSubmitting()">
+        <span class="company-offer-create__spinner" *ngIf="isSubmitting()" role="status" aria-hidden="true"></span>
         Publicar oferta
       </button>
-      <span class="text-success" *ngIf="submitSuccess()">La oferta se creó correctamente.</span>
-      <span class="text-danger" *ngIf="submitError()">{{ submitError() }}</span>
+
+      <span class="company-offer-create__feedback company-offer-create__feedback--success" *ngIf="submitSuccess()">
+        La oferta se creó correctamente.
+      </span>
+      <span class="company-offer-create__feedback company-offer-create__feedback--error" *ngIf="submitError()">
+        {{ submitError() }}
+      </span>
     </div>
   </form>
 </section>

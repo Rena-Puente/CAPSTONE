@@ -1,22 +1,53 @@
-<section class="company-dashboard container py-4">
-  <header class="mb-4">
-    <h1 class="h3 mb-1">Panel de empresa</h1>
-    <p class="text-muted mb-0" *ngIf="company(); else dashboardStatus">{{ company()?.name }}</p>
-  </header>
+<section class="company-dashboard">
+  <div class="company-dashboard__inner">
+    <header class="company-dashboard__header">
+      <div>
+        <h1 class="company-dashboard__title">Panel de empresa</h1>
+        <p class="company-dashboard__subtitle" *ngIf="company(); else dashboardStatus">
+          {{ company()?.name }}
+        </p>
+      </div>
+    </header>
 
-  <ng-template #dashboardStatus>
-    <p class="text-muted mb-0" *ngIf="loading(); else dashboardError">Cargando información de la empresa...</p>
-  </ng-template>
+    <ng-template #dashboardStatus>
+      <p class="company-dashboard__subtitle" *ngIf="loading(); else dashboardError">
+        Cargando información de la empresa...
+      </p>
+    </ng-template>
 
-  <ng-template #dashboardError>
-    <p class="text-danger" *ngIf="error()">{{ error() }}</p>
-  </ng-template>
+    <ng-template #dashboardError>
+      <p class="company-dashboard__error" *ngIf="error()">{{ error() }}</p>
+    </ng-template>
 
-  <nav class="mb-4 d-flex flex-wrap gap-2">
-    <a routerLink="profile" routerLinkActive="active" class="btn btn-outline-primary">Perfil de la empresa</a>
-    <a routerLink="offers/new" routerLinkActive="active" class="btn btn-outline-primary">Crear oferta</a>
-    <a routerLink="applicants" routerLinkActive="active" class="btn btn-outline-primary">Ver postulantes</a>
-  </nav>
+    <nav class="company-dashboard__nav" aria-label="Navegación del panel">
+      <a
+        routerLink="profile"
+        routerLinkActive="active"
+        class="company-dashboard__nav-link"
+        aria-label="Ver perfil de la empresa"
+      >
+        Perfil de la empresa
+      </a>
+      <a
+        routerLink="offers/new"
+        routerLinkActive="active"
+        class="company-dashboard__nav-link"
+        aria-label="Crear una nueva oferta"
+      >
+        Crear oferta
+      </a>
+      <a
+        routerLink="applicants"
+        routerLinkActive="active"
+        class="company-dashboard__nav-link"
+        aria-label="Ver postulantes"
+      >
+        Ver postulantes
+      </a>
+    </nav>
 
-  <router-outlet></router-outlet>
+    <div class="company-dashboard__content">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
 </section>

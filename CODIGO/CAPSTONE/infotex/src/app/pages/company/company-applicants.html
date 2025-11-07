@@ -1,14 +1,28 @@
 <section class="company-applicants">
-  <h2 class="h4 mb-3">Postulaciones recibidas</h2>
+  <header class="company-applicants__header">
+    <div>
+      <h2 class="company-applicants__title">Postulaciones recibidas</h2>
+      <p class="company-applicants__subtitle">
+        Mantén el seguimiento de las personas interesadas en tus ofertas.
+      </p>
+    </div>
+  </header>
 
-  <div *ngIf="loading()" class="alert alert-info" role="status">Cargando postulantes...</div>
-  <div *ngIf="error()" class="alert alert-danger" role="alert">{{ error() }}</div>
+  <div *ngIf="loading()" class="company-applicants__alert company-applicants__alert--info" role="status">
+    Cargando postulantes...
+  </div>
+
+  <div *ngIf="error()" class="company-applicants__alert company-applicants__alert--error" role="alert">
+    {{ error() }}
+  </div>
 
   <ng-container *ngIf="!loading() && !error()">
-    <div *ngIf="applicants().length === 0" class="alert alert-secondary">Aún no hay postulantes para tus ofertas.</div>
+    <div *ngIf="applicants().length === 0" class="company-applicants__empty">
+      Aún no hay postulantes para tus ofertas.
+    </div>
 
-    <div class="table-responsive" *ngIf="applicants().length > 0">
-      <table class="table table-striped align-middle">
+    <div class="company-applicants__table-wrapper" *ngIf="applicants().length > 0">
+      <table class="company-applicants__table">
         <thead>
           <tr>
             <th scope="col">Oferta</th>
@@ -21,23 +35,24 @@
         </thead>
         <tbody>
           <tr *ngFor="let applicant of applicants()">
-            <td>{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
-            <td>{{ applicant.applicantName || 'Sin nombre' }}</td>
-            <td>{{ applicant.applicantEmail || 'Sin correo' }}</td>
-            <td>
+            <td data-title="Oferta">{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
+            <td data-title="Postulante">{{ applicant.applicantName || 'Sin nombre' }}</td>
+            <td data-title="Correo">{{ applicant.applicantEmail || 'Sin correo' }}</td>
+            <td data-title="Perfil">
               <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
                 <a
                   [href]="profileUrl"
                   target="_blank"
                   rel="noopener noreferrer"
+                  class="company-applicants__link"
                 >
-                  {{ profileUrl }}
+                  Ver perfil
                 </a>
               </ng-container>
               <ng-template #noProfile>Sin perfil</ng-template>
             </td>
-            <td>{{ applicant.status || 'En revisión' }}</td>
-            <td>{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
+            <td data-title="Estado">{{ applicant.status || 'En revisión' }}</td>
+            <td data-title="Fecha">{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
           </tr>
         </tbody>
       </table>

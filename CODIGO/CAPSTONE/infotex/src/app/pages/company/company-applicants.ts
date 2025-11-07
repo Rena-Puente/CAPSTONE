@@ -8,7 +8,8 @@ import { CompanyService, CompanyApplicant } from '../../services/company.service
   selector: 'app-company-applicants',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './company-applicants.html'
+  templateUrl: './company-applicants.html',
+  styleUrl: './company-applicants.css'
 })
 export class CompanyApplicants {
   private readonly companyService = inject(CompanyService);
