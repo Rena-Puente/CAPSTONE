@@ -40,6 +40,17 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
     o_postulantes OUT SYS_REFCURSOR
   );
+
+  PROCEDURE sp_listar_ofertas_publicas(
+    o_ofertas OUT SYS_REFCURSOR
+  );
+
+  PROCEDURE sp_postular_oferta(
+    p_id_oferta           IN OFERTAS.ID_OFERTA%TYPE,
+    p_id_usuario          IN USUARIOS.ID_USUARIO%TYPE,
+    p_carta_presentacion  IN POSTULACIONES.CARTA_PRESENTACION%TYPE,
+    o_id_postulacion      OUT POSTULACIONES.ID_POSTULACION%TYPE
+  );
 END sp_empresas_pkg;
 /
 
@@ -408,12 +419,109 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
         FROM postulaciones p
         JOIN ofertas o
           ON o.id_oferta = p.id_oferta
-        JOIN usuarios u
+       JOIN usuarios u
           ON u.id_usuario = p.id_usuario
         LEFT JOIN perfiles pr
           ON pr.id_usuario = p.id_usuario
        WHERE o.id_empresa = p_id_empresa
        ORDER BY p.fecha_creacion DESC;
   END sp_listar_postulantes;
+
+  PROCEDURE sp_listar_ofertas_publicas(
+    o_ofertas OUT SYS_REFCURSOR
+  ) IS
+  BEGIN
+    OPEN o_ofertas FOR
+      SELECT o.id_oferta,
+             o.id_empresa,
+             o.titulo,
+             o.descripcion,
+             o.tipo_ubicacion,
+             o.ciudad,
+             o.pais,
+             o.seniority,
+             o.tipo_contrato,
+             o.fecha_creacion,
+             e.nombre      AS nombre_empresa,
+             e.sitio_web   AS sitio_web_empresa,
+             e.pais        AS pais_empresa,
+             e.ciudad      AS ciudad_empresa
+        FROM ofertas o
+        JOIN empresas e
+          ON e.id_empresa = o.id_empresa
+       WHERE NVL(o.activa, 0) = 1
+       ORDER BY o.fecha_creacion DESC;
+  END sp_listar_ofertas_publicas;
+
+  PROCEDURE sp_postular_oferta(
+    p_id_oferta           IN OFERTAS.ID_OFERTA%TYPE,
+    p_id_usuario          IN USUARIOS.ID_USUARIO%TYPE,
+    p_carta_presentacion  IN POSTULACIONES.CARTA_PRESENTACION%TYPE,
+    o_id_postulacion      OUT POSTULACIONES.ID_POSTULACION%TYPE
+  ) IS
+    v_activa        OFERTAS.ACTIVA%TYPE;
+    v_biografia     POSTULACIONES.CARTA_PRESENTACION%TYPE;
+    v_dummy         NUMBER;
+  BEGIN
+    IF p_id_oferta IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20080, 'Debes seleccionar una oferta válida.');
+    END IF;
+
+    IF p_id_usuario IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20081, 'Debes iniciar sesión para postular a una oferta.');
+    END IF;
+
+    BEGIN
+      SELECT activa
+        INTO v_activa
+        FROM ofertas
+       WHERE id_oferta = p_id_oferta;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20082, 'La oferta seleccionada no existe.');
+    END;
+
+    IF NVL(v_activa, 0) <> 1 THEN
+      RAISE_APPLICATION_ERROR(-20083, 'La oferta seleccionada no está disponible para nuevas postulaciones.');
+    END IF;
+
+    BEGIN
+      SELECT 1
+        INTO v_dummy
+        FROM usuarios
+       WHERE id_usuario = p_id_usuario
+         AND NVL(activo, 0) = 1
+       FETCH FIRST 1 ROWS ONLY;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20084, 'El usuario indicado no existe o no está activo.');
+    END;
+
+    SELECT COUNT(*)
+      INTO v_dummy
+      FROM postulaciones
+     WHERE id_oferta = p_id_oferta
+       AND id_usuario = p_id_usuario;
+
+    IF v_dummy > 0 THEN
+      RAISE_APPLICATION_ERROR(-20085, 'Ya has postulado a esta oferta.');
+    END IF;
+
+    v_biografia := p_carta_presentacion;
+
+    INSERT INTO postulaciones (
+      id_oferta,
+      id_usuario,
+      carta_presentacion,
+      estado,
+      fecha_creacion
+    ) VALUES (
+      p_id_oferta,
+      p_id_usuario,
+      v_biografia,
+      'enviada',
+      SYSTIMESTAMP
+    ) RETURNING id_postulacion INTO o_id_postulacion;
+  END sp_postular_oferta;
 END sp_empresas_pkg;
 /
