@@ -151,64 +151,104 @@ function registerAuthRoutes(app) {
         userAgent: req.headers['user-agent'] || null
       });
 
-      const result = await executeQuery(
-        'BEGIN :result := fn_login(:correo, :contrasena); END;',
-        {
-          correo: email,
-          contrasena: password,
-          result: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      let loginResult;
+
+      try {
+        loginResult = await executeQuery(
+          `BEGIN
+             sp_login_welcome(
+               p_correo          => :email,
+               p_password        => :password,
+               p_ip              => :ip,
+               p_ua              => :userAgent,
+               o_id_usuario      => :userId,
+               o_id_tipo_usuario => :userType,
+               o_id_empresa      => :companyId,
+               o_access_token    => :accessToken,
+               o_refresh_token   => :refreshToken,
+               o_expira_access   => :accessExpires,
+               o_expira_refresh  => :refreshExpires
+             );
+           END;`,
+          {
+            email,
+            password,
+            ip: getClientIp(req),
+            userAgent: req.headers['user-agent'] || null,
+            userId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+            userType: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+            companyId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+            accessToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
+            refreshToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
+            accessExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP },
+            refreshExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP }
+          },
+          { autoCommit: true }
+        );
+      } catch (error) {
+        const errorCode = error?.errorNum ?? null;
+
+        if (errorCode === 20060 || errorCode === 20061) {
+          const message = error?.message || 'Faltan datos obligatorios para iniciar sesión.';
+          return res.status(400).json({ ok: false, error: message });
         }
-      );
 
-      const userId = result.outBinds?.result ?? null;
+        if (errorCode === 20050) {
+          logAuthEvent('Login rejected', { email, reason: 'Inactive user' });
+          return res.status(401).json({ ok: false, error: 'Usuario inactivo.' });
+        }
 
-      if (!userId) {
-        logAuthEvent('Login rejected', { email, reason: 'Invalid credentials' });
-        return res.status(401).json({ ok: false, error: 'Credenciales inválidas.' });
+        if (errorCode === 20051) {
+          logAuthEvent('Login rejected', { email, reason: 'Invalid credentials' });
+          return res.status(401).json({ ok: false, error: 'Credenciales inválidas.' });
+        }
+
+        console.error('[Auth] Login failed at database procedure', {
+          email,
+          error: error?.message || error
+        });
+        return res.status(500).json({ ok: false, error: 'No se pudo completar el inicio de sesión.' });
       }
 
-      const sessionResult = await executeQuery(
-        `BEGIN
-           sp_emitir_sesion(
-             p_id_usuario     => :userId,
-             p_minutos_access => :accessMinutes,
-             p_dias_refresh   => :refreshDays,
-             p_ip             => :ip,
-             p_ua             => :userAgent,
-             o_access_token   => :accessToken,
-             o_refresh_token  => :refreshToken,
-             o_expira_access  => :accessExpires,
-             o_expira_refresh => :refreshExpires
-           );
-         END;`,
-        {
-          userId,
-          accessMinutes: accessTokenMinutes,
-          refreshDays: refreshTokenDays,
-          ip: getClientIp(req),
-          userAgent: req.headers['user-agent'] || null,
-          accessToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
-          refreshToken: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 },
-          accessExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP },
-          refreshExpires: { dir: oracledb.BIND_OUT, type: oracledb.DB_TYPE_TIMESTAMP }
-        },
-        { autoCommit: true }
-      );
+      const outBinds = loginResult.outBinds ?? {};
+      const rawUserId = outBinds.userId ?? null;
+      const parsedUserId = Number(rawUserId);
 
-      const outBinds = sessionResult.outBinds ?? {};
-      const [userType, profileStatus] = await Promise.all([
-        fetchUserType(userId),
-        calculateProfileStatus(userId)
-      ]);
-      const isProfileComplete = profileStatus?.isProfileComplete ?? null;
+      if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
+        console.error('[Auth] Login procedure returned invalid user identifier', { email, rawUserId });
+        return res.status(500).json({ ok: false, error: 'No se pudo completar el inicio de sesión.' });
+      }
+
+      const userId = parsedUserId;
+      const userType = normalizeUserType(outBinds.userType ?? null);
+      const companyIdRaw = outBinds.companyId ?? null;
+      const companyId = Number.isFinite(companyIdRaw) ? Number(companyIdRaw) : Number.parseInt(String(companyIdRaw ?? ''), 10);
+      const normalizedCompanyId = Number.isNaN(companyId) || companyId <= 0 ? null : companyId;
+      const accessToken = outBinds.accessToken ?? null;
+      const refreshToken = outBinds.refreshToken ?? null;
+      const accessExpires = outBinds.accessExpires ?? null;
+      const refreshExpires = outBinds.refreshExpires ?? null;
+
+      if (!accessToken || !refreshToken) {
+        console.error('[Auth] Login procedure did not return tokens', { email, userId });
+        return res.status(500).json({ ok: false, error: 'No se pudo completar el inicio de sesión.' });
+      }
+
+      let isProfileComplete = null;
+
+      if (userType === 1) {
+        const profileStatus = await calculateProfileStatus(userId);
+        isProfileComplete = profileStatus?.isProfileComplete ?? null;
+      }
 
       logAuthEvent('Login successful', {
         userId,
         userType,
-        accessToken: summarizeToken(outBinds.accessToken ?? null),
-        refreshToken: summarizeToken(outBinds.refreshToken ?? null),
-        accessExpiresAt: toIsoString(outBinds.accessExpires),
-        refreshExpiresAt: toIsoString(outBinds.refreshExpires),
+        companyId: normalizedCompanyId,
+        accessToken: summarizeToken(accessToken),
+        refreshToken: summarizeToken(refreshToken),
+        accessExpiresAt: toIsoString(accessExpires),
+        refreshExpiresAt: toIsoString(refreshExpires),
         isProfileComplete
       });
 
@@ -216,10 +256,11 @@ function registerAuthRoutes(app) {
         ok: true,
         userId,
         userType,
-        accessToken: outBinds.accessToken ?? null,
-        refreshToken: outBinds.refreshToken ?? null,
-        accessExpiresAt: toIsoString(outBinds.accessExpires),
-        refreshExpiresAt: toIsoString(outBinds.refreshExpires),
+        companyId: normalizedCompanyId,
+        accessToken,
+        refreshToken,
+        accessExpiresAt: toIsoString(accessExpires),
+        refreshExpiresAt: toIsoString(refreshExpires),
         isProfileComplete
       });
     } catch (error) {
@@ -384,11 +425,13 @@ function registerAuthRoutes(app) {
       );
 
       const outBinds = sessionResult.outBinds ?? {};
-      const [userType, profileStatus] = await Promise.all([
-        fetchUserType(userId),
-        calculateProfileStatus(userId)
-      ]);
-      const isProfileComplete = profileStatus?.isProfileComplete ?? null;
+      const userType = await fetchUserType(userId);
+      let isProfileComplete = null;
+
+      if (userType === 1) {
+        const profileStatus = await calculateProfileStatus(userId);
+        isProfileComplete = profileStatus?.isProfileComplete ?? null;
+      }
 
       logAuthEvent('GitHub login successful', {
         userId,
@@ -398,7 +441,8 @@ function registerAuthRoutes(app) {
         refreshToken: summarizeToken(outBinds.refreshToken ?? null),
         accessExpiresAt: toIsoString(outBinds.accessExpires),
         refreshExpiresAt: toIsoString(outBinds.refreshExpires),
-        isProfileComplete
+        isProfileComplete,
+        companyId: null
       });
 
       res.json({
@@ -409,7 +453,8 @@ function registerAuthRoutes(app) {
         refreshToken: outBinds.refreshToken ?? null,
         accessExpiresAt: toIsoString(outBinds.accessExpires),
         refreshExpiresAt: toIsoString(outBinds.refreshExpires),
-        isProfileComplete
+        isProfileComplete,
+        companyId: null
       });
     } catch (error) {
       console.error('[Auth] GitHub callback failed:', error);

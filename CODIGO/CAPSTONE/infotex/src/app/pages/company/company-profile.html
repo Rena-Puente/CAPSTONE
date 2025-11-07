@@ -1,0 +1,36 @@
+<section class="company-profile">
+  <div *ngIf="loading()" class="alert alert-info" role="status">Cargando perfil de la empresa...</div>
+  <div *ngIf="error()" class="alert alert-danger" role="alert">{{ error() }}</div>
+
+  <div *ngIf="profile() as company">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h2 class="h4 card-title mb-3">{{ company.name }}</h2>
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Correo de contacto</dt>
+          <dd class="col-sm-8">{{ company.email }}</dd>
+
+          <dt class="col-sm-4">Sitio web</dt>
+          <dd class="col-sm-8">
+            <a *ngIf="company.website; else noWebsite" [href]="company.website" target="_blank" rel="noopener">
+              {{ company.website }}
+            </a>
+            <ng-template #noWebsite>—</ng-template>
+          </dd>
+
+          <dt class="col-sm-4">Ubicación</dt>
+          <dd class="col-sm-8">{{ company.city }}, {{ company.country }}</dd>
+
+          <dt class="col-sm-4">RUT</dt>
+          <dd class="col-sm-8">{{ company.rut }}</dd>
+
+          <dt class="col-sm-4">Fecha de registro</dt>
+          <dd class="col-sm-8">{{ company.createdAt ? (company.createdAt | date: 'medium') : '—' }}</dd>
+
+          <dt class="col-sm-4">Última actualización</dt>
+          <dd class="col-sm-8">{{ company.updatedAt ? (company.updatedAt | date: 'medium') : '—' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>

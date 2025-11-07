@@ -1,5 +1,5 @@
-const { executeQuery, oracledb } = require('../db/oracle');
-const { toNullableTrimmedString } = require('../utils/format');
+const { executeQuery, fetchCursorRows, oracledb } = require('../db/oracle');
+const { toNullableTrimmedString, toIsoString } = require('../utils/format');
 
 const MAX_NAME_LENGTH = 150;
 const MAX_COUNTRY_LENGTH = 80;
@@ -10,6 +10,11 @@ const MAX_RUT_LENGTH = 12; // after formatting with hyphen
 const MAX_SALT_LENGTH = 32;
 const MAX_WEBSITE_LENGTH = 2048;
 const MAX_PASSWORD_ITERATIONS = 999999;
+const MAX_OFFER_TITLE_LENGTH = 150;
+const MAX_LOCATION_TYPE_LENGTH = 20;
+const MAX_SENIORITY_LENGTH = 30;
+const MAX_CONTRACT_TYPE_LENGTH = 30;
+const MAX_DESCRIPTION_LENGTH = 8000;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -166,6 +171,24 @@ function normalizePasswordIterations(value) {
   return iterations;
 }
 
+function normalizeOfferDescription(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  const description = typeof value === 'string' ? value.trim() : String(value).trim();
+
+  if (!description) {
+    throw new Error('La descripción de la oferta es obligatoria.');
+  }
+
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    throw new Error('La descripción de la oferta es demasiado extensa.');
+  }
+
+  return description;
+}
+
 function normalizeCompanyPayload(payload = {}) {
   const name = sanitizeString(payload.name);
   assertRequired(name, 'El nombre de la empresa');
@@ -202,6 +225,62 @@ function normalizeCompanyPayload(payload = {}) {
     rut,
     passwordSalt,
     passwordIterations
+  };
+}
+
+function normalizeOfferPayload(payload = {}) {
+  const title = sanitizeString(payload.title);
+  assertRequired(title, 'El título de la oferta');
+
+  if (title.length > MAX_OFFER_TITLE_LENGTH) {
+    throw new Error('El título de la oferta es demasiado largo.');
+  }
+
+  const description = normalizeOfferDescription(payload.description);
+
+  const locationType = sanitizeString(payload.locationType || payload.tipoUbicacion || payload.modality);
+  assertRequired(locationType, 'El tipo de ubicación de la oferta');
+
+  if (locationType.length > MAX_LOCATION_TYPE_LENGTH) {
+    throw new Error('El tipo de ubicación es demasiado largo.');
+  }
+
+  const city = sanitizeString(payload.city);
+  assertRequired(city, 'La ciudad de la oferta');
+
+  if (city.length > MAX_CITY_LENGTH) {
+    throw new Error('La ciudad de la oferta es demasiado larga.');
+  }
+
+  const country = sanitizeString(payload.country);
+  assertRequired(country, 'El país de la oferta');
+
+  if (country.length > MAX_COUNTRY_LENGTH) {
+    throw new Error('El país de la oferta es demasiado largo.');
+  }
+
+  const seniority = sanitizeString(payload.seniority);
+  assertRequired(seniority, 'La seniority de la oferta');
+
+  if (seniority.length > MAX_SENIORITY_LENGTH) {
+    throw new Error('La seniority es demasiado larga.');
+  }
+
+  const contractType = sanitizeString(payload.contractType || payload.tipoContrato);
+  assertRequired(contractType, 'El tipo de contrato de la oferta');
+
+  if (contractType.length > MAX_CONTRACT_TYPE_LENGTH) {
+    throw new Error('El tipo de contrato es demasiado largo.');
+  }
+
+  return {
+    title,
+    description,
+    locationType,
+    city,
+    country,
+    seniority,
+    contractType
   };
 }
 
@@ -268,12 +347,136 @@ function mapCompanyRow(row) {
     country: toNullableTrimmedString(row.PAIS ?? row.pais),
     city: toNullableTrimmedString(row.CIUDAD ?? row.ciudad),
     email: toNullableTrimmedString(row.EMAIL ?? row.email),
-    rut: toNullableTrimmedString(row.RUT_EMPRESA ?? row.rut_empresa)
+    rut: toNullableTrimmedString(row.RUT_EMPRESA ?? row.rut_empresa),
+    createdAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null),
+    updatedAt: toIsoString(row.FECHA_ACTUALIZACION ?? row.fecha_actualizacion ?? null)
   };
+}
+
+async function getCompanyForUser(userId) {
+  if (!Number.isInteger(userId) || userId <= 0) {
+    return null;
+  }
+
+  const result = await executeQuery(
+    `BEGIN sp_empresas_pkg.sp_obtener_empresa_usuario(
+       p_id_usuario => :userId,
+       o_empresa    => :cursor
+     ); END;`,
+    {
+      userId,
+      cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+    }
+  );
+
+  const cursor = result.outBinds?.cursor || null;
+  const rows = await fetchCursorRows(cursor);
+
+  if (!rows || rows.length === 0) {
+    return null;
+  }
+
+  return mapCompanyRow(rows[0]);
+}
+
+async function createOffer(companyId, payload) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    throw new Error('El identificador de la empresa no es válido.');
+  }
+
+  const normalized = normalizeOfferPayload(payload);
+
+  const result = await executeQuery(
+    `BEGIN sp_empresas_pkg.sp_crear_oferta(
+       p_id_empresa     => :companyId,
+       p_titulo         => :title,
+       p_descripcion    => :description,
+       p_tipo_ubicacion => :locationType,
+       p_ciudad         => :city,
+       p_pais           => :country,
+       p_seniority      => :seniority,
+       p_tipo_contrato  => :contractType,
+       o_id_oferta      => :offerId
+     ); END;`,
+    {
+      companyId,
+      title: normalized.title,
+      description: normalized.description,
+      locationType: normalized.locationType,
+      city: normalized.city,
+      country: normalized.country,
+      seniority: normalized.seniority,
+      contractType: normalized.contractType,
+      offerId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+    },
+    { autoCommit: true }
+  );
+
+  const newId = Number(result.outBinds?.offerId ?? 0);
+
+  if (!Number.isInteger(newId) || newId <= 0) {
+    throw new Error('No se pudo determinar el identificador de la oferta creada.');
+  }
+
+  return {
+    id: newId,
+    companyId,
+    title: normalized.title,
+    description: normalized.description,
+    locationType: normalized.locationType,
+    city: normalized.city,
+    country: normalized.country,
+    seniority: normalized.seniority,
+    contractType: normalized.contractType
+  };
+}
+
+function mapApplicantRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    applicationId: Number(row.ID_POSTULACION ?? row.id_postulacion ?? null) || null,
+    offerId: Number(row.ID_OFERTA ?? row.id_oferta ?? null) || null,
+    offerTitle: toNullableTrimmedString(row.TITULO_OFERTA ?? row.titulo_oferta ?? row.TITULO ?? row.titulo),
+    applicantId: Number(row.ID_USUARIO ?? row.id_usuario ?? null) || null,
+    applicantName: toNullableTrimmedString(row.NOMBRE_POSTULANTE ?? row.nombre_postulante ?? row.NOMBRE_MOSTRAR ?? row.nombre_mostrar),
+    applicantEmail: toNullableTrimmedString(row.CORREO_POSTULANTE ?? row.correo_postulante ?? row.CORREO ?? row.correo),
+    status: toNullableTrimmedString(row.ESTADO ?? row.estado),
+    submittedAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null)
+  };
+}
+
+async function listApplicants(companyId) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    return [];
+  }
+
+  const result = await executeQuery(
+    `BEGIN sp_empresas_pkg.sp_listar_postulantes(
+       p_id_empresa  => :companyId,
+       o_postulantes => :cursor
+     ); END;`,
+    {
+      companyId,
+      cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+    }
+  );
+
+  const cursor = result.outBinds?.cursor || null;
+  const rows = await fetchCursorRows(cursor);
+
+  return rows
+    .map((row) => mapApplicantRow(row))
+    .filter((item) => item && item.applicationId);
 }
 
 module.exports = {
   normalizeCompanyPayload,
   createCompany,
-  mapCompanyRow
+  mapCompanyRow,
+  getCompanyForUser,
+  createOffer,
+  listApplicants
 };

@@ -11,16 +11,13 @@ export const authGuard: CanActivateFn = (_route, state) => {
   return authService.ensureAuthenticated().pipe(
     map((isAuthenticated) => {
       if (isAuthenticated) {
-                const userType = authService.getUserType();
+        const userType = authService.getUserType();
         const restrictedDestination = resolveDefaultRouteForUserType(userType);
 
-        if (
-          restrictedDestination &&
-          !state.url.startsWith(restrictedDestination)
-        ) {
+        if (restrictedDestination && !state.url.startsWith(restrictedDestination)) {
           return router.createUrlTree([restrictedDestination]);
         }
-        
+
         return true;
       }
 

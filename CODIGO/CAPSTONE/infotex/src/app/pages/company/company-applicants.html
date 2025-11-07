@@ -1,0 +1,33 @@
+<section class="company-applicants">
+  <h2 class="h4 mb-3">Postulaciones recibidas</h2>
+
+  <div *ngIf="loading()" class="alert alert-info" role="status">Cargando postulantes...</div>
+  <div *ngIf="error()" class="alert alert-danger" role="alert">{{ error() }}</div>
+
+  <ng-container *ngIf="!loading() && !error()">
+    <div *ngIf="applicants().length === 0" class="alert alert-secondary">Aún no hay postulantes para tus ofertas.</div>
+
+    <div class="table-responsive" *ngIf="applicants().length > 0">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Oferta</th>
+            <th scope="col">Postulante</th>
+            <th scope="col">Correo</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let applicant of applicants()">
+            <td>{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
+            <td>{{ applicant.applicantName || 'Sin nombre' }}</td>
+            <td>{{ applicant.applicantEmail || 'Sin correo' }}</td>
+            <td>{{ applicant.status || 'En revisión' }}</td>
+            <td>{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</section>
