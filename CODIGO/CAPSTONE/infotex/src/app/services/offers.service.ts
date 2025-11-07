@@ -15,6 +15,7 @@ export interface OfferCompanySummary {
   country: string | null;
   website: string | null;
   logoUrl: string | null;
+  avatarUrl: string | null;
 }
 
 export interface PublicOffer {
@@ -134,7 +135,8 @@ export class OffersService {
       city: offer?.company?.city ?? null,
       country: offer?.company?.country ?? null,
       website: offer?.company?.website ?? null,
-      logoUrl: offer?.company?.logoUrl ?? null
+      logoUrl: offer?.company?.logoUrl ?? null,
+      avatarUrl: offer?.company?.avatarUrl ?? null
     };
 
     const numericId = Number.isFinite(offer?.id as number)
