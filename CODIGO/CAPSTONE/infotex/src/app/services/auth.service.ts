@@ -349,7 +349,12 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
   completeGithubLogin(
     code: string,
     state: string
-  ): Observable<{ userId: number; userType: number | null; isProfileComplete: boolean | null }> {
+  ): Observable<{
+    userId: number;
+    userType: number | null;
+    companyId: number | null;
+    isProfileComplete: boolean | null;
+  }> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/github/callback`, { code, state })
       .pipe(
@@ -365,10 +370,12 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
           }
 
           const userType = this.normalizeUserType(response.userType);
+          const companyId = this.normalizeId(response.companyId);
 
           this.persistSession({
             userId: response.userId,
             userType,
+            companyId,
             accessToken: response.accessToken,
             refreshToken: response.refreshToken,
             accessExpiresAt: response.accessExpiresAt ?? null,
@@ -388,6 +395,7 @@ getGithubAuthorizeUrl(state: string): Observable<string> {
           return {
             userId: response.userId,
             userType,
+            companyId,
             isProfileComplete: response.isProfileComplete ?? null
           };
         }),
