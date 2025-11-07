@@ -14,6 +14,7 @@
             <th scope="col">Oferta</th>
             <th scope="col">Postulante</th>
             <th scope="col">Correo</th>
+            <th scope="col">Perfil</th>
             <th scope="col">Estado</th>
             <th scope="col">Fecha</th>
           </tr>
@@ -23,6 +24,18 @@
             <td>{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
             <td>{{ applicant.applicantName || 'Sin nombre' }}</td>
             <td>{{ applicant.applicantEmail || 'Sin correo' }}</td>
+            <td>
+              <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
+                <a
+                  [href]="profileUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {{ profileUrl }}
+                </a>
+              </ng-container>
+              <ng-template #noProfile>Sin perfil</ng-template>
+            </td>
             <td>{{ applicant.status || 'En revisión' }}</td>
             <td>{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
           </tr>

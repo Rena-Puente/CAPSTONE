@@ -85,6 +85,7 @@ export interface CompanyApplicant {
   applicantId: number | null;
   applicantName: string | null;
   applicantEmail: string | null;
+  applicantProfileSlug: string | null;
   status: string | null;
   submittedAt: string | null;
 }
@@ -215,6 +216,7 @@ export class CompanyService {
           applicantId: applicant.applicantId ?? null,
           applicantName: applicant.applicantName ?? null,
           applicantEmail: applicant.applicantEmail ?? null,
+          applicantProfileSlug: applicant.applicantProfileSlug ?? null,
           status: applicant.status ?? null,
           submittedAt: applicant.submittedAt ?? null
         }));

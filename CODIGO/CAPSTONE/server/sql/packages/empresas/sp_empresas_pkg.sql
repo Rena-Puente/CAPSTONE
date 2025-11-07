@@ -400,6 +400,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
                NULL AS id_usuario,
                NULL AS nombre_postulante,
                NULL AS correo_postulante,
+               NULL AS slug_perfil,
                NULL AS estado,
                NULL AS fecha_creacion
           FROM DUAL
@@ -414,6 +415,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
              p.id_usuario,
              pr.nombre_mostrar AS nombre_postulante,
              u.correo AS correo_postulante,
+             pr.slug AS slug_perfil,
              p.estado,
              p.fecha_creacion
         FROM postulaciones p
