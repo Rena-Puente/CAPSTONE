@@ -1,14 +1,15 @@
-<section class="py-5 py-lg-6 bg-body-tertiary min-vh-100">
+<section class="company-create-section">
   <div class="container">
     <div class="row justify-content-center">
       <div class="col-12 col-lg-10 col-xl-8">
-        <div class="card shadow border-0">
-          <div class="card-body p-4 p-md-5">
+        <div class="card company-card shadow-lg border-0">
+          <div class="card-body company-card__body">
             <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-4">
               <div>
-                <h1 class="h3 mb-1">Registra tu empresa</h1>
-                <p class="text-muted mb-0">
-                  Completa la información para habilitar tu cuenta de empleador y publicar ofertas.
+                <h1 class="h3 mb-1">Registra a una empresa verificada</h1>
+                <br>
+                <p class="section-subtitle">
+                  Completa la información para habilitar la cuenta de una nueva empresa.
                 </p>
               </div>
             </div>
@@ -123,8 +124,9 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label for="company-phone" class="form-label">Teléfono de contacto <span class="text-muted">(opcional)</span></label>
-                  <input
+                  <label for="company-phone" class="form-label"
+                    >Teléfono de contacto <span class="optional-hint">(opcional)</span></label>
+                    <input
                     id="company-phone"
                     type="tel"
                     formControlName="phone"
@@ -144,7 +146,7 @@
                     rows="4"
                     formControlName="description"
                     class="form-control"
-                    placeholder="Cuéntanos en qué áreas trabaja tu empresa y qué perfiles busca."
+                    placeholder="Describe el rubro de la empresa, su mision y vision de trabajo."
                     [class.is-invalid]="shouldShowError(form.controls.description)"></textarea>
                   <div class="invalid-feedback" *ngIf="getControlErrorMessage('description') as error">
                     {{ error }}

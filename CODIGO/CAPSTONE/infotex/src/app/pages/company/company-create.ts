@@ -24,7 +24,8 @@ type CompanyFormControlName =
   selector: 'app-company-create',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  templateUrl: './company-create.html'
+  templateUrl: './company-create.html',
+  styleUrl: './company-create.css'
 })
 export class CompanyCreate {
   private readonly fb = inject(FormBuilder);
@@ -64,7 +65,7 @@ export class CompanyCreate {
       '',
       [
         Validators.required,
-        Validators.maxLength(12),
+        Validators.maxLength(10),
         Validators.pattern(/^[0-9]{7,8}-[0-9kK]$/)
       ]
     ],
@@ -182,7 +183,7 @@ export class CompanyCreate {
         case 'email':
           return 'El correo puede tener como máximo 160 caracteres.';
         case 'rut':
-          return 'El RUT puede tener como máximo 12 caracteres.';
+          return 'El RUT puede tener como máximo 10 caracteres.';
         case 'phone':
           return 'El teléfono puede tener como máximo 20 caracteres.';
         case 'description':
