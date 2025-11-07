@@ -10,7 +10,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
-import { resolveDefaultRouteForUserType } from '../../constants/user-type-routing';
+import { CANDIDATE_USER_TYPE, resolveDefaultRouteForUserType } from '../../constants/user-type-routing';
 import { AuthService } from '../../services/auth.service';
 
 type AuthPanelTab = 'login' | 'register';
@@ -142,7 +142,7 @@ export class Welcome {
 
       const destinationOverride = resolveDefaultRouteForUserType(userType);
 
-      if (!destinationOverride && isProfileComplete === null) {
+      if (!destinationOverride && userType === CANDIDATE_USER_TYPE && isProfileComplete === null) {
         this.isMenuOpen.set(true);
         this.setActiveTab('login');
         this.loginErrorMessage.set('No se pudo verificar el estado del perfil. Intenta nuevamente.');
