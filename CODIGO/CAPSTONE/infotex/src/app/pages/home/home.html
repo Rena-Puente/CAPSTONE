@@ -1,20 +1,100 @@
-<div class="container mt-4">
-  <div class="card bg-dark text-light border-secondary shadow">
-    <div class="card-body">
-      <h5 class="card-title">Bienvenido a InfoTex</h5>
-      <p class="card-text">
-        Dahsboard pulento
-      </p>
-      <a href="#" class="btn btn-outline-light">Acción</a>
+<div class="home-page">
+  <div class="container py-4">
+    <section class="home-header card shadow-sm border-0 mb-4">
+      <div class="card-body">
+        <h1 class="display-6 fw-semibold text-light mb-2">Oportunidades disponibles</h1>
+        <p class="lead text-secondary mb-0">
+          Explora las ofertas publicadas por empresas de la comunidad y postula con un solo clic.
+        </p>
+      </div>
+    </section>
+
+    <div *ngIf="globalMessage()" class="alert alert-success border-0 shadow-sm" role="alert">
+      {{ globalMessage() }}
     </div>
+
+    <div *ngIf="biographyError()" class="alert alert-danger border-0 shadow-sm" role="alert">
+      {{ biographyError() }}
+    </div>
+
+    <div
+      *ngIf="!biographyLoading() && !biographyError() && missingBiography()"
+      class="alert alert-warning border-0 shadow-sm"
+      role="alert"
+    >
+      Completa tu biografía en tu perfil para usarla como carta de presentación al postular.
+    </div>
+
+    <div *ngIf="loading()" class="alert alert-info border-0 shadow-sm" role="status">
+      Cargando ofertas disponibles...
+    </div>
+
+    <ng-container *ngIf="!loading()">
+      <div *ngIf="error()" class="alert alert-danger border-0 shadow-sm" role="alert">
+        {{ error() }}
+      </div>
+
+      <div *ngIf="!error() && offers().length === 0" class="alert alert-secondary border-0 shadow-sm">
+        Aún no hay ofertas disponibles. Vuelve más tarde para descubrir nuevas oportunidades.
+      </div>
+
+      <div *ngIf="offers().length > 0" class="offer-list">
+        <article class="offer-card" *ngFor="let offer of offers(); trackBy: trackByOfferId">
+          <div class="offer-logo" [ngClass]="{ 'with-image': !!getCompanyLogoUrl(offer) }">
+            <ng-container *ngIf="getCompanyLogoUrl(offer) as logo; else initials">
+              <img [src]="logo" [alt]="getCompanyDisplayName(offer)" loading="lazy" />
+            </ng-container>
+            <ng-template #initials>
+              <span>{{ getCompanyInitials(offer) }}</span>
+            </ng-template>
+          </div>
+
+          <div class="offer-content">
+            <div class="offer-header">
+              <h2 class="offer-title">{{ offer.title || 'Oferta sin título' }}</h2>
+              <p class="offer-company mb-1">
+                {{ getCompanyDisplayName(offer) }}
+                <span class="text-muted">•</span>
+                <span class="text-muted">
+                  {{ offer.city || offer.country || offer.company.city || offer.company.country || 'Ubicación no especificada' }}
+                </span>
+              </p>
+              <p class="offer-meta mb-0">
+                <span *ngIf="offer.contractType" class="meta-tag">{{ offer.contractType }}</span>
+                <span *ngIf="offer.locationType" class="meta-tag">{{ offer.locationType }}</span>
+                <span *ngIf="offer.seniority" class="meta-tag">{{ offer.seniority }}</span>
+                <span *ngIf="offer.createdAt" class="meta-tag text-secondary">
+                  Publicada {{ offer.createdAt | date: 'mediumDate' }}
+                </span>
+              </p>
+            </div>
+
+            <p class="offer-description">
+              {{ offer.description || 'La empresa no proporcionó una descripción detallada para esta oferta.' }}
+            </p>
+
+            <div class="offer-actions">
+              <button
+                type="button"
+                class="btn btn-apply"
+                (click)="applyToOffer(offer)"
+                [disabled]="isApplying(offer.id) || isApplied(offer.id) || missingBiography()"
+              >
+                <span *ngIf="isApplying(offer.id)" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <ng-container *ngIf="isApplied(offer.id); else applyLabel">
+                  <span class="me-2">✅</span>
+                  Postulación enviada
+                </ng-container>
+                <ng-template #applyLabel>Postular</ng-template>
+              </button>
+
+              <span *ngIf="getApplicationError(offer.id)" class="text-danger small ms-3">
+                {{ getApplicationError(offer.id) }}
+              </span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </ng-container>
   </div>
 </div>
-
-
-
-
-
-
-
-
-

@@ -8,6 +8,7 @@ const { registerEducationRoutes } = require('./routes/education');
 const { registerExperienceRoutes } = require('./routes/experience');
 const { registerSkillRoutes } = require('./routes/skills');
 const { registerCompanyRoutes } = require('./routes/companies');
+const { registerOfferRoutes } = require('./routes/offers');
 
 function createApp() {
   const app = express();
@@ -22,6 +23,7 @@ function createApp() {
   registerExperienceRoutes(app);
   registerSkillRoutes(app);
   registerCompanyRoutes(app);
+  registerOfferRoutes(app);
 
   return app;
 }
