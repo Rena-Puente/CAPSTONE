@@ -14,7 +14,10 @@ const {
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
   GITHUB_REDIRECT_URI,
-  GITHUB_SCOPE
+  GITHUB_SCOPE,
+  RESEND_API_KEY,
+  EMAIL_FROM,
+  EMAIL_VERIFICATION_BASE_URL
 } = process.env;
 
 function ensureEnv(value, name) {
@@ -49,6 +52,11 @@ const config = {
   tokens: {
     accessTokenMinutes,
     refreshTokenDays
+  },
+  email: {
+    resendApiKey: ensureEnv(RESEND_API_KEY, 'RESEND_API_KEY'),
+    from: ensureEnv(EMAIL_FROM, 'EMAIL_FROM'),
+    verificationBaseUrl: ensureEnv(EMAIL_VERIFICATION_BASE_URL, 'EMAIL_VERIFICATION_BASE_URL')
   },
   db: {
     user: ensureEnv(DB_USER, 'DB_USER'),

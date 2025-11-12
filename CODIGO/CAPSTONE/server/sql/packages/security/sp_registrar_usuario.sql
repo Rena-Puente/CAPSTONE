@@ -50,7 +50,8 @@ BEGIN
         contrasena_hash,
         pw_salt,
         pw_iters,
-        activo
+        activo,
+        fecha_actualizacion
     )
     VALUES (
         (SELECT NVL(MAX(id_usuario),0)+1 FROM usuarios), -- mejor usar SEQ real
@@ -58,7 +59,8 @@ BEGIN
         v_hash,
         v_salt,
         v_iters,
-        1
+        0,
+        SYSTIMESTAMP
     );
 
     COMMIT;
