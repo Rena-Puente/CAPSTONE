@@ -452,7 +452,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
         FROM ofertas o
         JOIN empresas e
           ON e.id_empresa = o.id_empresa
-       WHERE NVL(o.activa, 0) = 1
+       WHERE NVL(o.activa, 1) = 1
        ORDER BY o.fecha_creacion DESC;
   END sp_listar_ofertas_publicas;
 
