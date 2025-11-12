@@ -33,6 +33,7 @@
     "@angular/ssr": "^20.2.2",
     "bootstrap": "^5.3.8",
     "express": "^5.1.0",
+    "resend": "^6.4.2",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
