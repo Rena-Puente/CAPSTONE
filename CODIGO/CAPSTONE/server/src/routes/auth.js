@@ -16,6 +16,7 @@ const { getEducationStatus } = require('../services/education');
 const { getExperienceStatus } = require('../services/experience');
 const { getSkillStatus } = require('../services/skills');
 const { computeProfileMissingFields } = require('../services/profile');
+const { sendEmailVerification } = require('../services/email');
 const {
   GithubOAuthError,
   buildGithubAuthorizeUrl,
@@ -62,6 +63,37 @@ async function fetchUserType(userId) {
   } catch (error) {
     console.error('[Auth] Failed to fetch user type', {
       userId,
+      error: error?.message || error
+    });
+
+    return null;
+  }
+}
+
+async function findUserIdByEmail(email) {
+  if (!email) {
+    return null;
+  }
+
+  try {
+    const result = await executeQuery(
+      `SELECT id_usuario AS user_id
+         FROM usuarios
+        WHERE LOWER(TRIM(correo)) = LOWER(TRIM(:email))
+        FETCH FIRST 1 ROWS ONLY`,
+      { email }
+    );
+
+    const row = result.rows?.[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return row.USER_ID ?? row.user_id ?? null;
+  } catch (error) {
+    console.error('[Auth] Failed to locate user by email', {
+      email,
       error: error?.message || error
     });
 
@@ -623,10 +655,111 @@ function registerAuthRoutes(app) {
       if (outcome !== 'OK') {
         return res.status(400).json({ ok: false, error: outcome || 'No se pudo registrar al usuario.' });
       }
+      const userId = await findUserIdByEmail(email);
+
+      if (!userId) {
+        console.error('[Auth] Newly registered user could not be retrieved', { email });
+        return res.status(500).json({ ok: false, error: 'No se pudo preparar la verificación de correo.' });
+      }
+
+      const verificationResult = await executeQuery(
+        `BEGIN
+           sp_crear_verificacion_correo(
+             p_id_usuario => :userId,
+             o_token      => :token
+           );
+         END;`,
+        {
+          userId,
+          token: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 256 }
+        },
+        { autoCommit: true }
+      );
+
+      const verificationToken = verificationResult.outBinds?.token;
+
+      if (!verificationToken) {
+        console.error('[Auth] Verification token was not generated', { email, userId });
+        return res.status(500).json({ ok: false, error: 'No se pudo generar el enlace de verificación.' });
+      }
+
+      try {
+        await sendEmailVerification({ to: email, token: verificationToken });
+      } catch (emailError) {
+        console.error('[Auth] Failed to send verification email', {
+          email,
+          userId,
+          error: emailError?.message || emailError
+        });
+
+        return res
+          .status(502)
+          .json({ ok: false, error: 'No se pudo enviar el correo de verificación.' });
+      }
+
+      res.json({ ok: true, requiresEmailVerification: true });
+    } catch (error) {
+      handleOracleError(error, res, 'No se pudo registrar al usuario.');
+    }
+  });
+
+  app.post('/auth/verify-email', async (req, res) => {
+    const { token } = req.body ?? {};
+
+    if (!token) {
+      return res.status(400).json({ ok: false, error: 'El token de verificación es obligatorio.' });
+    }
+
+    try {
+      const result = await executeQuery(
+        `BEGIN
+           sp_confirmar_verificacion_correo(
+             p_token     => :token,
+             o_resultado => :resultado
+           );
+         END;`,
+        {
+          token,
+          resultado: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 }
+        },
+        { autoCommit: true }
+      );
+
+      const outcome = result.outBinds?.resultado;
+
+      if (outcome !== 'OK') {
+        let message = outcome || 'No se pudo verificar el correo.';
+        let statusCode = 400;
+
+        if (typeof outcome === 'string' && outcome.startsWith('ERROR:')) {
+          const code = outcome.slice('ERROR:'.length).toUpperCase();
+
+          switch (code) {
+            case 'TOKEN_INVALID':
+              message = 'El enlace de verificación no es válido.';
+              break;
+            case 'TOKEN_EXPIRED':
+              message = 'El enlace de verificación ha expirado.';
+              break;
+            case 'TOKEN_USED':
+              message = 'El enlace de verificación ya fue utilizado.';
+              break;
+            case 'TOKEN_REQUIRED':
+              message = 'El token de verificación es obligatorio.';
+              break;
+            default:
+              if (code.startsWith('ORA-')) {
+                statusCode = 500;
+              }
+          }
+        }
+
+        return res.status(statusCode).json({ ok: false, error: message });
+      }
 
       res.json({ ok: true });
     } catch (error) {
-      handleOracleError(error, res, 'No se pudo registrar al usuario.');
+      handleOracleError(error, res, 'No se pudo verificar el correo.');
     }
   });
 
