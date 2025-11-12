@@ -85,14 +85,33 @@
 
       <div class="company-offer-create__field">
         <label for="offerSeniority" class="company-offer-create__label">Seniority</label>
-        <input
-          type="text"
-          id="offerSeniority"
-          class="company-offer-create__control"
-          formControlName="seniority"
-          [class.is-invalid]="shouldShowError('seniority')"
-          placeholder="Junior, Semi Senior, Senior"
-        />
+        <ng-container *ngIf="!shouldUseSeniorityFallback(); else seniorityFallback">
+          <select
+            id="offerSeniority"
+            class="company-offer-create__control"
+            formControlName="seniority"
+            [class.is-invalid]="shouldShowError('seniority')"
+            [disabled]="seniorityLoading() || isSubmitting()"
+            aria-label="Selecciona el nivel de seniority"
+          >
+            <option value="" disabled [selected]="!form.controls.seniority.value">
+              {{ seniorityLoading() ? 'Cargando niveles disponibles...' : 'Selecciona un nivel' }}
+            </option>
+            <option *ngFor="let option of seniorityOptions()" [value]="option">{{ option }}</option>
+          </select>
+        </ng-container>
+        <ng-template #seniorityFallback>
+          <input
+            type="text"
+            id="offerSeniority"
+            class="company-offer-create__control"
+            formControlName="seniority"
+            [class.is-invalid]="shouldShowError('seniority')"
+            placeholder="Junior, Semi Senior, Senior"
+          />
+        </ng-template>
+        <div class="company-offer-create__hint" *ngIf="seniorityLoading()">Cargando niveles de seniority...</div>
+        <div class="company-offer-create__error" *ngIf="seniorityError()">{{ seniorityError() }}</div>
         <div class="company-offer-create__error" *ngIf="getControlError('seniority')">
           {{ getControlError('seniority') }}
         </div>

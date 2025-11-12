@@ -3,16 +3,22 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
+import {
+  CareerCatalogCategory,
+  CareerCatalogResponse,
+  normalizeCareerCatalogResponse
+} from './career-catalog.models';
 
 /** ciudades.json: Record<Region, Record<CiudadId, CiudadNombre>> */
 type CityDataset = Record<string, Record<string, string>>;
 
-/** carreras.json: Record<Categoría, string[]> */
-type CareerDataset = Record<string, string[]>;
+const DEFAULT_API_URL = 'http://localhost:3000';
+const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
 
 @Injectable({ providedIn: 'root' })
 export class ProfileFieldsService {
   private readonly http = inject(HttpClient);
+  private readonly apiUrl = (configuredApiUrl?.replace(/\/$/, '') || DEFAULT_API_URL).replace(/\/$/, '');
 
   /** ====== Ciudades ====== */
   private readonly cities$ = this.http
@@ -45,55 +51,61 @@ export class ProfileFieldsService {
     );
 
   /** ====== Carreras ====== */
-  private readonly careersMap$ = this.http
-    .get<CareerDataset>('assets/data/carreras.json')
+  private readonly careerCatalog$: Observable<CareerCatalogCategory[]> = this.http
+    .get<CareerCatalogResponse>(`${this.apiUrl}/catalogs/careers`)
     .pipe(
-      map((dataset) => {
-        const normalized: Record<string, string[]> = {};
-
-        if (dataset && typeof dataset === 'object') {
-          for (const [rawCategory, rawList] of Object.entries(dataset)) {
-            const category = (rawCategory ?? '').trim();
-            if (!category) continue;
-
-            const set = new Set<string>();
-            (rawList ?? []).forEach((name) => {
-              if (typeof name !== 'string') return;
-              const n = name.trim();
-              if (n) set.add(n);
-            });
-
-            normalized[category] = Array.from(set).sort((a, b) =>
-              a.localeCompare(b, 'es', { sensitivity: 'base' })
-            );
-          }
-        }
-
-        // Ordenar por nombre de categoría (opcional, útil para el UI)
-        const ordered: Record<string, string[]> = {};
-        Object.keys(normalized)
-          .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
-          .forEach((k) => (ordered[k] = normalized[k]));
-        return ordered;
-      }),
+      map((response) => normalizeCareerCatalogResponse(response)),
       catchError((error) => {
+        const message =
+          error?.error?.error ||
+          error?.error?.message ||
+          error?.message ||
+          'No se pudo cargar el listado de carreras.';
         console.error('[ProfileFieldsService] Falló carga de carreras', error);
-        return throwError(() => new Error('No se pudo cargar el listado de carreras.'));
+        return throwError(() => new Error(message));
       }),
       shareReplay({ bufferSize: 1, refCount: true })
     );
+
+  private readonly careersMap$ = this.careerCatalog$.pipe(
+    map((categories) => {
+      const mapObj: Record<string, string[]> = {};
+
+      for (const category of categories) {
+        if (this.isSeniorityCategory(category.category)) {
+          continue;
+        }
+
+        mapObj[category.category] = category.items.map((item) => item.name);
+      }
+
+      return mapObj;
+    }),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
 
   private readonly careersFlat$ = this.careersMap$.pipe(
     map((mapObj) => {
       const all: string[] = [];
       Object.values(mapObj).forEach((arr) => all.push(...arr));
-      // Unicidad global por si alguna carrera aparece en 2 categorías
       return Array.from(new Set(all)).sort((a, b) =>
         a.localeCompare(b, 'es', { sensitivity: 'base' })
       );
     }),
     shareReplay({ bufferSize: 1, refCount: true })
   );
+
+  private readonly seniorityLevels$ = this.careerCatalog$.pipe(
+    map((categories) => {
+      const match = categories.find((category) => this.isSeniorityCategory(category.category));
+      return match ? match.items.map((item) => item.name) : [];
+    }),
+    shareReplay({ bufferSize: 1, refCount: true })
+  );
+
+  private isSeniorityCategory(value: string): boolean {
+    return (value ?? '').trim().toLocaleLowerCase('es') === 'seniority';
+  }
 
   /** ====== API pública ====== */
 
@@ -118,6 +130,10 @@ export class ProfileFieldsService {
 
   getAllCareers(): Observable<string[]> {
     return this.careersFlat$;
+  }
+
+  getSeniorityLevels(): Observable<string[]> {
+    return this.seniorityLevels$;
   }
 
   // Utilidad: búsqueda rápida (opcional)
