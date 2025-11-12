@@ -1,6 +1,56 @@
 const { executeQuery, withConnection, fetchCursorRows, oracledb } = require('../db/oracle');
 const { toIsoString, toNullableTrimmedString } = require('../utils/format');
 
+function parsePositiveInteger(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      return null;
+    }
+
+    const integer = Math.trunc(value);
+    return integer > 0 ? integer : null;
+  }
+
+  if (typeof value === 'bigint') {
+    return value > 0n ? Number(value) : null;
+  }
+
+  const stringValue = String(value).trim();
+
+  if (!stringValue) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(stringValue, 10);
+
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getPositiveInteger(row, ...keys) {
+  for (const key of keys) {
+    if (!key || typeof key !== 'string') {
+      continue;
+    }
+
+    const value = row?.[key];
+    const parsed = parsePositiveInteger(value);
+
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 class OfferApplicationError extends Error {
   constructor(message, statusCode = 400, code = 'OFFER_APPLICATION_ERROR') {
     super(message);
@@ -15,17 +65,17 @@ function mapOfferRow(row) {
     return null;
   }
 
-  const id = Number(row.ID_OFERTA ?? row.id_oferta ?? null);
+    const id = getPositiveInteger(row, 'ID_OFERTA', 'id_oferta', 'ID', 'id', 'OFERTA_ID', 'oferta_id');
 
-  if (!Number.isInteger(id) || id <= 0) {
+  if (!id) {
     return null;
   }
 
-  const companyId = Number(row.ID_EMPRESA ?? row.id_empresa ?? null);
+  const companyId = getPositiveInteger(row, 'ID_EMPRESA', 'id_empresa', 'COMPANY_ID', 'company_id');
 
   return {
     id,
-    companyId: Number.isInteger(companyId) && companyId > 0 ? companyId : null,
+    companyId: companyId ?? null,
     title: toNullableTrimmedString(row.TITULO ?? row.titulo),
     description: toNullableTrimmedString(row.DESCRIPCION ?? row.descripcion),
     locationType: toNullableTrimmedString(row.TIPO_UBICACION ?? row.tipo_ubicacion),
