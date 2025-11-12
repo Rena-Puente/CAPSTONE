@@ -14,8 +14,20 @@ const {
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
   GITHUB_REDIRECT_URI,
-  GITHUB_SCOPE
+  GITHUB_SCOPE,
+  RESEND_API_KEY,
+  EMAIL_FROM,
+  EMAIL_VERIFICATION_BASE_URL
 } = process.env;
+
+function normalizeOptionalEnv(value) {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
 
 function ensureEnv(value, name) {
   if (!value) {
@@ -44,11 +56,40 @@ const githubScopeList = githubScope
   .map((item) => item.trim())
   .filter((item) => item.length > 0);
 
+const emailConfig = {
+  resendApiKey: normalizeOptionalEnv(RESEND_API_KEY),
+  from: normalizeOptionalEnv(EMAIL_FROM),
+  verificationBaseUrl: normalizeOptionalEnv(EMAIL_VERIFICATION_BASE_URL)
+};
+
+const missingEmailVariables = Object.entries({
+  RESEND_API_KEY: emailConfig.resendApiKey,
+  EMAIL_FROM: emailConfig.from,
+  EMAIL_VERIFICATION_BASE_URL: emailConfig.verificationBaseUrl
+})
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
+
+emailConfig.enabled = missingEmailVariables.length === 0;
+emailConfig.missingVariables = missingEmailVariables;
+
+if (!emailConfig.enabled) {
+  const message =
+    missingEmailVariables.length > 0
+      ? `Faltan las variables de entorno: ${missingEmailVariables.join(', ')}`
+      : 'Faltan variables de entorno para habilitar el envío de correos.';
+
+  console.warn('[Config] El envío de correos de verificación está deshabilitado.', message);
+}
+
 const config = {
   port,
   tokens: {
     accessTokenMinutes,
     refreshTokenDays
+  },
+  email: {
+    ...emailConfig
   },
   db: {
     user: ensureEnv(DB_USER, 'DB_USER'),
