@@ -505,6 +505,31 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
+.profile-form .form-select {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.profile-form .form-select:disabled {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.profile-form .form-select:focus {
+  color: #fff;
+  border-color: rgba(13, 110, 253, 0.65);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.profile-form .form-select option {
+  color: #000;
+}
+
+.profile-form .form-select optgroup {
+  color: #212529;
+  font-weight: 600;
+}
+
 .avatar-selector-trigger {
   font-weight: 600;
   letter-spacing: 0.04em;
