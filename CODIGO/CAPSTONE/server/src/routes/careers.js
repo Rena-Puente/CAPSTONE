@@ -1,0 +1,198 @@
+const { requireAccessToken } = require('../middleware/auth');
+const { getClientIp } = require('../utils/request');
+const { getUserIdFromAccessToken } = require('../services/auth');
+const { getUserType, isAdminUserType } = require('../services/users');
+const {
+  listCareerCatalog,
+  createCareer,
+  deleteCareer,
+  CareerCatalogError
+} = require('../services/careers');
+
+async function resolveAdminUser(req, res) {
+  const accessToken = req.auth?.accessToken ?? null;
+
+  const userId = await getUserIdFromAccessToken(accessToken);
+
+  if (!userId) {
+    res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+    return null;
+  }
+
+  const userType = await getUserType(userId);
+
+  if (!isAdminUserType(userType)) {
+    res.status(403).json({ ok: false, error: 'No tienes permisos para administrar el catálogo de carreras.' });
+    return null;
+  }
+
+  return userId;
+}
+
+function normalizeCareerResponse(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+
+  const rawCategory = typeof entry.category === 'string' ? entry.category : null;
+  const category = rawCategory ? rawCategory.trim() : '';
+
+  if (!category) {
+    return null;
+  }
+
+  const items = Array.isArray(entry.items) ? entry.items : [];
+  const normalizedItems = items
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const rawName =
+        typeof item.name === 'string'
+          ? item.name
+          : typeof item.career === 'string'
+          ? item.career
+          : null;
+      const career = rawName ? rawName.trim() : '';
+
+      if (!career) {
+        return null;
+      }
+
+      const rawId = item.id ?? item.ID ?? item.id_carrera ?? item.ID_CARRERA ?? null;
+      let id = null;
+
+      if (rawId !== null && rawId !== undefined && rawId !== '') {
+        const parsed = Number.isFinite(rawId) ? Number(rawId) : Number.parseInt(String(rawId), 10);
+        id = Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
+      }
+
+      return { id, career };
+    })
+    .filter(Boolean);
+
+  return {
+    category,
+    items: normalizedItems
+  };
+}
+
+function registerCareerRoutes(app) {
+  app.get('/catalogs/careers', async (req, res) => {
+    const startedAt = Date.now();
+    const rawCategory = typeof req.query?.category === 'string' ? req.query.category : null;
+
+    try {
+      const catalog = await listCareerCatalog(rawCategory);
+
+      const categories = catalog
+        .map((entry) => normalizeCareerResponse({
+          category: entry.category,
+          items: entry.items
+        }))
+        .filter(Boolean);
+
+      return res.json({
+        ok: true,
+        categories
+      });
+    } catch (error) {
+      console.error('[Careers] Failed to list catalog', {
+        path: req.originalUrl,
+        method: req.method,
+        ip: getClientIp(req),
+        elapsedMs: Date.now() - startedAt,
+        error: error?.message || error
+      });
+
+      return res
+        .status(500)
+        .json({ ok: false, error: 'No se pudo obtener el catálogo de carreras.' });
+    }
+  });
+
+  app.post('/admin/careers', requireAccessToken, async (req, res) => {
+    const rawCategory = req.body?.category ?? req.body?.categoria ?? null;
+    const rawCareer = req.body?.career ?? req.body?.carrera ?? null;
+
+    try {
+      const adminUserId = await resolveAdminUser(req, res);
+
+      if (!adminUserId) {
+        return;
+      }
+
+      const created = await createCareer({ category: rawCategory, career: rawCareer });
+
+      return res.status(201).json({
+        ok: true,
+        message: 'Carrera registrada correctamente.',
+        career: {
+          id: created.id,
+          category: created.category,
+          career: created.name
+        }
+      });
+    } catch (error) {
+      if (error instanceof CareerCatalogError) {
+        return res.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+          code: error.code
+        });
+      }
+
+      console.error('[Careers] Failed to create entry', {
+        path: req.originalUrl,
+        method: req.method,
+        ip: getClientIp(req),
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo crear la carrera.' });
+    }
+  });
+
+  app.delete('/admin/careers/:careerId', requireAccessToken, async (req, res) => {
+    const rawId = req.params?.careerId ?? null;
+    const bodyCategory = req.body?.category ?? req.body?.categoria ?? null;
+    const bodyCareer = req.body?.career ?? req.body?.carrera ?? null;
+
+    try {
+      const adminUserId = await resolveAdminUser(req, res);
+
+      if (!adminUserId) {
+        return;
+      }
+
+      await deleteCareer({ id: rawId, category: bodyCategory, career: bodyCareer });
+
+      return res.json({
+        ok: true,
+        message: 'Carrera eliminada correctamente.'
+      });
+    } catch (error) {
+      if (error instanceof CareerCatalogError) {
+        return res.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+          code: error.code
+        });
+      }
+
+      console.error('[Careers] Failed to delete entry', {
+        path: req.originalUrl,
+        method: req.method,
+        ip: getClientIp(req),
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo eliminar la carrera.' });
+    }
+  });
+}
+
+module.exports = {
+  registerCareerRoutes
+};
