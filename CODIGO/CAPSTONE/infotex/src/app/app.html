@@ -8,7 +8,9 @@
     <ng-template #authenticatedLinks>
       <ng-container *ngIf="isCandidate(); else otherAuthenticatedLinks">
         <a class="nav-link text-light" routerLink="/about">Nosotros</a>
-        <a class="nav-link text-light" routerLink="/home">Home</a>
+        <br>
+        <a class="nav-link text-light" routerLink="/home">Proyectos</a>
+        <br>
         <a class="nav-link text-light" routerLink="/profile">Perfil</a>
       </ng-container>
       <ng-template #otherAuthenticatedLinks>
