@@ -89,7 +89,11 @@ const config = {
     refreshTokenDays
   },
   email: {
-    ...emailConfig
+
+    resendApiKey: ensureEnv(RESEND_API_KEY, 'RESEND_API_KEY'),
+    from: ensureEnv(EMAIL_FROM, 'EMAIL_FROM'),
+    verificationBaseUrl: ensureEnv(EMAIL_VERIFICATION_BASE_URL, 'EMAIL_VERIFICATION_BASE_URL')
+ main
   },
   db: {
     user: ensureEnv(DB_USER, 'DB_USER'),
