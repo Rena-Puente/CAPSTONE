@@ -45,6 +45,11 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     o_ofertas OUT SYS_REFCURSOR
   );
 
+  PROCEDURE sp_resumen_postulaciones_empresa(
+    p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
+    o_resumen   OUT SYS_REFCURSOR
+  );
+
   PROCEDURE sp_postular_oferta(
     p_id_oferta           IN OFERTAS.ID_OFERTA%TYPE,
     p_id_usuario          IN USUARIOS.ID_USUARIO%TYPE,
@@ -457,12 +462,60 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
              e.pais        AS pais_empresa,
              e.ciudad      AS ciudad_empresa,
              e.url_avatar  AS url_avatar_empresa
-        FROM ofertas o
+       FROM ofertas o
         JOIN empresas e
           ON e.id_empresa = o.id_empresa
        WHERE NVL(o.activa, 1) = 1
        ORDER BY o.fecha_creacion DESC;
   END sp_listar_ofertas_publicas;
+
+  PROCEDURE sp_resumen_postulaciones_empresa(
+    p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
+    o_resumen   OUT SYS_REFCURSOR
+  ) IS
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      OPEN o_resumen FOR
+        SELECT 0 AS total_ofertas,
+               0 AS ofertas_activas,
+               0 AS total_postulaciones,
+               0 AS enviadas,
+               0 AS en_revision,
+               0 AS aceptadas,
+               0 AS rechazadas,
+               CAST(NULL AS TIMESTAMP) AS ultima_postulacion,
+               CAST(NULL AS TIMESTAMP) AS ultima_actualizacion
+          FROM dual;
+      RETURN;
+    END IF;
+
+    OPEN o_resumen FOR
+      WITH ofertas_empresa AS (
+        SELECT o.id_oferta,
+               NVL(o.activa, 0) AS activa
+          FROM ofertas o
+         WHERE o.id_empresa = p_id_empresa
+      ),
+      postulaciones_empresa AS (
+        SELECT p.id_postulacion,
+               NVL(LOWER(TRIM(p.estado)), 'enviada') AS estado,
+               p.fecha_creacion,
+               p.id_oferta
+          FROM postulaciones p
+          JOIN ofertas_empresa oe
+            ON oe.id_oferta = p.id_oferta
+      )
+      SELECT (SELECT COUNT(*) FROM ofertas_empresa)                         AS total_ofertas,
+             (SELECT COUNT(*) FROM ofertas_empresa WHERE activa = 1)        AS ofertas_activas,
+             (SELECT COUNT(*) FROM postulaciones_empresa)                   AS total_postulaciones,
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'enviada')    AS enviadas,
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'en_revision') AS en_revision,
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'aceptada')   AS aceptadas,
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'rechazada')  AS rechazadas,
+             (SELECT MAX(fecha_creacion) FROM postulaciones_empresa)         AS ultima_postulacion,
+             (SELECT MAX(fecha_creacion) FROM postulaciones_empresa)         AS ultima_actualizacion
+        FROM dual;
+  END sp_resumen_postulaciones_empresa;
 
   PROCEDURE sp_postular_oferta(
     p_id_oferta           IN OFERTAS.ID_OFERTA%TYPE,

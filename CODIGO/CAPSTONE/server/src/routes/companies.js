@@ -6,6 +6,7 @@ const {
   getCompanyForUser,
   createOffer,
   listApplicants,
+  getApplicationSummary,
   updateApplicationStatus,
   ApplicationStatusUpdateError,
   APPLICATION_STATUS_VALUES
@@ -153,9 +154,12 @@ function registerCompanyRoutes(app) {
         return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
       }
 
-      const applicants = await listApplicants(company.id);
+      const [applicants, summary] = await Promise.all([
+        listApplicants(company.id),
+        getApplicationSummary(company.id)
+      ]);
 
-      return res.json({ ok: true, applicants });
+      return res.json({ ok: true, applicants, summary });
     } catch (error) {
       console.error('[Companies] Failed to list applicants', {
         path: req.originalUrl,

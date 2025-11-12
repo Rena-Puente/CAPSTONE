@@ -527,6 +527,97 @@ function normalizeApplicationStatus(value) {
   );
 }
 
+function createDefaultApplicationSummary() {
+  return {
+    totalApplications: 0,
+    totalOffers: 0,
+    activeOffers: 0,
+    lastApplicationAt: null,
+    lastUpdatedAt: null,
+    byStatus: {
+      enviada: 0,
+      en_revision: 0,
+      aceptada: 0,
+      rechazada: 0
+    }
+  };
+}
+
+function toNonNegativeInteger(value) {
+  if (value === undefined || value === null || value === '') {
+    return 0;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+
+    const integer = Math.trunc(value);
+    return integer >= 0 ? integer : 0;
+  }
+
+  if (typeof value === 'bigint') {
+    if (value < 0n) {
+      return 0;
+    }
+
+    const asNumber = Number(value);
+    return Number.isFinite(asNumber) ? asNumber : Number.MAX_SAFE_INTEGER;
+  }
+
+  const stringValue = String(value).trim();
+
+  if (!stringValue) {
+    return 0;
+  }
+
+  const parsed = Number.parseInt(stringValue, 10);
+
+  if (!Number.isFinite(parsed) || Number.isNaN(parsed)) {
+    return 0;
+  }
+
+  return parsed >= 0 ? parsed : 0;
+}
+
+function mapApplicationSummaryRow(row) {
+  const summary = createDefaultApplicationSummary();
+
+  if (!row || typeof row !== 'object') {
+    return summary;
+  }
+
+  summary.totalApplications = toNonNegativeInteger(
+    row.TOTAL_POSTULACIONES ?? row.total_postulaciones ?? row.TOTALPOSTULACIONES
+  );
+  summary.byStatus.enviada = toNonNegativeInteger(row.ENVIADAS ?? row.enviadas ?? row.ENVIADA);
+  summary.byStatus.en_revision = toNonNegativeInteger(
+    row.EN_REVISION ?? row.en_revision ?? row.ENREVISION ?? row.enRevision
+  );
+  summary.byStatus.aceptada = toNonNegativeInteger(row.ACEPTADAS ?? row.aceptadas ?? row.ACEPTADA);
+  summary.byStatus.rechazada = toNonNegativeInteger(
+    row.RECHAZADAS ?? row.rechazadas ?? row.RECHAZADA ?? row.rechazada
+  );
+  summary.totalOffers = toNonNegativeInteger(
+    row.TOTAL_OFERTAS ?? row.total_ofertas ?? row.TOTALOFERTAS ?? row.totalOfertas
+  );
+  summary.activeOffers = toNonNegativeInteger(
+    row.OFERTAS_ACTIVAS ?? row.ofertas_activas ?? row.OFERTASACTIVAS ?? row.ofertasActivas
+  );
+  summary.lastApplicationAt = toIsoString(
+    row.ULTIMA_POSTULACION ?? row.ultima_postulacion ?? row.ULTIMAPOSTULACION ?? row.lastApplicationAt
+  );
+  summary.lastUpdatedAt = toIsoString(
+    row.ULTIMA_ACTUALIZACION ??
+      row.ultima_actualizacion ??
+      row.ULTIMAACTUALIZACION ??
+      row.lastUpdatedAt
+  );
+
+  return summary;
+}
+
 async function listApplicants(companyId) {
   if (!Number.isInteger(companyId) || companyId <= 0) {
     return [];
@@ -550,6 +641,34 @@ async function listApplicants(companyId) {
     return rows
       .map((row) => mapApplicantRow(row))
       .filter((item) => item && item.applicationId);
+  });
+}
+
+async function getApplicationSummary(companyId) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    return createDefaultApplicationSummary();
+  }
+
+  return withConnection(async (connection) => {
+    const result = await connection.execute(
+      `BEGIN sp_empresas_pkg.sp_resumen_postulaciones_empresa(
+         p_id_empresa => :companyId,
+         o_resumen   => :cursor
+       ); END;`,
+      {
+        companyId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.cursor || null;
+    const rows = await fetchCursorRows(cursor);
+
+    if (!rows || rows.length === 0) {
+      return createDefaultApplicationSummary();
+    }
+
+    return mapApplicationSummaryRow(rows[0]);
   });
 }
 
@@ -637,8 +756,14 @@ module.exports = {
   getCompanyForUser,
   createOffer,
   listApplicants,
+  getApplicationSummary,
   updateApplicationStatus,
   normalizeApplicationStatus,
   ApplicationStatusUpdateError,
-  APPLICATION_STATUS_VALUES
+  APPLICATION_STATUS_VALUES,
+  __test__: {
+    createDefaultApplicationSummary,
+    mapApplicationSummaryRow,
+    toNonNegativeInteger
+  }
 };
