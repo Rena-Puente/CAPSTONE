@@ -123,7 +123,7 @@ function parseCareerItems(rawItems) {
       continue;
     }
 
-        const rawName =
+      const rawName =
       typeof item.carrera === 'string'
         ? item.carrera
         : typeof item.name === 'string'
@@ -192,7 +192,7 @@ function parseCareerCatalogJson(rawJson) {
       continue;
     }
 
-        const rawCategory =
+      const rawCategory =
       typeof entry.categoria === 'string'
         ? entry.categoria
         : typeof entry.category === 'string'
@@ -222,10 +222,15 @@ function parseCareerCatalogJson(rawJson) {
 
 async function listCareerCatalog(category = null) {
   const normalizedCategory = normalizeCategory(category, { required: false });
+    const categoryBind = {
+    dir: oracledb.BIND_IN,
+    type: oracledb.STRING,
+    val: normalizedCategory
+  };
 
   const result = await executeQuery(
     `SELECT carreras_pkg.fn_carreras_por_categoria_json(:category) AS json_data FROM dual`,
-    { category: normalizedCategory }
+    { category: categoryBind }
   );
 
   const row = result.rows?.[0] ?? {};

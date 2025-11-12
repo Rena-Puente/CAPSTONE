@@ -68,7 +68,7 @@ function normalizeCareerResponse(entry) {
         id = Number.isNaN(parsed) || parsed <= 0 ? null : parsed;
       }
 
-      return { id, career };
+      return { id, career, name: career };
     })
     .filter(Boolean);
 
