@@ -98,7 +98,8 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
   FUNCTION fn_carreras_por_categoria_json(
     p_categoria IN VARCHAR2 DEFAULT NULL
   ) RETURN CLOB IS
-    v_json  CLOB;
+    v_json            CLOB := '[]';
+    v_categoria_filtro carreras.categoria%TYPE := NULL;
   BEGIN
     /*
       Notas de implementación:
@@ -107,55 +108,85 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
       - Se garantizan dos órdenes:
           * Categorías: alfabético
           * Carreras dentro de cada categoría: alfabético
+      - Si no existen filas que cumplan con el filtro se retorna "[]"
+        en lugar de propagar NO_DATA_FOUND, facilitando el consumo
+        desde el API.
     */
+
+    IF p_categoria IS NOT NULL THEN
+      v_categoria_filtro := TRIM(p_categoria);
+      IF v_categoria_filtro IS NULL OR LENGTH(v_categoria_filtro) = 0 THEN
+        v_categoria_filtro := NULL;
+      END IF;
+    END IF;
 
     SELECT
       '[' ||
-      RTRIM(
-        XMLCAST(
-          XMLAGG(
-            XMLELEMENT(e, cat_json || ',')
-            ORDER BY categoria
-          ) AS CLOB
+      NVL(
+        RTRIM(
+          XMLCAST(
+            XMLAGG(
+              XMLELEMENT(e, cat_json || ',')
+              ORDER BY LOWER(categoria)
+            ) AS CLOB
+          ),
+          ','
         ),
-        ','
+        ''
       ) ||
       ']'
     INTO v_json
     FROM (
       SELECT
         categoria,
-        -- pieza JSON por categoría
         JSON_OBJECT(
           'categoria' VALUE categoria,
           'items'     VALUE (
-            -- array JSON de items (id/carrera) ordenados
             '[' ||
-            RTRIM(
-              XMLCAST(
-                XMLAGG(
-                  XMLELEMENT(e,
-                    JSON_OBJECT(
-                      'id'      VALUE id_carrera,
-                      'carrera' VALUE carrera
-                      RETURNING CLOB
-                    ) || ','
-                  )
-                  ORDER BY carrera
-                ) AS CLOB
+            NVL(
+              RTRIM(
+                XMLCAST(
+                  XMLAGG(
+                    XMLELEMENT(e,
+                      JSON_OBJECT(
+                        'id'      VALUE id_carrera,
+                        'carrera' VALUE carrera
+                        RETURNING CLOB
+                      ) || ','
+                    )
+                    ORDER BY LOWER(carrera)
+                  ) AS CLOB
+                ),
+                ','
               ),
-              ','
+              ''
             ) ||
             ']'
           )
           RETURNING CLOB
         ) AS cat_json
-      FROM carreras
-      WHERE p_categoria IS NULL OR categoria = p_categoria
+      FROM (
+        SELECT
+          TRIM(categoria) AS categoria,
+          id_carrera,
+          TRIM(carrera)   AS carrera
+        FROM carreras
+        WHERE categoria IS NOT NULL
+          AND carrera   IS NOT NULL
+          AND TRIM(categoria) <> ''
+          AND TRIM(carrera)   <> ''
+          AND (
+            v_categoria_filtro IS NULL OR
+            UPPER(TRIM(categoria)) = UPPER(v_categoria_filtro)
+          )
+      )
       GROUP BY categoria
     );
 
-    RETURN v_json;
+    RETURN NVL(v_json, '[]');
+  EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+      RETURN '[]';
   END fn_carreras_por_categoria_json;
 
 END carreras_pkg;

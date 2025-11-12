@@ -1,0 +1,99 @@
+<section class="admin-careers">
+  <header class="admin-careers__header">
+    <h2 class="admin-careers__title">Catálogo de carreras</h2>
+    <p class="admin-careers__subtitle">
+      Administra las carreras disponibles para el perfil de los candidatos y los niveles de seniority en las ofertas.
+    </p>
+  </header>
+
+  <form class="admin-careers__form" [formGroup]="form" (ngSubmit)="createCareer()" novalidate>
+    <div class="admin-careers__form-grid">
+      <div class="admin-careers__field">
+        <label for="careerCategory" class="admin-careers__label">Categoría</label>
+        <input
+          type="text"
+          id="careerCategory"
+          class="admin-careers__control"
+          placeholder="Ej. Programación y Desarrollo"
+          formControlName="category"
+          [class.is-invalid]="shouldShowError('category')"
+        />
+        <div class="admin-careers__error" *ngIf="getControlError('category')">
+          {{ getControlError('category') }}
+        </div>
+      </div>
+
+      <div class="admin-careers__field">
+        <label for="careerName" class="admin-careers__label">Carrera</label>
+        <input
+          type="text"
+          id="careerName"
+          class="admin-careers__control"
+          placeholder="Ej. Desarrollo Web Full Stack"
+          formControlName="career"
+          [class.is-invalid]="shouldShowError('career')"
+        />
+        <div class="admin-careers__error" *ngIf="getControlError('career')">
+          {{ getControlError('career') }}
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-careers__actions">
+      <button type="submit" class="admin-careers__submit" [disabled]="isSubmitting()">
+        <span class="admin-careers__spinner" *ngIf="isSubmitting()" aria-hidden="true"></span>
+        Agregar carrera
+      </button>
+      <span class="admin-careers__feedback admin-careers__feedback--success" *ngIf="submitSuccess()">
+        {{ submitSuccess() }}
+      </span>
+      <span class="admin-careers__feedback admin-careers__feedback--error" *ngIf="submitError()">
+        {{ submitError() }}
+      </span>
+    </div>
+  </form>
+
+  <section class="admin-careers__catalog">
+    <div class="admin-careers__hint" *ngIf="loading()">Cargando catálogo...</div>
+
+    <div class="admin-careers__alert admin-careers__alert--error" *ngIf="error()">
+      {{ error() }}
+      <button type="button" class="admin-careers__retry" (click)="refreshCatalog()">Reintentar</button>
+    </div>
+
+    <ng-container *ngIf="!loading() && !error()">
+      <div class="admin-careers__hint" *ngIf="catalog().length === 0">
+        Aún no hay carreras registradas.
+      </div>
+
+      <div class="admin-careers__category" *ngFor="let category of catalog()">
+        <div class="admin-careers__category-header">
+          <h3 class="admin-careers__category-name">{{ category.category }}</h3>
+          <span class="admin-careers__count">
+            {{ category.items.length }}
+            {{ category.items.length === 1 ? 'carrera' : 'carreras' }}
+          </span>
+        </div>
+
+        <ul class="admin-careers__items">
+          <li class="admin-careers__item" *ngFor="let item of category.items">
+            <span class="admin-careers__item-name">{{ item.name }}</span>
+            <button
+              type="button"
+              class="admin-careers__delete"
+              (click)="deleteCareer(category, item)"
+              [disabled]="deletingId() === item.id"
+            >
+              <span class="admin-careers__spinner" *ngIf="deletingId() === item.id" aria-hidden="true"></span>
+              <span>{{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+    </ng-container>
+
+    <div class="admin-careers__alert admin-careers__alert--error" *ngIf="deleteError()">
+      {{ deleteError() }}
+    </div>
+  </section>
+</section>

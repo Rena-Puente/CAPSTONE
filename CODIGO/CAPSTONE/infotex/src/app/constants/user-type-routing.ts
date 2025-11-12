@@ -2,7 +2,7 @@ export const CANDIDATE_USER_TYPE = 1;
 export const ADMIN_USER_TYPE = 2;
 export const COMPANY_USER_TYPE = 3;
 
-export const ADMIN_DASHBOARD_ROUTE = '/companies/create';
+export const ADMIN_DASHBOARD_ROUTE = '/admin/careers';
 export const COMPANY_DASHBOARD_ROUTE = '/companies';
 
 export function resolveDefaultRouteForUserType(userType: number | null): string | null {

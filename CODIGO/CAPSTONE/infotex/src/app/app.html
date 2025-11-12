@@ -20,12 +20,10 @@
           <a class="nav-link text-light" routerLink="/companies/applicants">Postulantes</a>
         </ng-container>
         <ng-template #adminLinks>
-          <a
-            *ngIf="isAdmin()"
-            class="nav-link text-light"
-            routerLink="/companies/create"
-            >Crear empresa</a
-          >
+          <ng-container *ngIf="isAdmin()">
+            <a class="nav-link text-light" routerLink="/admin/careers">Gestionar carreras</a>
+            <a class="nav-link text-light" routerLink="/companies/create">Crear empresa</a>
+          </ng-container>
         </ng-template>
       </ng-template>
       <button class="btn btn-outline-light" type="button" (click)="logout()">Cerrar sesión</button>
