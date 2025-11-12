@@ -126,7 +126,7 @@ export class CareersAdminService {
       return throwError(() => new Error(message));
     }
 
-    const body: Record<string, string | undefined> = {};
+    const body: { category?: string; career?: string } = {};
 
     const normalizedCategory = normalizeText(category).trim();
     const normalizedCareer = normalizeText(career).trim();
