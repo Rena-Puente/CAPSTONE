@@ -87,11 +87,7 @@ async function fetchCursorRows(cursor) {
       for (const row of batch) {
         rows.push(await normalizeCursorRow(row));
       }
-          if (batch.length < batchSize) {
-        break;
-      }
     }
-    
   } finally {
     try {
       await cursor.close();
