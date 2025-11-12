@@ -63,6 +63,11 @@ interface RegisterResponse {
   error?: string;
 }
 
+interface VerifyEmailResponse {
+  ok: boolean;
+  error?: string | null;
+}
+
 interface AuthSession {
   userId: number;
   userType: number | null;
@@ -242,6 +247,36 @@ export class AuthService {
         catchError((error) => {
           const message = error?.error?.error || error?.message || 'No se pudo crear la cuenta.';
           console.error('[AuthService] Registration failed', { email, error: message });
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  verifyEmail(token: string): Observable<void> {
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
+
+    if (!normalizedToken) {
+      return throwError(() => new Error('El enlace de verificación es inválido.'));
+    }
+
+    return this.http
+      .post<VerifyEmailResponse>(`${this.apiUrl}/auth/verify-email`, { token: normalizedToken })
+      .pipe(
+        map((response) => {
+          if (!response.ok) {
+            const message = response.error || 'No se pudo verificar el correo.';
+            throw new Error(message);
+          }
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error || error?.message || 'No se pudo verificar el correo.';
+
+          console.error('[AuthService] Email verification failed', {
+            error: message,
+            token: summarizeToken(normalizedToken)
+          });
+
           return throwError(() => new Error(message));
         })
       );
