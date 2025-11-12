@@ -123,7 +123,16 @@ function parseCareerItems(rawItems) {
       continue;
     }
 
-    const rawName = typeof item.carrera === 'string' ? item.carrera : typeof item.name === 'string' ? item.name : null;
+        const rawName =
+      typeof item.carrera === 'string'
+        ? item.carrera
+        : typeof item.name === 'string'
+        ? item.name
+        : typeof item.CARRERA === 'string'
+        ? item.CARRERA
+        : typeof item.NAME === 'string'
+        ? item.NAME
+        : null;
     const name = rawName ? rawName.trim() : '';
 
     if (!name) {
@@ -183,14 +192,22 @@ function parseCareerCatalogJson(rawJson) {
       continue;
     }
 
-    const rawCategory = typeof entry.categoria === 'string' ? entry.categoria : entry.category;
+        const rawCategory =
+      typeof entry.categoria === 'string'
+        ? entry.categoria
+        : typeof entry.category === 'string'
+        ? entry.category
+        : typeof entry.CATEGORIA === 'string'
+        ? entry.CATEGORIA
+        : null;
     const category = rawCategory ? String(rawCategory).trim() : '';
 
     if (!category) {
       continue;
     }
 
-    const items = parseCareerItems(entry.items);
+    const rawItems = entry.items ?? entry.carreras ?? entry.CARRERAS ?? null;
+    const items = parseCareerItems(rawItems);
 
     categories.push({
       category,
