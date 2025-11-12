@@ -11,6 +11,7 @@ import { CompanyApplicants } from './pages/company/company-applicants';
 import { authGuard } from './guards/auth.guard';
 import { guestGuard } from './guards/guest.guard';
 import { GithubCallback } from './pages/auth/github-callback/github-callback';
+import { VerifyEmail } from './pages/auth/verify-email/verify-email';
 import { companyGuard } from './guards/company.guard';
 
 export const routes: Routes = [
@@ -31,6 +32,7 @@ export const routes: Routes = [
   { path: 'companies/create', component: CompanyCreate, canActivate: [authGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },
   { path: 'auth/github/callback', component: GithubCallback },
+  { path: 'auth/verify-email', component: VerifyEmail },
   {
     path: 'user/:slug',
     loadComponent: () =>

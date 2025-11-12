@@ -1,0 +1,29 @@
+<section class="verify-email" aria-labelledby="verifyEmailTitle">
+  <div class="verify-email__container">
+    <article class="verify-email__card" role="status" *ngIf="loading(); else verificationResult">
+      <div class="verify-email__spinner" aria-hidden="true"></div>
+      <h1 id="verifyEmailTitle" class="verify-email__title">Confirmando tu correo…</h1>
+      <p class="verify-email__message">Estamos validando tu enlace de verificación. Esto puede tomar unos segundos.</p>
+    </article>
+
+    <ng-template #verificationResult>
+      <article class="verify-email__card" *ngIf="success(); else verificationError" role="status">
+        <div class="verify-email__icon" aria-hidden="true">✅</div>
+        <h1 id="verifyEmailTitle" class="verify-email__title">¡Correo verificado!</h1>
+        <p class="verify-email__message">
+          Tu dirección de correo electrónico quedó confirmada y ya puedes ingresar a InfoTex con total seguridad.
+        </p>
+        <a class="verify-email__link" routerLink="/welcome">Ir a la página de inicio</a>
+      </article>
+    </ng-template>
+
+    <ng-template #verificationError>
+      <article class="verify-email__card" role="alert">
+        <div class="verify-email__icon verify-email__icon--error" aria-hidden="true">⚠️</div>
+        <h1 id="verifyEmailTitle" class="verify-email__title">No pudimos validar el enlace</h1>
+        <p class="verify-email__message">{{ errorMessage() }}</p>
+        <a class="verify-email__link" routerLink="/welcome">Volver a InfoTex</a>
+      </article>
+    </ng-template>
+  </div>
+</section>
