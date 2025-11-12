@@ -1,6 +1,22 @@
 const { fetch } = require('undici');
 const { config } = require('../config');
 
+function ensureEmailServiceConfigured() {
+  const emailConfig = config.email || {};
+
+  if (emailConfig.enabled) {
+    return;
+  }
+
+  const missing = Array.isArray(emailConfig.missingVariables) && emailConfig.missingVariables.length > 0
+    ? emailConfig.missingVariables.join(', ')
+    : 'las variables de entorno requeridas';
+
+  const error = new Error(`El servicio de envío de correos no está configurado. Faltan ${missing}.`);
+  error.code = 'EMAIL_CONFIGURATION_MISSING';
+  throw error;
+}
+
 function buildVerificationUrl(token) {
   const baseUrl = config.email.verificationBaseUrl;
 
@@ -34,6 +50,8 @@ async function sendEmailVerification({ to, token }) {
   if (!to || !token) {
     throw new Error('El correo y el token son obligatorios para enviar la verificación.');
   }
+
+  ensureEmailServiceConfigured();
 
   const verificationUrl = buildVerificationUrl(token);
   const payload = {
