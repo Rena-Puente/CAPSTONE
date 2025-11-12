@@ -17,6 +17,7 @@ const { getExperienceStatus } = require('../services/experience');
 const { getSkillStatus } = require('../services/skills');
 const { computeProfileMissingFields } = require('../services/profile');
 const { sendEmailVerification } = require('../services/email');
+const { USER_TYPE, getUserType } = require('../services/users');
 const {
   GithubOAuthError,
   buildGithubAuthorizeUrl,
@@ -44,30 +45,7 @@ function normalizeUserType(value) {
 }
 
 async function fetchUserType(userId) {
-  try {
-    const result = await executeQuery(
-      `SELECT id_tipo_usuario AS user_type
-         FROM usuarios
-        WHERE id_usuario = :userId
-        FETCH FIRST 1 ROWS ONLY`,
-      { userId }
-    );
-
-    const row = result.rows?.[0];
-
-    if (!row) {
-      return null;
-    }
-
-    return normalizeUserType(row.USER_TYPE ?? row.user_type ?? null);
-  } catch (error) {
-    console.error('[Auth] Failed to fetch user type', {
-      userId,
-      error: error?.message || error
-    });
-
-    return null;
-  }
+  return getUserType(userId);
 }
 
 async function findUserIdByEmail(email) {
@@ -268,7 +246,7 @@ function registerAuthRoutes(app) {
 
       let isProfileComplete = null;
 
-      if (userType === 1) {
+      if (userType === USER_TYPE.CANDIDATE) {
         const profileStatus = await calculateProfileStatus(userId);
         isProfileComplete = profileStatus?.isProfileComplete ?? null;
       }
@@ -460,7 +438,7 @@ function registerAuthRoutes(app) {
       const userType = await fetchUserType(userId);
       let isProfileComplete = null;
 
-      if (userType === 1) {
+      if (userType === USER_TYPE.CANDIDATE) {
         const profileStatus = await calculateProfileStatus(userId);
         isProfileComplete = profileStatus?.isProfileComplete ?? null;
       }

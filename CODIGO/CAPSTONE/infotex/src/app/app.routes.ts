@@ -13,6 +13,8 @@ import { guestGuard } from './guards/guest.guard';
 import { GithubCallback } from './pages/auth/github-callback/github-callback';
 import { VerifyEmail } from './pages/auth/verify-email/verify-email';
 import { companyGuard } from './guards/company.guard';
+import { adminGuard } from './guards/admin.guard';
+import { AdminCareers } from './pages/admin/admin-careers';
 
 export const routes: Routes = [
   { path: 'home', component: Home, canActivate: [authGuard] },
@@ -30,6 +32,7 @@ export const routes: Routes = [
     ]
   },
   { path: 'companies/create', component: CompanyCreate, canActivate: [authGuard] },
+  { path: 'admin/careers', component: AdminCareers, canActivate: [authGuard, adminGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },
   { path: 'auth/github/callback', component: GithubCallback },
   { path: 'auth/verify-email', component: VerifyEmail },
