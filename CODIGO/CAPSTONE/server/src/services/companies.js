@@ -18,6 +18,23 @@ const MAX_DESCRIPTION_LENGTH = 8000;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const APPLICATION_STATUS_VALUES = Object.freeze(['enviada', 'en_revision', 'aceptada', 'rechazada']);
+const APPLICATION_STATUS_ALIASES = new Map(
+  APPLICATION_STATUS_VALUES.map((status) => [status, status])
+);
+
+APPLICATION_STATUS_ALIASES.set('enrevision', 'en_revision');
+APPLICATION_STATUS_ALIASES.set('en-revision', 'en_revision');
+APPLICATION_STATUS_ALIASES.set('en revision', 'en_revision');
+APPLICATION_STATUS_ALIASES.set('revision', 'en_revision');
+APPLICATION_STATUS_ALIASES.set('revisando', 'en_revision');
+APPLICATION_STATUS_ALIASES.set('aceptado', 'aceptada');
+APPLICATION_STATUS_ALIASES.set('aprobado', 'aceptada');
+APPLICATION_STATUS_ALIASES.set('aprobada', 'aceptada');
+APPLICATION_STATUS_ALIASES.set('rechazado', 'rechazada');
+APPLICATION_STATUS_ALIASES.set('descartado', 'rechazada');
+APPLICATION_STATUS_ALIASES.set('descartada', 'rechazada');
+
 function sanitizeString(value) {
   if (value === undefined || value === null) {
     return '';
@@ -445,10 +462,69 @@ function mapApplicantRow(row) {
     applicantId: Number(row.ID_USUARIO ?? row.id_usuario ?? null) || null,
     applicantName: toNullableTrimmedString(row.NOMBRE_POSTULANTE ?? row.nombre_postulante ?? row.NOMBRE_MOSTRAR ?? row.nombre_mostrar),
     applicantEmail: toNullableTrimmedString(row.CORREO_POSTULANTE ?? row.correo_postulante ?? row.CORREO ?? row.correo),
-        applicantProfileSlug: toNullableTrimmedString(row.SLUG_PERFIL ?? row.slug_perfil ?? row.SLUG ?? row.slug),
+    applicantProfileSlug: toNullableTrimmedString(row.SLUG_PERFIL ?? row.slug_perfil ?? row.SLUG ?? row.slug),
     status: toNullableTrimmedString(row.ESTADO ?? row.estado),
     submittedAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null)
   };
+}
+
+class ApplicationStatusUpdateError extends Error {
+  constructor(message, statusCode = 400, code = 'APPLICATION_STATUS_ERROR') {
+    super(message);
+    this.name = 'ApplicationStatusUpdateError';
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+function normalizeStatusKey(value) {
+  if (!value) {
+    return '';
+  }
+
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_');
+}
+
+function normalizeApplicationStatus(value) {
+  const sanitized = sanitizeString(value);
+
+  if (!sanitized) {
+    throw new ApplicationStatusUpdateError(
+      'Debes indicar el estado al que quieres mover la postulación.',
+      400,
+      'INVALID_STATUS'
+    );
+  }
+
+  const normalizedKey = normalizeStatusKey(sanitized);
+
+  if (!normalizedKey) {
+    throw new ApplicationStatusUpdateError(
+      'El estado indicado para la postulación no es válido.',
+      400,
+      'INVALID_STATUS'
+    );
+  }
+
+  const candidateKeys = [normalizedKey, normalizedKey.replace(/_/g, '')];
+
+  for (const key of candidateKeys) {
+    if (APPLICATION_STATUS_ALIASES.has(key)) {
+      return APPLICATION_STATUS_ALIASES.get(key);
+    }
+  }
+
+  throw new ApplicationStatusUpdateError(
+    'El estado indicado para la postulación no es válido.',
+    400,
+    'INVALID_STATUS'
+  );
 }
 
 async function listApplicants(companyId) {
@@ -477,11 +553,92 @@ async function listApplicants(companyId) {
   });
 }
 
+async function updateApplicationStatus(companyId, applicationId, status) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    throw new ApplicationStatusUpdateError(
+      'El identificador de la empresa no es válido.',
+      400,
+      'INVALID_COMPANY'
+    );
+  }
+
+  if (!Number.isInteger(applicationId) || applicationId <= 0) {
+    throw new ApplicationStatusUpdateError(
+      'El identificador de la postulación no es válido.',
+      400,
+      'INVALID_APPLICATION'
+    );
+  }
+
+  const normalizedStatus = normalizeApplicationStatus(status);
+
+  try {
+    const result = await executeQuery(
+      `BEGIN sp_empresas_pkg.sp_actualizar_estado_postulacion(
+         p_id_empresa        => :companyId,
+         p_id_postulacion    => :applicationId,
+         p_estado            => :status,
+         o_estado_nuevo      => :newStatus,
+         o_estado_anterior   => :previousStatus
+       ); END;`,
+      {
+        companyId,
+        applicationId,
+        status: normalizedStatus,
+        newStatus: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 40 },
+        previousStatus: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 40 }
+      },
+      { autoCommit: true }
+    );
+
+    const newStatus = toNullableTrimmedString(result.outBinds?.newStatus) || normalizedStatus;
+    const previousStatus = toNullableTrimmedString(result.outBinds?.previousStatus) || null;
+
+    return {
+      applicationId,
+      companyId,
+      status: newStatus,
+      previousStatus
+    };
+  } catch (error) {
+    if (typeof error?.errorNum === 'number') {
+      switch (error.errorNum) {
+        case 20086:
+          throw new ApplicationStatusUpdateError(
+            'El estado indicado para la postulación no es válido.',
+            400,
+            'INVALID_STATUS'
+          );
+        case 20087:
+          throw new ApplicationStatusUpdateError(
+            'No se encontró la postulación indicada.',
+            404,
+            'APPLICATION_NOT_FOUND'
+          );
+        case 20088:
+          throw new ApplicationStatusUpdateError(
+            'La empresa no puede actualizar esta postulación.',
+            403,
+            'APPLICATION_FORBIDDEN'
+          );
+        default:
+          break;
+      }
+    }
+
+    throw error;
+  }
+}
+
 module.exports = {
   normalizeCompanyPayload,
   createCompany,
   mapCompanyRow,
   getCompanyForUser,
   createOffer,
-  listApplicants
+  listApplicants,
+  updateApplicationStatus,
+  normalizeApplicationStatus,
+  ApplicationStatusUpdateError,
+  APPLICATION_STATUS_VALUES
 };

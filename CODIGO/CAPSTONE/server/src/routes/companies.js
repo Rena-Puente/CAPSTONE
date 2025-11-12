@@ -5,7 +5,10 @@ const {
   createCompany,
   getCompanyForUser,
   createOffer,
-  listApplicants
+  listApplicants,
+  updateApplicationStatus,
+  ApplicationStatusUpdateError,
+  APPLICATION_STATUS_VALUES
 } = require('../services/companies');
 const { getUserIdFromAccessToken } = require('../services/auth');
 const { requireAccessToken } = require('../middleware/auth');
@@ -160,6 +163,63 @@ function registerCompanyRoutes(app) {
       });
 
       return res.status(500).json({ ok: false, error: 'No se pudo obtener la lista de postulantes.' });
+    }
+  });
+
+  app.patch('/companies/me/applicants/:applicationId/status', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+    const applicationId = Number.parseInt(req.params.applicationId, 10);
+    const requestedStatus =
+      req.body?.status ?? req.body?.estado ?? req.body?.state ?? req.body?.nuevoEstado ?? null;
+
+    if (!Number.isInteger(applicationId) || applicationId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de la postulación no es válido.' });
+    }
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      const application = await updateApplicationStatus(company.id, applicationId, requestedStatus);
+
+      return res.json({
+        ok: true,
+        message: 'Estado de la postulación actualizado correctamente.',
+        application: {
+          id: application.applicationId,
+          status: application.status,
+          previousStatus: application.previousStatus
+        }
+      });
+    } catch (error) {
+      if (error instanceof ApplicationStatusUpdateError) {
+        return res.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+          code: error.code,
+          allowedStatuses: APPLICATION_STATUS_VALUES
+        });
+      }
+
+      console.error('[Companies] Failed to update application status', {
+        path: req.originalUrl,
+        method: req.method,
+        applicationId,
+        error: error?.message || error
+      });
+
+      return res
+        .status(500)
+        .json({ ok: false, error: 'No se pudo actualizar el estado de la postulación.' });
     }
   });
 }
