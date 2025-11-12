@@ -65,9 +65,9 @@ async function sendEmailVerification({ to, token }) {
       `<p>Si el botón anterior no funciona, copia y pega este enlace en tu navegador:</p>` +
       `<p style=\"word-break:break-all;\"><a href=\"${verificationUrl}\">${verificationUrl}</a></p>` +
       `<p>Si no creaste una cuenta, puedes ignorar este mensaje.</p>` +
-      `<p style=\"margin-top:32px;\">Equipo CAPSTONE</p>` +
+      `<p style=\"margin-top:32px;\">Equipo de InfoTex</p>` +
       `</body></html>`,
-    text: `Bienvenido a CAPSTONE. Para activar tu cuenta visita: ${verificationUrl}`
+    text: `Bienvenido a InfoTex. Para activar tu cuenta visita: ${verificationUrl}`
   };
 
   const response = await fetch('https://api.resend.com/emails', {

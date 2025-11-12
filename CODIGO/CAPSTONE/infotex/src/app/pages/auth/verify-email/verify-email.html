@@ -10,9 +10,7 @@
       <article class="verify-email__card" *ngIf="success(); else verificationError" role="status">
         <div class="verify-email__icon" aria-hidden="true">✅</div>
         <h1 id="verifyEmailTitle" class="verify-email__title">¡Correo verificado!</h1>
-        <p class="verify-email__message">
-          Tu dirección de correo electrónico quedó confirmada y ya puedes ingresar a InfoTex con total seguridad.
-        </p>
+        <p class="verify-email__message">{{ successDescription() }}</p>
         <a class="verify-email__link" routerLink="/welcome">Ir a la página de inicio</a>
       </article>
     </ng-template>

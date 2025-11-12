@@ -19,6 +19,9 @@ export class VerifyEmail implements OnInit {
   protected readonly loading = signal(true);
   protected readonly success = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
+    protected readonly successDescription = signal(
+    'Tu dirección de correo electrónico quedó confirmada y ya puedes ingresar a InfoTex con total seguridad.'
+  );
 
   async ngOnInit(): Promise<void> {
     const token = this.route.snapshot.queryParamMap.get('token');
@@ -37,6 +40,15 @@ export class VerifyEmail implements OnInit {
         error instanceof Error
           ? error.message
           : 'No se pudo verificar el correo electrónico. Intenta nuevamente.';
+      
+      if (typeof message === 'string' && message.toLowerCase().includes('ya fue utilizado')) {
+        this.successDescription.set(
+          'Tu correo electrónico ya estaba verificado. Ya puedes continuar usando InfoTex con normalidad.'
+        );
+        this.success.set(true);
+        this.errorMessage.set(null);
+        return;
+      }
       this.errorMessage.set(message);
     } finally {
       this.loading.set(false);

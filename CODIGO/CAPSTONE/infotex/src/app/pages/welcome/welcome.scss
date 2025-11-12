@@ -353,18 +353,20 @@
   transform: rotate(90deg);
 }
 
-.login-menu__avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(140deg, rgba(35, 134, 54, 0.15), rgba(9, 105, 218, 0.15));
-  border: 1px solid rgba(63, 185, 80, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1.5rem;
-  color: rgba(240, 246, 252, 0.9);
-  font-size: 1.75rem;
+// 🎨 Variables opcionales (puedes moverlas a tu archivo _variables.scss)
+$avatar-size: 72px;
+$avatar-radius: 50%;
+$avatar-border: 1px solid rgba(63, 185, 80, 0.35);
+$avatar-gradient: linear-gradient(140deg, rgba(35, 134, 54, 0.15), rgba(9, 105, 218, 0.15));
+$avatar-color: rgba(240, 246, 252, 0.9);
+$avatar-font-size: 1.75rem;
+$avatar-margin-bottom: 1.5rem;
+
+// 🧩 Bloque principal
+/* El panel / card que contiene el login */
+.login-menu__panel {
+  position: relative;
+  overflow: visible; // <- clave para que no recorte al avatar
 }
 
 .login-menu__tabs {

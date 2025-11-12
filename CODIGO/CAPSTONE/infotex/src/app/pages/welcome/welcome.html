@@ -164,11 +164,7 @@
     <div class="login-menu__backdrop" (click)="closeMenu()" aria-hidden="true"></div>
     <div class="login-menu__panel" role="dialog" aria-modal="true" aria-labelledby="loginMenuTitle"
       aria-describedby="loginMenuSubtitle" (click)="$event.stopPropagation()">
-      <button type="button" class="login-menu__close" (click)="closeMenu()" aria-label="Cerrar formulario">×</button>
-      <div class="login-menu__avatar" aria-hidden="true">
-        <span class="login-menu__avatar-icon">👤</span>
-      </div>
-      <nav class="login-menu__tabs" role="tablist">
+      <nav class="login-menu__tabs" role="tablist" class="text-center">
         <button type="button" class="login-menu__tab" [class.login-menu__tab--active]="activeTab() === 'login'"
           (click)="switchToLogin()" role="tab" [attr.aria-selected]="activeTab() === 'login'" aria-controls="loginPanel"
           id="loginTab">
@@ -180,8 +176,10 @@
           Crear cuenta
         </button>
       </nav>
-
-      <h2 id="loginMenuTitle">{{ activeTab() === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta' }}</h2>
+      <br>
+      <h2 id="loginMenuTitle" class="text-center">
+        {{ activeTab() === 'login' ? 'Bienvenido de nuevo' : 'Crea tu cuenta' }}
+      </h2>
       <p class="login-menu__subtitle" id="loginMenuSubtitle">
         {{
         activeTab() === 'login'
@@ -213,7 +211,6 @@
       <div *ngIf="activeTab() === 'login'" class="login-menu__divider" aria-hidden="true">
         <span>o</span>
       </div>
-
       <form *ngIf="activeTab() === 'login'" class="login-menu__form" [formGroup]="loginForm" (ngSubmit)="submitLogin()"
         novalidate role="tabpanel" id="loginPanel" aria-labelledby="loginTab">
         <div class="login-menu__field">
@@ -318,15 +315,15 @@
         <p class="login-menu__error login-menu__error--global" *ngIf="registerErrorMessage()">{{ registerErrorMessage()
           }}</p>
       </form>
-
+      <br>
       <p class="login-menu__register">
         <ng-container *ngIf="activeTab() === 'login'; else loginCta">
           ¿No tienes una cuenta?
-          <button type="button" class="login-menu__register-link" (click)="switchToRegister()">Regístrate</button>
+          <a type="button" class="login-menu__register-link" (click)="switchToRegister()">Regístrate</a>
         </ng-container>
         <ng-template #loginCta>
           ¿Ya tienes una cuenta?
-          <button type="button" class="login-menu__register-link" (click)="switchToLogin()">Inicia sesión</button>
+          <a type="button" class="login-menu__register-link" (click)="switchToLogin()">Inicia sesión</a>
         </ng-template>
       </p>
     </div>
