@@ -162,7 +162,7 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
               ''
             ) ||
             ']'
-          )
+          ) FORMAT JSON
           RETURNING CLOB
         ) AS cat_json
       FROM (

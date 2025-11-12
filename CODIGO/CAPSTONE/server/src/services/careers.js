@@ -115,7 +115,27 @@ function mapCareerOracleError(error) {
 }
 
 function parseCareerItems(rawItems) {
-  const items = Array.isArray(rawItems) ? rawItems : [];
+  let items = [];
+
+  if (Array.isArray(rawItems)) {
+    items = rawItems;
+  } else if (typeof rawItems === 'string') {
+    const trimmed = rawItems.trim();
+
+    if (trimmed) {
+      try {
+        const parsed = JSON.parse(trimmed);
+
+        if (Array.isArray(parsed)) {
+          items = parsed;
+        }
+      } catch (error) {
+        console.error('[CareersService] Failed to parse career items JSON string', {
+          error: error?.message || error
+        });
+      }
+    }
+  }
   const unique = new Map();
 
   for (const item of items) {
@@ -123,13 +143,17 @@ function parseCareerItems(rawItems) {
       continue;
     }
 
-      const rawName =
+    const rawName =
       typeof item.carrera === 'string'
         ? item.carrera
+        : typeof item.career === 'string'
+        ? item.career
         : typeof item.name === 'string'
         ? item.name
         : typeof item.CARRERA === 'string'
         ? item.CARRERA
+        : typeof item.CAREER === 'string'
+        ? item.CAREER
         : typeof item.NAME === 'string'
         ? item.NAME
         : null;
@@ -192,13 +216,15 @@ function parseCareerCatalogJson(rawJson) {
       continue;
     }
 
-      const rawCategory =
+    const rawCategory =
       typeof entry.categoria === 'string'
         ? entry.categoria
         : typeof entry.category === 'string'
         ? entry.category
         : typeof entry.CATEGORIA === 'string'
         ? entry.CATEGORIA
+        : typeof entry.CATEGORY === 'string'
+        ? entry.CATEGORY
         : null;
     const category = rawCategory ? String(rawCategory).trim() : '';
 
