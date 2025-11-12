@@ -51,6 +51,14 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     p_carta_presentacion  IN POSTULACIONES.CARTA_PRESENTACION%TYPE,
     o_id_postulacion      OUT POSTULACIONES.ID_POSTULACION%TYPE
   );
+
+  PROCEDURE sp_actualizar_estado_postulacion(
+    p_id_empresa        IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_postulacion    IN POSTULACIONES.ID_POSTULACION%TYPE,
+    p_estado            IN POSTULACIONES.ESTADO%TYPE,
+    o_estado_nuevo      OUT POSTULACIONES.ESTADO%TYPE,
+    o_estado_anterior   OUT POSTULACIONES.ESTADO%TYPE
+  );
 END sp_empresas_pkg;
 /
 
@@ -526,5 +534,79 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       SYSTIMESTAMP
     ) RETURNING id_postulacion INTO o_id_postulacion;
   END sp_postular_oferta;
+
+  PROCEDURE sp_actualizar_estado_postulacion(
+    p_id_empresa        IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_postulacion    IN POSTULACIONES.ID_POSTULACION%TYPE,
+    p_estado            IN POSTULACIONES.ESTADO%TYPE,
+    o_estado_nuevo      OUT POSTULACIONES.ESTADO%TYPE,
+    o_estado_anterior   OUT POSTULACIONES.ESTADO%TYPE
+  ) IS
+    c_estado_enviada    CONSTANT VARCHAR2(20) := 'enviada';
+    c_estado_revision   CONSTANT VARCHAR2(20) := 'en_revision';
+    c_estado_aceptada   CONSTANT VARCHAR2(20) := 'aceptada';
+    c_estado_rechazada  CONSTANT VARCHAR2(20) := 'rechazada';
+    v_estado_normal     POSTULACIONES.ESTADO%TYPE;
+    v_estado_actual     POSTULACIONES.ESTADO%TYPE;
+    v_id_empresa_oferta EMPRESAS.ID_EMPRESA%TYPE;
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20088, 'El identificador de la empresa es obligatorio.');
+    END IF;
+
+    IF p_id_postulacion IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20087, 'Debes indicar una postulación válida.');
+    END IF;
+
+    v_estado_normal := LOWER(TRIM(p_estado));
+
+    IF v_estado_normal IS NULL OR v_estado_normal = '' THEN
+      RAISE_APPLICATION_ERROR(-20086, 'Debes indicar un estado válido para la postulación.');
+    END IF;
+
+    IF v_estado_normal NOT IN (
+      c_estado_enviada,
+      c_estado_revision,
+      c_estado_aceptada,
+      c_estado_rechazada
+    ) THEN
+      RAISE_APPLICATION_ERROR(-20086, 'El estado indicado para la postulación no es válido.');
+    END IF;
+
+    BEGIN
+      SELECT o.id_empresa,
+             NVL(p.estado, c_estado_enviada)
+        INTO v_id_empresa_oferta,
+             v_estado_actual
+        FROM postulaciones p
+        JOIN ofertas o
+          ON o.id_oferta = p.id_oferta
+       WHERE p.id_postulacion = p_id_postulacion;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20087, 'La postulación indicada no existe.');
+    END;
+
+    IF v_id_empresa_oferta IS NULL OR v_id_empresa_oferta <> p_id_empresa THEN
+      RAISE_APPLICATION_ERROR(-20088, 'No tienes permisos para actualizar esta postulación.');
+    END IF;
+
+    o_estado_anterior := v_estado_actual;
+
+    IF NVL(LOWER(TRIM(v_estado_actual)), c_estado_enviada) = v_estado_normal THEN
+      o_estado_nuevo := v_estado_actual;
+      RETURN;
+    END IF;
+
+    UPDATE postulaciones
+       SET estado = v_estado_normal
+     WHERE id_postulacion = p_id_postulacion;
+
+    IF SQL%ROWCOUNT = 0 THEN
+      RAISE_APPLICATION_ERROR(-20087, 'No se encontró la postulación que se intentó actualizar.');
+    END IF;
+
+    o_estado_nuevo := v_estado_normal;
+  END sp_actualizar_estado_postulacion;
 END sp_empresas_pkg;
 /

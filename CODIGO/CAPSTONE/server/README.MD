@@ -120,3 +120,13 @@ Versión autenticada para que el dueño del perfil consulte sus repositorios vin
 - Ante errores con GitHub (ej. límites de cuota agotados) responde con un código HTTP propagado por el servicio (`502`, `429`, etc.) y un mensaje genérico.
 
 Los resultados se cachean temporalmente para reducir llamadas redundantes y se implementan reintentos exponenciales ante errores transitorios o límites de cuota informados por GitHub.
+
+### `PATCH /companies/me/applicants/:applicationId/status`
+
+Permite a una empresa autenticada mover el estado de una postulación. Utiliza el procedimiento PL/SQL `sp_empresas_pkg.sp_actualizar_estado_postulacion` para validar la pertenencia de la postulación y aplicar reglas de negocio directamente en Oracle.
+
+- El cuerpo debe incluir `status` (o `estado`) con uno de los valores permitidos: `enviada`, `en_revision`, `aceptada`, `rechazada`.
+- Responde `400` cuando el identificador de la postulación es inválido o el estado enviado no está permitido.
+- Responde `403` cuando la postulación no pertenece a la empresa autenticada.
+- Responde `404` si la postulación no existe.
+- Devuelve `200` con `{ ok, message, application }`, donde `application` incluye el nuevo estado y el estado anterior.
