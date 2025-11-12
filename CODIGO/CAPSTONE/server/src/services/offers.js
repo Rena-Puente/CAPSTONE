@@ -1,6 +1,87 @@
 const { executeQuery, withConnection, fetchCursorRows, oracledb } = require('../db/oracle');
 const { toIsoString, toNullableTrimmedString } = require('../utils/format');
 
+const normalizedRowCache = new WeakMap();
+
+function normalizeKey(key) {
+  if (!key) {
+    return '';
+  }
+
+  return String(key)
+    .trim()
+    .replace(/[^\p{L}\p{N}]+/gu, '')
+    .toLowerCase();
+}
+
+function getNormalizedRow(row) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  let cached = normalizedRowCache.get(row);
+
+  if (cached) {
+    return cached;
+  }
+
+  const normalized = new Map();
+
+  for (const [key, value] of Object.entries(row)) {
+    const normalizedKey = normalizeKey(key);
+
+    if (!normalizedKey || normalized.has(normalizedKey)) {
+      continue;
+    }
+
+    normalized.set(normalizedKey, value);
+  }
+
+  normalizedRowCache.set(row, normalized);
+
+  return normalized;
+}
+
+function getRowValue(row, ...keys) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (!key || typeof key !== 'string') {
+      continue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(row, key)) {
+      const value = row[key];
+
+      if (value !== undefined) {
+        return value;
+      }
+    }
+  }
+
+  const normalized = getNormalizedRow(row);
+
+  if (!normalized) {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (!key || typeof key !== 'string') {
+      continue;
+    }
+
+    const normalizedKey = normalizeKey(key);
+
+    if (normalizedKey && normalized.has(normalizedKey)) {
+      return normalized.get(normalizedKey);
+    }
+  }
+
+  return null;
+}
+
 function parsePositiveInteger(value) {
   if (value === undefined || value === null) {
     return null;
@@ -35,12 +116,23 @@ function parsePositiveInteger(value) {
 }
 
 function getPositiveInteger(row, ...keys) {
+  if (!row || typeof row !== 'object') {
+    return null;
+  }
+
+  const normalized = getNormalizedRow(row);
+
   for (const key of keys) {
     if (!key || typeof key !== 'string') {
       continue;
     }
 
-    const value = row?.[key];
+    let value = row[key];
+
+    if (value === undefined && normalized) {
+      value = normalized.get(normalizeKey(key));
+    }
+
     const parsed = parsePositiveInteger(value);
 
     if (parsed) {
@@ -65,38 +157,156 @@ function mapOfferRow(row) {
     return null;
   }
 
-    const id = getPositiveInteger(row, 'ID_OFERTA', 'id_oferta', 'ID', 'id', 'OFERTA_ID', 'oferta_id');
+  const id = getPositiveInteger(
+    row,
+    'ID_OFERTA',
+    'id_oferta',
+    'IDOFERTA',
+    'OFERTA_ID',
+    'idOferta',
+    'ID'
+  );
 
   if (!id) {
     return null;
   }
 
-  const companyId = getPositiveInteger(row, 'ID_EMPRESA', 'id_empresa', 'COMPANY_ID', 'company_id');
+  const companyId = getPositiveInteger(
+    row,
+    'ID_EMPRESA',
+    'id_empresa',
+    'IDEMPRESA',
+    'COMPANY_ID',
+    'company_id',
+    'idEmpresa'
+  );
+
+  const title = toNullableTrimmedString(
+    getRowValue(row, 'TITULO_OFERTA', 'titulo_oferta', 'TITULO', 'titulo', 'title')
+  );
+  const description = toNullableTrimmedString(
+    getRowValue(row, 'DESCRIPCION', 'descripcion', 'DETALLE', 'detalle', 'description')
+  );
+  const locationType = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'TIPO_UBICACION',
+      'tipo_ubicacion',
+      'TIPOUBICACION',
+      'locationType',
+      'tipoUbicacion'
+    )
+  );
+  const city = toNullableTrimmedString(
+    getRowValue(row, 'CIUDAD', 'ciudad', 'CIUDAD_OFERTA', 'ciudad_oferta', 'city')
+  );
+  const country = toNullableTrimmedString(
+    getRowValue(row, 'PAIS', 'pais', 'PAIS_OFERTA', 'pais_oferta', 'country')
+  );
+  const seniority = toNullableTrimmedString(
+    getRowValue(row, 'SENIORITY', 'seniority', 'NIVEL', 'nivel', 'seniorityLevel')
+  );
+  const contractType = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'TIPO_CONTRATO',
+      'tipo_contrato',
+      'TIPOCONTRATO',
+      'contractType',
+      'tipoContrato'
+    )
+  );
+  const createdAt = toIsoString(
+    getRowValue(row, 'FECHA_CREACION', 'fecha_creacion', 'CREATED_AT', 'created_at', 'createdAt')
+  );
+
+  const companyName =
+    toNullableTrimmedString(
+      getRowValue(
+        row,
+        'NOMBRE_EMPRESA',
+        'nombre_empresa',
+        'NOMBRE',
+        'nombre',
+        'EMPRESA_NOMBRE',
+        'empresaNombre'
+      )
+    ) || 'Empresa sin nombre';
+  const companyCity = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'CIUDAD_EMPRESA',
+      'ciudad_empresa',
+      'EMPRESA_CIUDAD',
+      'empresa_ciudad',
+      'companyCity'
+    )
+  );
+  const companyCountry = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'PAIS_EMPRESA',
+      'pais_empresa',
+      'EMPRESA_PAIS',
+      'empresa_pais',
+      'companyCountry'
+    )
+  );
+  const companyWebsite = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'SITIO_WEB_EMPRESA',
+      'sitio_web_empresa',
+      'SITIO_WEB',
+      'sitio_web',
+      'WEBSITE',
+      'website'
+    )
+  );
+  const companyLogo = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'LOGO_URL_EMPRESA',
+      'logo_url_empresa',
+      'LOGO_EMPRESA',
+      'logo_empresa',
+      'LOGO_URL',
+      'logo_url',
+      'companyLogoUrl'
+    )
+  );
+  const companyAvatar = toNullableTrimmedString(
+    getRowValue(
+      row,
+      'URL_AVATAR_EMPRESA',
+      'url_avatar_empresa',
+      'URL_AVATAR',
+      'url_avatar',
+      'AVATAR_URL',
+      'avatar_url',
+      'companyAvatarUrl'
+    )
+  );
 
   return {
     id,
     companyId: companyId ?? null,
-    title: toNullableTrimmedString(row.TITULO ?? row.titulo),
-    description: toNullableTrimmedString(row.DESCRIPCION ?? row.descripcion),
-    locationType: toNullableTrimmedString(row.TIPO_UBICACION ?? row.tipo_ubicacion),
-    city: toNullableTrimmedString(row.CIUDAD ?? row.ciudad),
-    country: toNullableTrimmedString(row.PAIS ?? row.pais),
-    seniority: toNullableTrimmedString(row.SENIORITY ?? row.seniority),
-    contractType: toNullableTrimmedString(row.TIPO_CONTRATO ?? row.tipo_contrato),
-    createdAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null),
+    title,
+    description,
+    locationType,
+    city,
+    country,
+    seniority,
+    contractType,
+    createdAt,
     company: {
       id: Number.isInteger(companyId) && companyId > 0 ? companyId : null,
-      name:
-        toNullableTrimmedString(
-          row.NOMBRE_EMPRESA ?? row.nombre_empresa ?? row.NOMBRE ?? row.nombre
-        ) || 'Empresa sin nombre',
-      city: toNullableTrimmedString(row.CIUDAD_EMPRESA ?? row.ciudad_empresa),
-      country: toNullableTrimmedString(row.PAIS_EMPRESA ?? row.pais_empresa),
-      website: toNullableTrimmedString(row.SITIO_WEB_EMPRESA ?? row.sitio_web_empresa),
-      logoUrl: toNullableTrimmedString(row.LOGO_URL ?? row.logo_url),
-      avatarUrl: toNullableTrimmedString(
-        row.URL_AVATAR_EMPRESA ?? row.url_avatar_empresa ?? row.URL_AVATAR ?? row.url_avatar
-      )
+      name: companyName,
+      city: companyCity,
+      country: companyCountry,
+      website: companyWebsite,
+      logoUrl: companyLogo,
+      avatarUrl: companyAvatar
     }
   };
 }
@@ -112,8 +322,44 @@ async function listPublicOffers() {
 
     const cursor = result.outBinds?.cursor || null;
     const rows = await fetchCursorRows(cursor);
+    const totalRows = Array.isArray(rows) ? rows.length : 0;
+    const offers = [];
+    let discardedRows = 0;
 
-    return rows.map((row) => mapOfferRow(row)).filter((offer) => offer && offer.id);
+    if (Array.isArray(rows)) {
+      for (const row of rows) {
+        const offer = mapOfferRow(row);
+
+        if (offer && offer.id) {
+          offers.push(offer);
+        } else {
+          discardedRows += 1;
+        }
+      }
+    }
+
+    const companyIds = new Set();
+
+    for (const offer of offers) {
+      const companyIdentifier = Number.isInteger(offer.company?.id) && offer.company.id > 0
+        ? offer.company.id
+        : Number.isInteger(offer.companyId) && offer.companyId > 0
+          ? offer.companyId
+          : null;
+
+      if (companyIdentifier) {
+        companyIds.add(companyIdentifier);
+      }
+    }
+
+    console.info('[Offers] Listed public offers', {
+      totalRows,
+      offers: offers.length,
+      discardedRows,
+      companies: companyIds.size
+    });
+
+    return offers;
   });
 }
 
