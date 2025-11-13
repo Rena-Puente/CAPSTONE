@@ -248,13 +248,13 @@ function parseCareerCatalogJson(rawJson) {
 
 async function listCareerCatalog(category = null) {
   const normalizedCategory = normalizeCategory(category, { required: false });
-    const categoryBind = {
+  const categoryBind = {
     dir: oracledb.BIND_IN,
     type: oracledb.STRING,
     val: normalizedCategory
   };
 
-    console.info('[CareersService] listCareerCatalog -> executing query', {
+  console.info('[CareersService] listCareerCatalog -> executing query', {
     normalizedCategory
   });
 
@@ -263,7 +263,7 @@ async function listCareerCatalog(category = null) {
     { category: categoryBind }
   );
 
-    console.info('[CareersService] listCareerCatalog -> raw query result', {
+  console.info('[CareersService] listCareerCatalog -> raw query result', {
     metaData: result?.metaData,
     rows: result?.rows
   });
@@ -276,7 +276,7 @@ async function listCareerCatalog(category = null) {
     row.fn_carreras_por_categoria_json ??
     null;
 
-   console.info('[CareersService] listCareerCatalog -> jsonData received', {
+  console.info('[CareersService] listCareerCatalog -> jsonData received', {
     type: typeof jsonData,
     preview:
       typeof jsonData === 'string' && jsonData.length > 200
