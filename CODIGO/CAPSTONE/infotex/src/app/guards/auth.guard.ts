@@ -1,7 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { map } from 'rxjs/operators';
-import { resolveDefaultRouteForUserType } from '../constants/user-type-routing';
 import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = (_route, state) => {
@@ -10,18 +9,14 @@ export const authGuard: CanActivateFn = (_route, state) => {
 
   return authService.ensureAuthenticated().pipe(
     map((isAuthenticated) => {
-      if (isAuthenticated) {
-        const userType = authService.getUserType();
-        const restrictedDestination = resolveDefaultRouteForUserType(userType);
-
-        if (restrictedDestination && !state.url.startsWith(restrictedDestination)) {
-          return router.createUrlTree([restrictedDestination]);
-        }
-
-        return true;
+      if (!isAuthenticated) {
+        return router.createUrlTree(['/welcome'], {
+          queryParams: { returnUrl: state.url },
+        });
       }
 
-      return router.createUrlTree(['/welcome']);
+      return true;
     })
   );
 };
+
