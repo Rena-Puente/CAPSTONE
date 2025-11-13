@@ -2,6 +2,7 @@ import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
+import { ApplicationsService } from '../../services/applications.service';
 import { OffersService, PublicOffer } from '../../services/offers.service';
 import { ProfileData, ProfileService } from '../../services/profile.service';
 
@@ -14,6 +15,7 @@ import { ProfileData, ProfileService } from '../../services/profile.service';
 })
 export class Home {
   private readonly offersService = inject(OffersService);
+  private readonly applicationsService = inject(ApplicationsService);
   private readonly profileService = inject(ProfileService);
 
   protected readonly loading = signal(false);
@@ -45,6 +47,7 @@ export class Home {
 
   constructor() {
     void this.loadOffers();
+    void this.loadExistingApplications();
     void this.loadProfile();
   }
 
@@ -187,6 +190,24 @@ export class Home {
       this.offers.set([]);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  private async loadExistingApplications(): Promise<void> {
+    try {
+      const applications = await firstValueFrom(
+        this.applicationsService.listCurrentUserApplications()
+      );
+      const appliedOfferIds = applications
+        .map((application) => application.offerId)
+        .filter(
+          (offerId): offerId is number =>
+            typeof offerId === 'number' && Number.isFinite(offerId) && offerId > 0
+        );
+
+      this.appliedOffers.set(new Set(appliedOfferIds));
+    } catch (error) {
+      console.error('[Home] Failed to load existing applications', error);
     }
   }
 

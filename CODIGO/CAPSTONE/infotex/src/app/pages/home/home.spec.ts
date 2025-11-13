@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { Home } from './home';
+import { ApplicationsService } from '../../services/applications.service';
 import { OffersService, PublicOffer, OfferApplicationResult } from '../../services/offers.service';
 import { ProfileData, ProfileService } from '../../services/profile.service';
 
@@ -40,6 +41,12 @@ class ProfileServiceStub {
   }
 }
 
+class ApplicationsServiceStub {
+  listCurrentUserApplications() {
+    return of([]);
+  }
+}
+
 describe('Home', () => {
   let component: Home;
   let fixture: ComponentFixture<Home>;
@@ -49,7 +56,8 @@ describe('Home', () => {
       imports: [Home],
       providers: [
         { provide: OffersService, useClass: OffersServiceStub },
-        { provide: ProfileService, useClass: ProfileServiceStub }
+        { provide: ProfileService, useClass: ProfileServiceStub },
+        { provide: ApplicationsService, useClass: ApplicationsServiceStub }
       ]
     }).compileComponents();
 

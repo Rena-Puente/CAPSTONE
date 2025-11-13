@@ -83,7 +83,7 @@
                 <span *ngIf="isApplying(offer.id)" class="spinner-border spinner-border-sm me-2" role="status"></span>
                 <ng-container *ngIf="isApplied(offer.id); else applyLabel">
                   <span class="me-2">✅</span>
-                  Postulación enviada
+                  Ya postulaste
                 </ng-container>
                 <ng-template #applyLabel>Postular</ng-template>
               </button>
