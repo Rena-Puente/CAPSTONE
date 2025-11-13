@@ -36,9 +36,6 @@ beforeEach(() => {
   oracleMock.__setExecuteQueryMock(async () => {
     throw new Error('executeQuery mock not configured');
   });
-  if (typeof careersService.__resetDefaultCareerCatalogSeedForTests === 'function') {
-    careersService.__resetDefaultCareerCatalogSeedForTests();
-  }
 });
 
 test('listCareerCatalog parses item collections provided as JSON strings', async () => {
@@ -88,41 +85,18 @@ test('listCareerCatalog parses item collections provided as JSON strings', async
   });
 });
 
-test('listCareerCatalog seeds default catalog when database returns an empty response', async () => {
-  const queryResponses = [
-    {
-      rows: [
-        {
-          JSON_DATA: '[]'
-        }
-      ]
-    },
-    {
-      rows: [
-        {
-          JSON_DATA: JSON.stringify(
-            (Array.isArray(defaultCatalogSeed) ? defaultCatalogSeed : []).map((entry, categoryIndex) => ({
-              categoria: entry.category,
-              items: entry.items.map((name, itemIndex) => ({
-                id: categoryIndex * 100 + itemIndex + 1,
-                carrera: name
-              }))
-            }))
-          )
-        }
-      ]
-    }
-  ];
-
+test('listCareerCatalog returns default dataset when database returns no rows', async () => {
+  let fallbackSelects = 0;
   let createCalls = 0;
 
   oracleMock.__setExecuteQueryMock(async (sql) => {
     if (/fn_carreras_por_categoria_json/.test(sql)) {
-      if (queryResponses.length === 0) {
-        return { rows: [{ JSON_DATA: '[]' }] };
-      }
+      return { rows: [{ JSON_DATA: '[]' }] };
+    }
 
-      return queryResponses.shift();
+    if (/FROM carreras/i.test(sql)) {
+      fallbackSelects += 1;
+      return { rows: [] };
     }
 
     if (/sp_carrera_crear/.test(sql)) {
@@ -135,7 +109,8 @@ test('listCareerCatalog seeds default catalog when database returns an empty res
 
   const result = await careersService.listCareerCatalog();
 
-  assert.equal(createCalls > 0, true);
+  assert.equal(createCalls, 0);
+  assert.equal(fallbackSelects, 1);
   assert.equal(result.length > 0, true);
 
   const expected = (Array.isArray(defaultCatalogSeed) ? defaultCatalogSeed : [])
@@ -162,45 +137,18 @@ test('listCareerCatalog seeds default catalog when database returns an empty res
   assert.deepEqual(normalizedResult, expected);
 });
 
-test('listCareerCatalog re-seeds catalog when database is emptied after an initial seed', async () => {
-  const selectResponses = [
-    { rows: [{ JSON_DATA: '[]' }] },
-    {
-      rows: [
-        {
-          JSON_DATA: JSON.stringify([
-            {
-              categoria: 'Tecnología',
-              items: [{ id: 1, carrera: 'Backend' }]
-            }
-          ])
-        }
-      ]
-    },
-    { rows: [{ JSON_DATA: '[]' }] },
-    {
-      rows: [
-        {
-          JSON_DATA: JSON.stringify([
-            {
-              categoria: 'Tecnología',
-              items: [{ id: 2, carrera: 'Backend' }]
-            }
-          ])
-        }
-      ]
-    }
-  ];
-
+test('listCareerCatalog consistently uses default dataset when database stays empty', async () => {
+  let fallbackSelects = 0;
   let createCalls = 0;
 
   oracleMock.__setExecuteQueryMock(async (sql) => {
     if (/fn_carreras_por_categoria_json/.test(sql)) {
-      if (selectResponses.length === 0) {
-        throw new Error('No more SELECT responses configured for test');
-      }
+      return { rows: [{ JSON_DATA: '[]' }] };
+    }
 
-      return selectResponses.shift();
+    if (/FROM carreras/i.test(sql)) {
+      fallbackSelects += 1;
+      return { rows: [] };
     }
 
     if (/sp_carrera_crear/.test(sql)) {
@@ -212,26 +160,26 @@ test('listCareerCatalog re-seeds catalog when database is emptied after an initi
   });
 
   const firstResult = await careersService.listCareerCatalog();
-  assert.equal(Array.isArray(firstResult), true);
-  const firstSeedCalls = createCalls;
-  assert.equal(firstSeedCalls > 0, true);
-
   const secondResult = await careersService.listCareerCatalog();
-  assert.equal(Array.isArray(secondResult), true);
-  assert.equal(createCalls > firstSeedCalls, true);
 
-  assert.deepEqual(
-    secondResult,
-    [
-      {
-        category: 'Tecnología',
-        items: [
-          {
-            id: 2,
-            name: 'Backend'
-          }
-        ]
-      }
-    ]
-  );
+  assert.equal(createCalls, 0);
+  assert.equal(fallbackSelects, 2);
+  assert.equal(Array.isArray(firstResult), true);
+  assert.equal(Array.isArray(secondResult), true);
+  assert.equal(firstResult.length > 0, true);
+  assert.equal(secondResult.length > 0, true);
+
+  const mapToComparable = (collection) =>
+    collection
+      .map((entry) => ({
+        category: entry.category,
+        items: entry.items.map((item) => item.name)
+      }))
+      .map((entry) => ({
+        category: entry.category,
+        items: entry.items.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+      }))
+      .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+
+  assert.deepEqual(mapToComparable(firstResult), mapToComparable(secondResult));
 });
