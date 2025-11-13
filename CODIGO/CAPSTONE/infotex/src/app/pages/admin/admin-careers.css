@@ -223,6 +223,27 @@
   color: #8b949e;
 }
 
+.admin-careers__items-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-careers__items-header {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(220px, 1fr) minmax(240px, 1.3fr) minmax(130px, 0.8fr);
+  gap: 1rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid #30363d;
+  border-radius: 0.75rem;
+  background: rgba(48, 54, 61, 0.35);
+  color: #8b949e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .admin-careers__items {
   list-style: none;
   margin: 0;
@@ -233,19 +254,62 @@
 }
 
 .admin-careers__item {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(220px, 1fr) minmax(240px, 1.3fr) minmax(130px, 0.8fr);
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem;
   border: 1px solid #30363d;
   border-radius: 0.75rem;
   background-color: #0d1117;
 }
 
-.admin-careers__item-name {
+.admin-careers__cell {
+  color: #c9d1d9;
+  font-size: 0.95rem;
+}
+
+.admin-careers__cell--head {
+  color: #8b949e;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.admin-careers__cell--id {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-careers__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(46, 160, 67, 0.15);
+  color: #7ee787;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.admin-careers__badge--empty {
+  background: rgba(240, 246, 252, 0.08);
+  color: #8b949e;
+}
+
+.admin-careers__cell--category {
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.admin-careers__cell--name {
   font-weight: 500;
   color: #f0f6fc;
+}
+
+.admin-careers__cell--actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .admin-careers__delete {
@@ -273,6 +337,36 @@
 }
 
 @media (max-width: 640px) {
+  .admin-careers__items-header {
+    display: none;
+  }
+
+  .admin-careers__item {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    align-items: flex-start;
+  }
+
+  .admin-careers__cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.95rem;
+  }
+
+  .admin-careers__cell::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #8b949e;
+  }
+
+  .admin-careers__cell--actions {
+    justify-content: flex-start;
+  }
+
   .admin-careers__actions {
     flex-direction: column;
     align-items: stretch;

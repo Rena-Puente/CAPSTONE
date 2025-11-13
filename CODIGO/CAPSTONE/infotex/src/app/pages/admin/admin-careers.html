@@ -75,20 +75,55 @@
           </span>
         </div>
 
-        <ul class="admin-careers__items">
-          <li class="admin-careers__item" *ngFor="let item of category.items">
-            <span class="admin-careers__item-name">{{ item.name }}</span>
-            <button
-              type="button"
-              class="admin-careers__delete"
-              (click)="deleteCareer(category, item)"
-              [disabled]="deletingId() === item.id"
-            >
-              <span class="admin-careers__spinner" *ngIf="deletingId() === item.id" aria-hidden="true"></span>
-              <span>{{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}</span>
-            </button>
-          </li>
-        </ul>
+        <div class="admin-careers__items-wrapper" role="table" aria-label="Carreras de {{ category.category }}">
+          <div class="admin-careers__items-header" role="row">
+            <span class="admin-careers__cell admin-careers__cell--head" role="columnheader">ID carrera</span>
+            <span class="admin-careers__cell admin-careers__cell--head" role="columnheader">Categoría</span>
+            <span class="admin-careers__cell admin-careers__cell--head" role="columnheader">Carrera</span>
+            <span class="admin-careers__cell admin-careers__cell--head admin-careers__cell--actions" role="columnheader">
+              Acciones
+            </span>
+          </div>
+
+          <ul class="admin-careers__items" role="rowgroup">
+            <li class="admin-careers__item" *ngFor="let item of category.items" role="row">
+              <span
+                class="admin-careers__cell admin-careers__cell--id"
+                role="cell"
+                [attr.data-label]="'ID carrera'"
+              >
+                <span
+                  class="admin-careers__badge"
+                  [class.admin-careers__badge--empty]="!item.id"
+                  >{{ item.id ?? 'Sin ID' }}</span
+                >
+              </span>
+              <span
+                class="admin-careers__cell admin-careers__cell--category"
+                role="cell"
+                [attr.data-label]="'Categoría'"
+                >{{ category.category }}</span
+              >
+              <span
+                class="admin-careers__cell admin-careers__cell--name"
+                role="cell"
+                [attr.data-label]="'Carrera'"
+                >{{ item.name }}</span
+              >
+              <span class="admin-careers__cell admin-careers__cell--actions" role="cell" [attr.data-label]="'Acciones'">
+                <button
+                  type="button"
+                  class="admin-careers__delete"
+                  (click)="deleteCareer(category, item)"
+                  [disabled]="deletingId() === item.id"
+                >
+                  <span class="admin-careers__spinner" *ngIf="deletingId() === item.id" aria-hidden="true"></span>
+                  <span>{{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}</span>
+                </button>
+              </span>
+            </li>
+          </ul>
+        </div>
       </div>
     </ng-container>
 
