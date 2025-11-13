@@ -15,11 +15,13 @@ import { VerifyEmail } from './pages/auth/verify-email/verify-email';
 import { companyGuard } from './guards/company.guard';
 import { adminGuard } from './guards/admin.guard';
 import { AdminCareers } from './pages/admin/admin-careers';
+import { Aplications } from './pages/aplications/aplications';
 
 export const routes: Routes = [
   { path: 'home', component: Home, canActivate: [authGuard] },
   { path: 'about', component: About },
   { path: 'profile', component: Profile, canActivate: [authGuard] },
+  { path: 'applications', component: Aplications, canActivate: [authGuard] },
   { path: 'companies/create', component: CompanyCreate, canActivate: [authGuard] },
   {
     path: 'companies',
