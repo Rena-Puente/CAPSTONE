@@ -1,5 +1,5 @@
 import { CommonModule, DatePipe } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { ApplicationsService, CandidateApplication } from '../../services/applications.service';
@@ -17,6 +17,50 @@ export class Aplications {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly applications = signal<CandidateApplication[]>([]);
+  protected readonly stats = computed(() => {
+    const applications = this.applications();
+
+    let active = 0;
+    let accepted = 0;
+    let inReview = 0;
+    let lastUpdate: Date | null = null;
+
+    for (const application of applications) {
+      if (application.offerActive !== false) {
+        active += 1;
+      }
+
+      const normalizedStatus = this.normalizeStatusForComparison(application.status);
+
+      if (normalizedStatus === 'aceptada' || normalizedStatus === 'accepted') {
+        accepted += 1;
+      }
+
+      if (
+        normalizedStatus === 'en_revision' ||
+        normalizedStatus === 'revision' ||
+        normalizedStatus === 'en_proceso' ||
+        normalizedStatus === 'postulada' ||
+        normalizedStatus === 'enviada'
+      ) {
+        inReview += 1;
+      }
+
+      const candidateDate = this.extractRelevantDate(application);
+
+      if (candidateDate && (!lastUpdate || candidateDate > lastUpdate)) {
+        lastUpdate = candidateDate;
+      }
+    }
+
+    return {
+      total: applications.length,
+      active,
+      accepted,
+      inReview,
+      lastUpdate
+    };
+  });
 
   constructor() {
     void this.loadApplications();
@@ -78,6 +122,25 @@ export class Aplications {
     return city || country || null;
   }
 
+  protected getCardAccentClass(status: string | null): string {
+    const normalizedStatus = this.normalizeStatusForComparison(status);
+
+    switch (normalizedStatus) {
+      case 'aceptada':
+      case 'accepted':
+        return 'application-card--accepted';
+      case 'rechazada':
+      case 'rejected':
+        return 'application-card--rejected';
+      case 'en_revision':
+      case 'revision':
+      case 'en_proceso':
+        return 'application-card--review';
+      default:
+        return 'application-card--default';
+    }
+  }
+
   private async loadApplications(): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
@@ -95,4 +158,28 @@ export class Aplications {
     }
   }
 
+  private normalizeStatusForComparison(status: string | null | undefined): string {
+    if (!status) {
+      return '';
+    }
+
+    return status
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-záéíóúñü0-9_\s-]/giu, '')
+      .replace(/\s+/g, ' ')
+      .replace(/\s/g, '_');
+  }
+
+  private extractRelevantDate(application: CandidateApplication): Date | null {
+    const rawDate = application.updatedAt ?? application.submittedAt ?? application.offerPublishedAt;
+
+    if (!rawDate) {
+      return null;
+    }
+
+    const candidateDate = new Date(rawDate);
+
+    return Number.isNaN(candidateDate.getTime()) ? null : candidateDate;
+  }
 }
