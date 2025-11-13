@@ -1,10 +1,61 @@
 <section class="applications-page">
   <header class="applications-header">
-    <h1 class="display-6">Mis postulaciones</h1>
-    <p class="text-muted mb-0">
-      Revisa el estado de tus postulaciones y mantente al tanto de las oportunidades que has seguido.
-    </p>
+    <div class="header-eyebrow text-uppercase">
+      <i class="bi bi-kanban me-2"></i>
+      Panel de seguimiento
+    </div>
+    <div class="header-content">
+      <div>
+        <h1 class="display-6 mb-2">Mis postulaciones</h1>
+        <p class="text-muted mb-0">
+          Revisa el estado de tus postulaciones y mantente al tanto de las oportunidades que has seguido.
+        </p>
+      </div>
+      <div class="header-illustration" aria-hidden="true">
+        <i class="bi bi-radar"></i>
+      </div>
+    </div>
   </header>
+
+  <section
+    *ngIf="!loading() && !error() && applications().length > 0"
+    class="applications-metrics"
+    aria-label="Resumen de postulaciones"
+  >
+    <article class="metric-card">
+      <i class="bi bi-briefcase-fill"></i>
+      <div>
+        <p class="metric-label">Postulaciones registradas</p>
+        <p class="metric-value">{{ stats().total }}</p>
+      </div>
+    </article>
+    <article class="metric-card">
+      <i class="bi bi-rocket-takeoff-fill"></i>
+      <div>
+        <p class="metric-label">Postulaciones activas</p>
+        <p class="metric-value">{{ stats().active }}</p>
+      </div>
+    </article>
+    <article class="metric-card">
+      <i class="bi bi-binoculars-fill"></i>
+      <div>
+        <p class="metric-label">En seguimiento</p>
+        <p class="metric-value">{{ stats().inReview }}</p>
+      </div>
+    </article>
+    <article class="metric-card">
+      <i class="bi bi-calendar2-check-fill"></i>
+      <div>
+        <p class="metric-label">Última actualización</p>
+        <p class="metric-value" *ngIf="stats().lastUpdate as lastUpdate; else noUpdates">
+          {{ lastUpdate | date: 'medium' }}
+        </p>
+        <ng-template #noUpdates>
+          <span class="metric-placeholder">Sin registros</span>
+        </ng-template>
+      </div>
+    </article>
+  </section>
 
   <div *ngIf="loading()" class="alert alert-info mt-4" role="status">
     <i class="bi bi-arrow-repeat me-2 spinner-border spinner-border-sm"></i>
@@ -28,11 +79,12 @@
   <div *ngIf="!loading() && !error() && applications().length > 0" class="applications-list mt-4">
     <article
       class="application-card card mb-3"
+      [ngClass]="getCardAccentClass(application.status)"
       *ngFor="let application of applications(); trackBy: trackByApplicationId"
     >
       <div class="card-body">
-        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
-          <div>
+        <div class="application-card__header">
+          <div class="application-card__title">
             <h2 class="card-title h5 mb-1">{{ application.offerTitle || 'Oferta sin título' }}</h2>
             <p class="card-subtitle text-muted mb-0">
               {{ application.companyName || 'Empresa sin nombre' }}
@@ -43,20 +95,20 @@
           </span>
         </div>
 
-        <div class="application-tags text-muted small d-flex flex-wrap gap-3 mb-3">
-          <span *ngIf="getLocationLabel(application) as location" class="d-inline-flex align-items-center gap-1">
+        <div class="application-tags">
+          <span *ngIf="getLocationLabel(application) as location" class="tag-pill">
             <i class="bi bi-geo-alt-fill"></i>
             <span>{{ location }}</span>
           </span>
-          <span *ngIf="application.locationType" class="d-inline-flex align-items-center gap-1">
+          <span *ngIf="application.locationType" class="tag-pill">
             <i class="bi bi-geo-fill"></i>
             <span>{{ application.locationType }}</span>
           </span>
-          <span *ngIf="application.seniority" class="d-inline-flex align-items-center gap-1">
+          <span *ngIf="application.seniority" class="tag-pill">
             <i class="bi bi-mortarboard-fill"></i>
             <span>{{ application.seniority }}</span>
           </span>
-          <span *ngIf="application.contractType" class="d-inline-flex align-items-center gap-1">
+          <span *ngIf="application.contractType" class="tag-pill">
             <i class="bi bi-briefcase-fill"></i>
             <span>{{ application.contractType }}</span>
           </span>
@@ -66,7 +118,7 @@
           {{ coverLetter }}
         </p>
 
-        <div class="application-meta small text-muted d-flex flex-wrap gap-3">
+        <div class="application-meta">
           <span>
             <i class="bi bi-calendar-check me-1"></i>
             Postulada: <strong>{{ application.submittedAt | date: 'medium' }}</strong>
