@@ -82,12 +82,13 @@ CREATE OR REPLACE PACKAGE BODY casa_estudios_pkg AS
   -- Salida: [{"id":1,"casa_estudios":"Duoc UC"}, ...]
   --------------------------------------------------------------------
   FUNCTION fn_casa_listar_json(
-    p_casa_estudios IN VARCHAR2 DEFAULT NULL
-  ) RETURN CLOB IS
-    v_json CLOB;
-  BEGIN
-    SELECT
-      '[' ||
+  p_casa_estudios IN VARCHAR2 DEFAULT NULL
+) RETURN CLOB IS
+  v_json CLOB;
+BEGIN
+  SELECT
+    '[' ||
+    NVL(
       RTRIM(
         XMLCAST(
           XMLAGG(
@@ -98,23 +99,26 @@ CREATE OR REPLACE PACKAGE BODY casa_estudios_pkg AS
                 RETURNING CLOB
               ) || ','
             )
-            ORDER BY casa_estudios
+            ORDER BY LOWER(casa_estudios)
           ) AS CLOB
         ),
         ','
-      ) ||
-      ']'
-    INTO v_json
-    FROM casa_estudios
-    WHERE p_casa_estudios IS NULL
-       OR UPPER(TRIM(casa_estudios)) = UPPER(TRIM(p_casa_estudios));
+      ),
+      ''
+    ) ||
+    ']'
+  INTO v_json
+  FROM casa_estudios
+  WHERE
+    p_casa_estudios IS NULL
+    OR UPPER(TRIM(casa_estudios)) = UPPER(TRIM(p_casa_estudios));
 
-    IF v_json IS NULL THEN
-      v_json := '[]';
-    END IF;
+  RETURN NVL(v_json, '[]');
 
-    RETURN v_json;
-  END fn_casa_listar_json;
+EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+    RETURN '[]';
+END fn_casa_listar_json;
 
 END casa_estudios_pkg;
 /
