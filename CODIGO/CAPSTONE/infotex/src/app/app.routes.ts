@@ -20,6 +20,7 @@ export const routes: Routes = [
   { path: 'home', component: Home, canActivate: [authGuard] },
   { path: 'about', component: About },
   { path: 'profile', component: Profile, canActivate: [authGuard] },
+  { path: 'companies/create', component: CompanyCreate, canActivate: [authGuard] },
   {
     path: 'companies',
     component: CompanyDashboard,
@@ -31,7 +32,6 @@ export const routes: Routes = [
       { path: 'applicants', component: CompanyApplicants, canActivate: [authGuard, companyGuard] }
     ]
   },
-  { path: 'companies/create', component: CompanyCreate, canActivate: [authGuard] },
   { path: 'admin/careers', component: AdminCareers, canActivate: [authGuard, adminGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },
   { path: 'auth/github/callback', component: GithubCallback },
