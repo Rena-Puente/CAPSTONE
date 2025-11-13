@@ -56,7 +56,7 @@ function previewString(value) {
   } chars)`;
 }
 
-function previewValue(value) {
+function previewValue(value, seen = new WeakSet()) {
   if (value === null || value === undefined) {
     return value;
   }
@@ -73,13 +73,23 @@ function previewValue(value) {
     return value.toISOString();
   }
 
-  if (Array.isArray(value)) {
-    return value.slice(0, MAX_ROW_PREVIEW_COUNT).map((entry) => previewValue(entry));
-  }
-
   if (typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, previewValue(entry)]));
-  }
+    if (seen.has(value)) {
+      return '[Circular]';
+    }
+
+    seen.add(value);
+
+    if (Array.isArray(value)) {
+      return value
+        .slice(0, MAX_ROW_PREVIEW_COUNT)
+        .map((entry) => previewValue(entry, seen));
+    }
+
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, previewValue(entry, seen)])
+    );
+    }
 
   return value;
 }
