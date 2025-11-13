@@ -161,3 +161,77 @@ test('listCareerCatalog seeds default catalog when database returns an empty res
 
   assert.deepEqual(normalizedResult, expected);
 });
+
+test('listCareerCatalog re-seeds catalog when database is emptied after an initial seed', async () => {
+  const selectResponses = [
+    { rows: [{ JSON_DATA: '[]' }] },
+    {
+      rows: [
+        {
+          JSON_DATA: JSON.stringify([
+            {
+              categoria: 'Tecnología',
+              items: [{ id: 1, carrera: 'Backend' }]
+            }
+          ])
+        }
+      ]
+    },
+    { rows: [{ JSON_DATA: '[]' }] },
+    {
+      rows: [
+        {
+          JSON_DATA: JSON.stringify([
+            {
+              categoria: 'Tecnología',
+              items: [{ id: 2, carrera: 'Backend' }]
+            }
+          ])
+        }
+      ]
+    }
+  ];
+
+  let createCalls = 0;
+
+  oracleMock.__setExecuteQueryMock(async (sql) => {
+    if (/fn_carreras_por_categoria_json/.test(sql)) {
+      if (selectResponses.length === 0) {
+        throw new Error('No more SELECT responses configured for test');
+      }
+
+      return selectResponses.shift();
+    }
+
+    if (/sp_carrera_crear/.test(sql)) {
+      createCalls += 1;
+      return { outBinds: { careerId: createCalls } };
+    }
+
+    throw new Error(`Unexpected SQL in test: ${sql}`);
+  });
+
+  const firstResult = await careersService.listCareerCatalog();
+  assert.equal(Array.isArray(firstResult), true);
+  const firstSeedCalls = createCalls;
+  assert.equal(firstSeedCalls > 0, true);
+
+  const secondResult = await careersService.listCareerCatalog();
+  assert.equal(Array.isArray(secondResult), true);
+  assert.equal(createCalls > firstSeedCalls, true);
+
+  assert.deepEqual(
+    secondResult,
+    [
+      {
+        category: 'Tecnología',
+        items: [
+          {
+            id: 2,
+            name: 'Backend'
+          }
+        ]
+      }
+    ]
+  );
+});

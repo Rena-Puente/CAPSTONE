@@ -380,11 +380,12 @@ async function listCareerCatalog(category = null, { allowSeed = true } = {}) {
   const categories = parseCareerCatalogJson(jsonData);
 
   if (allowSeed && categories.length === 0) {
-    const seeded = await ensureDefaultCareerCatalogSeeded();
+    await ensureDefaultCareerCatalogSeeded({
+      force: defaultCareerCatalogSeedCompleted
+    });
 
-    if (seeded) {
-      return listCareerCatalog(category, { allowSeed: false });
-    }
+
+    return listCareerCatalog(category, { allowSeed: false });
   }
 
   console.info('[CareersService] listCareerCatalog -> parsed categories', {
@@ -474,7 +475,23 @@ async function seedDefaultCareerCatalog() {
   return insertedCount > 0;
 }
 
-async function ensureDefaultCareerCatalogSeeded() {
+async function ensureDefaultCareerCatalogSeeded({ force = false } = {}) {
+  if (force) {
+    if (defaultCareerCatalogSeedPromise) {
+      try {
+        await defaultCareerCatalogSeedPromise;
+      } catch (error) {
+        console.error('[CareersService] Default career catalog seed promise failed before force reload', {
+          error: error?.message || error
+        });
+      }
+    }
+
+    defaultCareerCatalogSeedPromise = null;
+    defaultCareerCatalogSeedCompleted = false;
+    defaultCareerCatalogSeedInserted = false;
+  }
+
   if (defaultCareerCatalogSeedCompleted) {
     return defaultCareerCatalogSeedInserted;
   }
