@@ -1,1 +1,90 @@
-<p>aplications works!</p>
+<section class="applications-page">
+  <header class="applications-header">
+    <h1 class="display-6">Mis postulaciones</h1>
+    <p class="text-muted mb-0">
+      Revisa el estado de tus postulaciones y mantente al tanto de las oportunidades que has seguido.
+    </p>
+  </header>
+
+  <div *ngIf="loading()" class="alert alert-info mt-4" role="status">
+    <i class="bi bi-arrow-repeat me-2 spinner-border spinner-border-sm"></i>
+    Cargando tus postulaciones...
+  </div>
+
+  <div *ngIf="!loading() && error()" class="alert alert-danger mt-4" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ error() }}
+  </div>
+
+  <div
+    *ngIf="!loading() && !error() && applications().length === 0"
+    class="alert alert-secondary mt-4"
+    role="alert"
+  >
+    <i class="bi bi-briefcase me-2"></i>
+    Aún no has postulado a ninguna oferta. Explora las oportunidades disponibles y postula a las que te interesen.
+  </div>
+
+  <div *ngIf="!loading() && !error() && applications().length > 0" class="applications-list mt-4">
+    <article
+      class="application-card card mb-3"
+      *ngFor="let application of applications(); trackBy: trackByApplicationId"
+    >
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+          <div>
+            <h2 class="card-title h5 mb-1">{{ application.offerTitle || 'Oferta sin título' }}</h2>
+            <p class="card-subtitle text-muted mb-0">
+              {{ application.companyName || 'Empresa sin nombre' }}
+            </p>
+          </div>
+          <span class="status-badge" [ngClass]="getStatusBadgeClass(application.status)">
+            {{ formatStatus(application.status) }}
+          </span>
+        </div>
+
+        <div class="application-tags text-muted small d-flex flex-wrap gap-3 mb-3">
+          <span *ngIf="getLocationLabel(application) as location" class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-geo-alt-fill"></i>
+            <span>{{ location }}</span>
+          </span>
+          <span *ngIf="application.locationType" class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-geo-fill"></i>
+            <span>{{ application.locationType }}</span>
+          </span>
+          <span *ngIf="application.seniority" class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-mortarboard-fill"></i>
+            <span>{{ application.seniority }}</span>
+          </span>
+          <span *ngIf="application.contractType" class="d-inline-flex align-items-center gap-1">
+            <i class="bi bi-briefcase-fill"></i>
+            <span>{{ application.contractType }}</span>
+          </span>
+        </div>
+
+        <p class="cover-letter" *ngIf="application.coverLetter as coverLetter">
+          {{ coverLetter }}
+        </p>
+
+        <div class="application-meta small text-muted d-flex flex-wrap gap-3">
+          <span>
+            <i class="bi bi-calendar-check me-1"></i>
+            Postulada: <strong>{{ application.submittedAt | date: 'medium' }}</strong>
+          </span>
+          <span *ngIf="application.updatedAt">
+            <i class="bi bi-clock-history me-1"></i>
+            Actualizada: {{ application.updatedAt | date: 'medium' }}
+          </span>
+          <span *ngIf="application.offerPublishedAt">
+            <i class="bi bi-calendar-event me-1"></i>
+            Publicada: {{ application.offerPublishedAt | date: 'mediumDate' }}
+          </span>
+          <span *ngIf="!application.offerActive" class="text-danger fw-semibold">
+            <i class="bi bi-exclamation-octagon me-1"></i>
+            Oferta inactiva
+          </span>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
