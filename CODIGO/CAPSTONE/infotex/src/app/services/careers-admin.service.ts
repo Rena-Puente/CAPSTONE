@@ -112,11 +112,20 @@ export class CareersAdminService {
     );
   }
 
-    deleteCareer(id: number | null, category?: string, career?: string): Observable<void> {
-    const careerId = typeof id === 'number' ? Math.trunc(id) : NaN;
+  private static readonly DELETE_BY_NAME_PLACEHOLDER = 'by-name';
 
-    if (!Number.isInteger(careerId) || careerId <= 0) {
-      return throwError(() => new Error('El identificador de la carrera no es válido.'));
+  deleteCareer(id: number | null, category?: string, career?: string): Observable<void> {
+    const hasId = id !== null && id !== undefined;
+    let careerId: number | null = null;
+
+    if (hasId) {
+      const parsed = Number.parseInt(String(id), 10);
+
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        return throwError(() => new Error('El identificador de la carrera no es válido.'));
+      }
+
+      careerId = parsed;
     }
 
     let options: { headers: HttpHeaders };
@@ -133,19 +142,33 @@ export class CareersAdminService {
     const normalizedCategory = normalizeText(category).trim();
     const normalizedCareer = normalizeText(career).trim();
 
-    if (normalizedCategory) {
-      body.category = normalizedCategory;
-    }
+    if (careerId === null) {
+      if (!normalizedCategory || !normalizedCareer) {
+        return throwError(
+          () => new Error('Debes indicar la categoría y el nombre de la carrera a eliminar.')
+        );
+      }
 
-    if (normalizedCareer) {
+      body.category = normalizedCategory;
       body.career = normalizedCareer;
+    } else {
+      if (normalizedCategory) {
+        body.category = normalizedCategory;
+      }
+
+      if (normalizedCareer) {
+        body.career = normalizedCareer;
+      }
     }
 
     return this.http
-      .delete<DeleteCareerResponse>(`${this.apiUrl}/admin/careers/${careerId}`, {
-        ...options,
-        body
-      })
+      .delete<DeleteCareerResponse>(
+        `${this.apiUrl}/admin/careers/${careerId ?? CareersAdminService.DELETE_BY_NAME_PLACEHOLDER}`,
+        {
+          ...options,
+          body
+        }
+      )
       .pipe(
         map((response) => {
           if (!response.ok) {
