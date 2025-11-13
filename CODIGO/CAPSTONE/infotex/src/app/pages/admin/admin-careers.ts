@@ -161,6 +161,24 @@ export class AdminCareers implements OnInit {
     if (!item || (deletingKey && this.deletingKey() === deletingKey)) {
       return;
     }
+        const itemId = item?.id ?? null;
+
+    if (itemId === null || itemId === undefined) {
+      this.deleteError.set('La carrera seleccionada no tiene un identificador válido.');
+      return;
+    }
+
+    if (!Number.isFinite(itemId)) {
+      this.deleteError.set('El identificador de la carrera no es válido.');
+      return;
+    }
+
+    const sanitizedId = Math.trunc(itemId);
+
+    if (!Number.isInteger(sanitizedId) || sanitizedId <= 0) {
+      this.deleteError.set('El identificador de la carrera no es válido.');
+      return;
+    }
 
     const confirmed = window.confirm(`¿Deseas eliminar la carrera "${item.name}" de "${category.category}"?`);
 
@@ -172,12 +190,11 @@ export class AdminCareers implements OnInit {
     this.deleteError.set(null);
 
     try {
-      await firstValueFrom(this.careersService.deleteCareer(item.id, category.category, item.name));
-
+      await firstValueFrom(this.careersService.deleteCareer(sanitizedId, category.category, item.name));
       this.catalog.update((entries) => {
         const normalizedCategory = category.category.trim().toLocaleLowerCase('es');
         const normalizedCareer = item.name.trim().toLocaleLowerCase('es');
-        const itemId = item.id ?? null;
+        const targetId = sanitizedId;
 
         return entries
           .map((entry) => {
@@ -186,8 +203,8 @@ export class AdminCareers implements OnInit {
             }
 
             const items = entry.items.filter((current) => {
-              if (itemId && current.id) {
-                return current.id !== itemId;
+              if (targetId && current.id) {
+                return current.id !== targetId;
               }
 
               return current.name.trim().toLocaleLowerCase('es') !== normalizedCareer;

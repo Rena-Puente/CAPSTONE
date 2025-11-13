@@ -112,8 +112,10 @@ export class CareersAdminService {
     );
   }
 
-  deleteCareer(id: number, category?: string, career?: string): Observable<void> {
-    if (!Number.isInteger(id) || id <= 0) {
+    deleteCareer(id: number | null, category?: string, career?: string): Observable<void> {
+    const careerId = typeof id === 'number' ? Math.trunc(id) : NaN;
+
+    if (!Number.isInteger(careerId) || careerId <= 0) {
       return throwError(() => new Error('El identificador de la carrera no es válido.'));
     }
 
@@ -140,7 +142,7 @@ export class CareersAdminService {
     }
 
     return this.http
-      .delete<DeleteCareerResponse>(`${this.apiUrl}/admin/careers/${id}`, {
+      .delete<DeleteCareerResponse>(`${this.apiUrl}/admin/careers/${careerId}`, {
         ...options,
         body
       })
