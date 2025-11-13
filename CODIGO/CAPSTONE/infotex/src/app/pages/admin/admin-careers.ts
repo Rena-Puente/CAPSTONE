@@ -27,7 +27,7 @@ export class AdminCareers implements OnInit {
   protected readonly isSubmitting = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly submitSuccess = signal<string | null>(null);
-  protected readonly deletingId = signal<number | null>(null);
+  protected readonly deletingKey = signal<string | null>(null);
   protected readonly deleteError = signal<string | null>(null);
 
   protected readonly form = this.fb.nonNullable.group({
@@ -133,13 +133,32 @@ export class AdminCareers implements OnInit {
     }
   }
 
-  protected async deleteCareer(category: CareerCatalogCategory, item: CareerCatalogItem): Promise<void> {
-    if (!item || this.deletingId() === item.id) {
-      return;
+  private buildCareerKey(category: CareerCatalogCategory, item: CareerCatalogItem): string {
+    if (item?.id) {
+      return `id:${item.id}`;
     }
 
-    if (!item.id) {
-      this.deleteError.set('No se puede eliminar la carrera porque no tiene identificador.');
+    const normalizedCategory = category?.category?.trim().toLocaleLowerCase('es') ?? '';
+    const normalizedName = item?.name?.trim().toLocaleLowerCase('es') ?? '';
+
+    return `name:${normalizedCategory}|${normalizedName}`;
+  }
+
+  protected isDeleting(category: CareerCatalogCategory, item: CareerCatalogItem): boolean {
+    const key = this.buildCareerKey(category, item);
+    const current = this.deletingKey();
+
+    if (!key || !current) {
+      return false;
+    }
+
+    return current === key;
+  }
+
+  protected async deleteCareer(category: CareerCatalogCategory, item: CareerCatalogItem): Promise<void> {
+    const deletingKey = this.buildCareerKey(category, item);
+
+    if (!item || (deletingKey && this.deletingKey() === deletingKey)) {
       return;
     }
 
@@ -149,31 +168,40 @@ export class AdminCareers implements OnInit {
       return;
     }
 
-    this.deletingId.set(item.id);
+    this.deletingKey.set(deletingKey);
     this.deleteError.set(null);
 
     try {
       await firstValueFrom(this.careersService.deleteCareer(item.id, category.category, item.name));
 
       this.catalog.update((entries) => {
-        const updated = entries
+        const normalizedCategory = category.category.trim().toLocaleLowerCase('es');
+        const normalizedCareer = item.name.trim().toLocaleLowerCase('es');
+        const itemId = item.id ?? null;
+
+        return entries
           .map((entry) => {
-            if (entry.category !== category.category) {
+            if (entry.category.trim().toLocaleLowerCase('es') !== normalizedCategory) {
               return entry;
             }
 
-            const items = entry.items.filter((current) => current.id !== item.id);
+            const items = entry.items.filter((current) => {
+              if (itemId && current.id) {
+                return current.id !== itemId;
+              }
+
+              return current.name.trim().toLocaleLowerCase('es') !== normalizedCareer;
+            });
+
             return { category: entry.category, items };
           })
           .filter((entry) => entry.items.length > 0);
-
-        return updated;
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo eliminar la carrera.';
       this.deleteError.set(message);
     } finally {
-      this.deletingId.set(null);
+      this.deletingKey.set(null);
     }
   }
 }

@@ -115,10 +115,10 @@
                   type="button"
                   class="admin-careers__delete"
                   (click)="deleteCareer(category, item)"
-                  [disabled]="deletingId() === item.id"
+                  [disabled]="isDeleting(category, item)"
                 >
-                  <span class="admin-careers__spinner" *ngIf="deletingId() === item.id" aria-hidden="true"></span>
-                  <span>{{ deletingId() === item.id ? 'Eliminando…' : 'Eliminar' }}</span>
+                  <span class="admin-careers__spinner" *ngIf="isDeleting(category, item)" aria-hidden="true"></span>
+                  <span>{{ isDeleting(category, item) ? 'Eliminando…' : 'Eliminar' }}</span>
                 </button>
               </span>
             </li>
