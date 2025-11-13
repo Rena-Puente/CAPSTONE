@@ -116,6 +116,7 @@ const defaultCareerCatalogSeed = normalizeDefaultCareerSeedDataset(defaultCareer
 let defaultCareerCatalogSeedPromise = null;
 let defaultCareerCatalogSeedCompleted = false;
 let defaultCareerCatalogSeedInserted = false;
+let defaultCareerCatalogSeedEnsured = false;
 
 function normalizeCategory(value, { required = true } = {}) {
   const category = sanitizeString(value);
@@ -339,8 +340,17 @@ function parseCareerCatalogJson(rawJson) {
   return categories;
 }
 
-async function listCareerCatalog(category = null, { allowSeed = true } = {}) {
-  const normalizedCategory = normalizeCategory(category, { required: false });
+function summarizeCategoriesForLog(categories) {
+  return categories.map((entry) => ({
+    category: entry.category,
+    items: entry.items.map((item) => ({
+      id: item.id,
+      name: item.name
+    }))
+  }));
+}
+
+async function executeCareerCatalogQuery(normalizedCategory) {
   const categoryBind = {
     dir: oracledb.BIND_IN,
     type: oracledb.STRING,
@@ -379,24 +389,192 @@ async function listCareerCatalog(category = null, { allowSeed = true } = {}) {
 
   const categories = parseCareerCatalogJson(jsonData);
 
-  if (allowSeed && categories.length === 0) {
-    await ensureDefaultCareerCatalogSeeded({
-      force: defaultCareerCatalogSeedCompleted
-    });
+  console.info('[CareersService] listCareerCatalog -> parsed categories', {
+    categoryCount: categories.length,
+    categories: summarizeCategoriesForLog(categories)
+  });
 
+  return categories;
+}
+
+async function fetchCareerCatalogFromTable(normalizedCategory) {
+  const binds = {};
+  let sql = `
+    SELECT id_carrera, categoria, carrera
+      FROM carreras
+     WHERE categoria IS NOT NULL
+       AND carrera IS NOT NULL
+       AND TRIM(categoria) <> ''
+       AND TRIM(carrera) <> ''
+  `;
+
+  if (normalizedCategory) {
+    sql += `
+       AND UPPER(TRIM(categoria)) = UPPER(:category)
+    `;
+    binds.category = {
+      dir: oracledb.BIND_IN,
+      type: oracledb.STRING,
+      val: normalizedCategory
+    };
+  }
+
+  sql += `
+     ORDER BY LOWER(categoria), LOWER(carrera)
+  `;
+
+  console.info('[CareersService] listCareerCatalog -> executing fallback SELECT', {
+    normalizedCategory,
+    sql
+  });
+
+  let result;
+  try {
+    result = await executeQuery(sql, binds);
+  } catch (error) {
+    console.error('[CareersService] listCareerCatalog -> fallback SELECT failed', {
+      error: error?.message || error
+    });
+    return [];
+  }
+
+  const categoriesMap = new Map();
+
+  for (const row of result.rows ?? []) {
+    if (!row || typeof row !== 'object') {
+      continue;
+    }
+
+    const rawCategory =
+      row.categoria ??
+      row.CATEGORIA ??
+      row.category ??
+      row.CATEGORY ??
+      null;
+    const category = sanitizeString(rawCategory);
+
+    if (!category) {
+      continue;
+    }
+
+    const rawCareer =
+      row.carrera ??
+      row.CARRERA ??
+      row.career ??
+      row.CAREER ??
+      row.name ??
+      row.NAME ??
+      null;
+    const careerName = sanitizeString(rawCareer);
+
+    if (!careerName) {
+      continue;
+    }
+
+    const rawId =
+      row.id_carrera ??
+      row.ID_CARRERA ??
+      row.id ??
+      row.ID ??
+      null;
+    const parsedId =
+      rawId === null || rawId === undefined || rawId === ''
+        ? null
+        : Number.parseInt(String(rawId), 10);
+    const id = Number.isNaN(parsedId) ? null : parsedId;
+
+    const key = category.toLocaleLowerCase('es');
+    const existing = categoriesMap.get(key) ?? {
+      category,
+      items: new Map()
+    };
+
+    if (!categoriesMap.has(key)) {
+      categoriesMap.set(key, existing);
+    }
+
+    const careerKey = careerName.toLocaleLowerCase('es');
+
+    if (!existing.items.has(careerKey)) {
+      existing.items.set(careerKey, { id, name: careerName });
+    }
+  }
+
+  const categories = Array.from(categoriesMap.values())
+    .map((entry) => ({
+      category: entry.category,
+      items: Array.from(entry.items.values()).sort((a, b) =>
+        a.name.localeCompare(b.name, 'es', { sensitivity: 'base' })
+      )
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+
+  if (categories.length > 0) {
+    console.info('[CareersService] listCareerCatalog -> fallback SELECT categories', {
+      categoryCount: categories.length,
+      categories: summarizeCategoriesForLog(categories)
+    });
+  }
+
+  return categories;
+}
+
+function buildCareerCatalogFromSeed(normalizedCategory) {
+  if (!Array.isArray(defaultCareerCatalogSeed) || defaultCareerCatalogSeed.length === 0) {
+    return [];
+  }
+
+  const filteredSeed = normalizedCategory
+    ? defaultCareerCatalogSeed.filter(
+        (entry) => entry.category.localeCompare(normalizedCategory, 'es', { sensitivity: 'base' }) === 0
+      )
+    : defaultCareerCatalogSeed;
+
+  const categories = filteredSeed
+    .map((entry) => ({
+      category: entry.category,
+      items: entry.careers
+        .map((name) => sanitizeString(name))
+        .filter((name) => name.length > 0)
+        .map((name) => ({ id: null, name }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+
+  if (categories.length > 0) {
+    console.info('[CareersService] listCareerCatalog -> using in-memory seed fallback', {
+      categoryCount: categories.length,
+      categories: summarizeCategoriesForLog(categories)
+    });
+  }
+
+  return categories;
+}
+
+async function listCareerCatalog(category = null, { allowSeed = true } = {}) {
+  const normalizedCategory = normalizeCategory(category, { required: false });
+
+  let categories = await executeCareerCatalogQuery(normalizedCategory);
+
+  if (categories.length === 0 && allowSeed) {
+    await ensureDefaultCareerCatalogSeeded({
+      force: defaultCareerCatalogSeedInserted
+    });
 
     return listCareerCatalog(category, { allowSeed: false });
   }
 
-  console.info('[CareersService] listCareerCatalog -> parsed categories', {
+  if (categories.length === 0) {
+    categories = await fetchCareerCatalogFromTable(normalizedCategory);
+  }
+
+  if (categories.length === 0) {
+    categories = buildCareerCatalogFromSeed(normalizedCategory);
+  }
+
+  console.info('[CareersService] listCareerCatalog -> returning categories', {
     categoryCount: categories.length,
-    categories: categories.map((entry) => ({
-      category: entry.category,
-      items: entry.items.map((item) => ({
-        id: item.id,
-        name: item.name
-      }))
-    }))
+    categories: summarizeCategoriesForLog(categories)
   });
 
   return categories;
@@ -448,10 +626,11 @@ async function createCareer({ category, career }) {
 
 async function seedDefaultCareerCatalog() {
   if (defaultCareerCatalogSeed.length === 0) {
-    return false;
+    return { inserted: 0, ensured: false };
   }
 
   let insertedCount = 0;
+  let existingCount = 0;
 
   for (const entry of defaultCareerCatalogSeed) {
     for (const careerName of entry.careers) {
@@ -460,6 +639,7 @@ async function seedDefaultCareerCatalog() {
         insertedCount += 1;
       } catch (error) {
         if (error instanceof CareerCatalogError && error.code === 'CAREER_ALREADY_EXISTS') {
+          existingCount += 1;
           continue;
         }
 
@@ -472,7 +652,15 @@ async function seedDefaultCareerCatalog() {
     }
   }
 
-  return insertedCount > 0;
+  const ensured = insertedCount > 0 || existingCount > 0;
+
+  console.info('[CareersService] Default career catalog seed summary', {
+    insertedCount,
+    existingCount,
+    ensured
+  });
+
+  return { inserted: insertedCount, ensured };
 }
 
 async function ensureDefaultCareerCatalogSeeded({ force = false } = {}) {
@@ -490,24 +678,27 @@ async function ensureDefaultCareerCatalogSeeded({ force = false } = {}) {
     defaultCareerCatalogSeedPromise = null;
     defaultCareerCatalogSeedCompleted = false;
     defaultCareerCatalogSeedInserted = false;
+    defaultCareerCatalogSeedEnsured = false;
   }
 
   if (defaultCareerCatalogSeedCompleted) {
-    return defaultCareerCatalogSeedInserted;
+    return defaultCareerCatalogSeedEnsured;
   }
 
   if (!defaultCareerCatalogSeedPromise) {
     defaultCareerCatalogSeedPromise = seedDefaultCareerCatalog()
-      .then((inserted) => {
+      .then(({ inserted, ensured }) => {
         defaultCareerCatalogSeedCompleted = true;
-        defaultCareerCatalogSeedInserted = inserted;
-        return inserted;
+        defaultCareerCatalogSeedInserted = inserted > 0;
+        defaultCareerCatalogSeedEnsured = ensured;
+        return defaultCareerCatalogSeedEnsured;
       })
       .catch((error) => {
         console.error('[CareersService] Failed to seed default career catalog', {
           error: error?.message || error
         });
         defaultCareerCatalogSeedPromise = null;
+        defaultCareerCatalogSeedEnsured = false;
         return false;
       });
   }
@@ -519,6 +710,7 @@ function __resetDefaultCareerCatalogSeedForTests() {
   defaultCareerCatalogSeedPromise = null;
   defaultCareerCatalogSeedCompleted = false;
   defaultCareerCatalogSeedInserted = false;
+  defaultCareerCatalogSeedEnsured = false;
 }
 
 async function deleteCareer({ id, category, career } = {}) {
