@@ -161,22 +161,26 @@ export class AdminCareers implements OnInit {
     if (!item || (deletingKey && this.deletingKey() === deletingKey)) {
       return;
     }
-        const itemId = item?.id ?? null;
 
-    if (itemId === null || itemId === undefined) {
-      this.deleteError.set('La carrera seleccionada no tiene un identificador válido.');
-      return;
+    const rawId = item?.id ?? null;
+    let sanitizedId: number | null = null;
+
+    if (rawId !== null && rawId !== undefined && rawId !== '') {
+      const parsedId = Number.parseInt(String(rawId), 10);
+
+      if (!Number.isInteger(parsedId) || parsedId <= 0) {
+        this.deleteError.set('El identificador de la carrera no es válido.');
+        return;
+      }
+
+      sanitizedId = parsedId;
     }
 
-    if (!Number.isFinite(itemId)) {
-      this.deleteError.set('El identificador de la carrera no es válido.');
-      return;
-    }
+    const normalizedCategory = category?.category?.trim() ?? '';
+    const normalizedCareer = item?.name?.trim() ?? '';
 
-    const sanitizedId = Math.trunc(itemId);
-
-    if (!Number.isInteger(sanitizedId) || sanitizedId <= 0) {
-      this.deleteError.set('El identificador de la carrera no es válido.');
+    if (sanitizedId === null && (!normalizedCategory || !normalizedCareer)) {
+      this.deleteError.set('Debes indicar la categoría y el nombre de la carrera a eliminar.');
       return;
     }
 
@@ -190,7 +194,7 @@ export class AdminCareers implements OnInit {
     this.deleteError.set(null);
 
     try {
-      await firstValueFrom(this.careersService.deleteCareer(sanitizedId, category.category, item.name));
+      await firstValueFrom(this.careersService.deleteCareer(sanitizedId, normalizedCategory, normalizedCareer));
       this.catalog.update((entries) => {
         const normalizedCategory = category.category.trim().toLocaleLowerCase('es');
         const normalizedCareer = item.name.trim().toLocaleLowerCase('es');

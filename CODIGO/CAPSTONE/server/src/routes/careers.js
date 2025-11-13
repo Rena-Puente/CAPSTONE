@@ -156,6 +156,10 @@ function registerCareerRoutes(app) {
 
   app.delete('/admin/careers/:careerId', requireAccessToken, async (req, res) => {
     const rawId = req.params?.careerId ?? null;
+    const normalizedPathId =
+      typeof rawId === 'string' && rawId.trim().toLocaleLowerCase('es') === 'by-name'
+        ? null
+        : rawId;
     const bodyCategory = req.body?.category ?? req.body?.categoria ?? null;
     const bodyCareer = req.body?.career ?? req.body?.carrera ?? null;
 
@@ -166,7 +170,7 @@ function registerCareerRoutes(app) {
         return;
       }
 
-      await deleteCareer({ id: rawId, category: bodyCategory, career: bodyCareer });
+      await deleteCareer({ id: normalizedPathId, category: bodyCategory, career: bodyCareer });
 
       return res.json({
         ok: true,
