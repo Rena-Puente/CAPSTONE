@@ -254,10 +254,19 @@ async function listCareerCatalog(category = null) {
     val: normalizedCategory
   };
 
+    console.info('[CareersService] listCareerCatalog -> executing query', {
+    normalizedCategory
+  });
+
   const result = await executeQuery(
     `SELECT carreras_pkg.fn_carreras_por_categoria_json(:category) AS json_data FROM dual`,
     { category: categoryBind }
   );
+
+    console.info('[CareersService] listCareerCatalog -> raw query result', {
+    metaData: result?.metaData,
+    rows: result?.rows
+  });
 
   const row = result.rows?.[0] ?? {};
   const jsonData =
@@ -267,8 +276,30 @@ async function listCareerCatalog(category = null) {
     row.fn_carreras_por_categoria_json ??
     null;
 
-  return parseCareerCatalogJson(jsonData);
+   console.info('[CareersService] listCareerCatalog -> jsonData received', {
+    type: typeof jsonData,
+    preview:
+      typeof jsonData === 'string' && jsonData.length > 200
+        ? `${jsonData.slice(0, 200)}...`
+        : jsonData
+  });
+
+  const categories = parseCareerCatalogJson(jsonData);
+
+  console.info('[CareersService] listCareerCatalog -> parsed categories', {
+    categoryCount: categories.length,
+    categories: categories.map((entry) => ({
+      category: entry.category,
+      items: entry.items.map((item) => ({
+        id: item.id,
+        name: item.name
+      }))
+    }))
+  });
+
+  return categories;
 }
+
 
 async function createCareer({ category, career }) {
   const normalizedCategory = normalizeCategory(category, { required: true });
