@@ -1,4 +1,5 @@
 const { executeQuery, oracledb } = require('../db/oracle');
+const defaultCareerCatalogDataset = require('../data/default-career-catalog.json');
 
 const MAX_CATEGORY_LENGTH = 100;
 const MAX_CAREER_LENGTH = 150;
@@ -23,6 +24,98 @@ function sanitizeString(value) {
 
   return String(value).trim();
 }
+
+function normalizeDefaultCareerSeedDataset(rawDataset) {
+  if (!rawDataset) {
+    return [];
+  }
+
+  const sourceArray = Array.isArray(rawDataset)
+    ? rawDataset
+    : Array.isArray(rawDataset.categories)
+    ? rawDataset.categories
+    : [];
+
+  const categories = [];
+
+  for (const entry of sourceArray) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+
+    const rawCategory =
+      typeof entry.category === 'string'
+        ? entry.category
+        : typeof entry.categoria === 'string'
+        ? entry.categoria
+        : typeof entry.CATEGORY === 'string'
+        ? entry.CATEGORY
+        : typeof entry.CATEGORIA === 'string'
+        ? entry.CATEGORIA
+        : null;
+    const category = sanitizeString(rawCategory);
+
+    if (!category) {
+      continue;
+    }
+
+    const rawItems = entry.items ?? entry.careers ?? entry.CARRERAS ?? null;
+    if (!Array.isArray(rawItems) || rawItems.length === 0) {
+      continue;
+    }
+
+    const uniqueCareers = new Map();
+
+    for (const rawItem of rawItems) {
+      let name = '';
+
+      if (typeof rawItem === 'string') {
+        name = sanitizeString(rawItem);
+      } else if (rawItem && typeof rawItem === 'object') {
+        const candidate =
+          typeof rawItem.career === 'string'
+            ? rawItem.career
+            : typeof rawItem.carrera === 'string'
+            ? rawItem.carrera
+            : typeof rawItem.name === 'string'
+            ? rawItem.name
+            : typeof rawItem.CAREER === 'string'
+            ? rawItem.CAREER
+            : typeof rawItem.CARRERA === 'string'
+            ? rawItem.CARRERA
+            : typeof rawItem.NAME === 'string'
+            ? rawItem.NAME
+            : null;
+        name = sanitizeString(candidate);
+      }
+
+      if (!name) {
+        continue;
+      }
+
+      const key = name.toLocaleLowerCase('es');
+      if (!uniqueCareers.has(key)) {
+        uniqueCareers.set(key, name);
+      }
+    }
+
+    if (uniqueCareers.size === 0) {
+      continue;
+    }
+
+    categories.push({
+      category,
+      careers: Array.from(uniqueCareers.values())
+    });
+  }
+
+  return categories;
+}
+
+const defaultCareerCatalogSeed = normalizeDefaultCareerSeedDataset(defaultCareerCatalogDataset);
+let defaultCareerCatalogSeedPromise = null;
+let defaultCareerCatalogSeedCompleted = false;
+let defaultCareerCatalogSeedInserted = false;
 
 function normalizeCategory(value, { required = true } = {}) {
   const category = sanitizeString(value);
@@ -246,7 +339,7 @@ function parseCareerCatalogJson(rawJson) {
   return categories;
 }
 
-async function listCareerCatalog(category = null) {
+async function listCareerCatalog(category = null, { allowSeed = true } = {}) {
   const normalizedCategory = normalizeCategory(category, { required: false });
   const categoryBind = {
     dir: oracledb.BIND_IN,
@@ -285,6 +378,14 @@ async function listCareerCatalog(category = null) {
   });
 
   const categories = parseCareerCatalogJson(jsonData);
+
+  if (allowSeed && categories.length === 0) {
+    const seeded = await ensureDefaultCareerCatalogSeeded();
+
+    if (seeded) {
+      return listCareerCatalog(category, { allowSeed: false });
+    }
+  }
 
   console.info('[CareersService] listCareerCatalog -> parsed categories', {
     categoryCount: categories.length,
@@ -344,6 +445,65 @@ async function createCareer({ category, career }) {
   }
 }
 
+async function seedDefaultCareerCatalog() {
+  if (defaultCareerCatalogSeed.length === 0) {
+    return false;
+  }
+
+  let insertedCount = 0;
+
+  for (const entry of defaultCareerCatalogSeed) {
+    for (const careerName of entry.careers) {
+      try {
+        await createCareer({ category: entry.category, career: careerName });
+        insertedCount += 1;
+      } catch (error) {
+        if (error instanceof CareerCatalogError && error.code === 'CAREER_ALREADY_EXISTS') {
+          continue;
+        }
+
+        console.error('[CareersService] Failed to seed default career entry', {
+          category: entry.category,
+          career: careerName,
+          error: error?.message || error
+        });
+      }
+    }
+  }
+
+  return insertedCount > 0;
+}
+
+async function ensureDefaultCareerCatalogSeeded() {
+  if (defaultCareerCatalogSeedCompleted) {
+    return defaultCareerCatalogSeedInserted;
+  }
+
+  if (!defaultCareerCatalogSeedPromise) {
+    defaultCareerCatalogSeedPromise = seedDefaultCareerCatalog()
+      .then((inserted) => {
+        defaultCareerCatalogSeedCompleted = true;
+        defaultCareerCatalogSeedInserted = inserted;
+        return inserted;
+      })
+      .catch((error) => {
+        console.error('[CareersService] Failed to seed default career catalog', {
+          error: error?.message || error
+        });
+        defaultCareerCatalogSeedPromise = null;
+        return false;
+      });
+  }
+
+  return defaultCareerCatalogSeedPromise;
+}
+
+function __resetDefaultCareerCatalogSeedForTests() {
+  defaultCareerCatalogSeedPromise = null;
+  defaultCareerCatalogSeedCompleted = false;
+  defaultCareerCatalogSeedInserted = false;
+}
+
 async function deleteCareer({ id, category, career } = {}) {
   let normalizedId = null;
 
@@ -393,5 +553,6 @@ module.exports = {
   CareerCatalogError,
   listCareerCatalog,
   createCareer,
-  deleteCareer
+  deleteCareer,
+  __resetDefaultCareerCatalogSeedForTests
 };

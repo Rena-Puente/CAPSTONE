@@ -3,6 +3,7 @@ const { test, beforeEach } = require('node:test');
 const path = require('node:path');
 
 const moduleCache = require.cache;
+const defaultCatalogSeed = require('../../src/data/default-career-catalog.json');
 
 function registerOracleMock() {
   const modulePath = path.resolve(__dirname, '../../src/db/oracle.js');
@@ -35,6 +36,9 @@ beforeEach(() => {
   oracleMock.__setExecuteQueryMock(async () => {
     throw new Error('executeQuery mock not configured');
   });
+  if (typeof careersService.__resetDefaultCareerCatalogSeedForTests === 'function') {
+    careersService.__resetDefaultCareerCatalogSeedForTests();
+  }
 });
 
 test('listCareerCatalog parses item collections provided as JSON strings', async () => {
@@ -82,4 +86,78 @@ test('listCareerCatalog parses item collections provided as JSON strings', async
       { id: 12, name: 'QA Automation' }
     ]
   });
+});
+
+test('listCareerCatalog seeds default catalog when database returns an empty response', async () => {
+  const queryResponses = [
+    {
+      rows: [
+        {
+          JSON_DATA: '[]'
+        }
+      ]
+    },
+    {
+      rows: [
+        {
+          JSON_DATA: JSON.stringify(
+            (Array.isArray(defaultCatalogSeed) ? defaultCatalogSeed : []).map((entry, categoryIndex) => ({
+              categoria: entry.category,
+              items: entry.items.map((name, itemIndex) => ({
+                id: categoryIndex * 100 + itemIndex + 1,
+                carrera: name
+              }))
+            }))
+          )
+        }
+      ]
+    }
+  ];
+
+  let createCalls = 0;
+
+  oracleMock.__setExecuteQueryMock(async (sql) => {
+    if (/fn_carreras_por_categoria_json/.test(sql)) {
+      if (queryResponses.length === 0) {
+        return { rows: [{ JSON_DATA: '[]' }] };
+      }
+
+      return queryResponses.shift();
+    }
+
+    if (/sp_carrera_crear/.test(sql)) {
+      createCalls += 1;
+      return { outBinds: { careerId: createCalls } };
+    }
+
+    throw new Error(`Unexpected SQL in test: ${sql}`);
+  });
+
+  const result = await careersService.listCareerCatalog();
+
+  assert.equal(createCalls > 0, true);
+  assert.equal(result.length > 0, true);
+
+  const expected = (Array.isArray(defaultCatalogSeed) ? defaultCatalogSeed : [])
+    .map((entry) => ({
+      category: entry.category.trim(),
+      items: entry.items
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0)
+        .sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+
+  const normalizedResult = result
+    .map((entry) => ({
+      category: entry.category,
+      items: entry.items.map((item) => item.name)
+    }))
+    .map((entry) => ({
+      category: entry.category,
+      items: entry.items.sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }))
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+
+  assert.deepEqual(normalizedResult, expected);
 });
