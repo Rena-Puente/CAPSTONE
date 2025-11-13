@@ -113,10 +113,6 @@ function normalizeDefaultCareerSeedDataset(rawDataset) {
 }
 
 const defaultCareerCatalogSeed = normalizeDefaultCareerSeedDataset(defaultCareerCatalogDataset);
-let defaultCareerCatalogSeedPromise = null;
-let defaultCareerCatalogSeedCompleted = false;
-let defaultCareerCatalogSeedInserted = false;
-let defaultCareerCatalogSeedEnsured = false;
 
 function normalizeCategory(value, { required = true } = {}) {
   const category = sanitizeString(value);
@@ -551,18 +547,10 @@ function buildCareerCatalogFromSeed(normalizedCategory) {
   return categories;
 }
 
-async function listCareerCatalog(category = null, { allowSeed = true } = {}) {
+async function listCareerCatalog(category = null) {
   const normalizedCategory = normalizeCategory(category, { required: false });
 
   let categories = await executeCareerCatalogQuery(normalizedCategory);
-
-  if (categories.length === 0 && allowSeed) {
-    await ensureDefaultCareerCatalogSeeded({
-      force: defaultCareerCatalogSeedInserted
-    });
-
-    return listCareerCatalog(category, { allowSeed: false });
-  }
 
   if (categories.length === 0) {
     categories = await fetchCareerCatalogFromTable(normalizedCategory);
@@ -624,95 +612,6 @@ async function createCareer({ category, career }) {
   }
 }
 
-async function seedDefaultCareerCatalog() {
-  if (defaultCareerCatalogSeed.length === 0) {
-    return { inserted: 0, ensured: false };
-  }
-
-  let insertedCount = 0;
-  let existingCount = 0;
-
-  for (const entry of defaultCareerCatalogSeed) {
-    for (const careerName of entry.careers) {
-      try {
-        await createCareer({ category: entry.category, career: careerName });
-        insertedCount += 1;
-      } catch (error) {
-        if (error instanceof CareerCatalogError && error.code === 'CAREER_ALREADY_EXISTS') {
-          existingCount += 1;
-          continue;
-        }
-
-        console.error('[CareersService] Failed to seed default career entry', {
-          category: entry.category,
-          career: careerName,
-          error: error?.message || error
-        });
-      }
-    }
-  }
-
-  const ensured = insertedCount > 0 || existingCount > 0;
-
-  console.info('[CareersService] Default career catalog seed summary', {
-    insertedCount,
-    existingCount,
-    ensured
-  });
-
-  return { inserted: insertedCount, ensured };
-}
-
-async function ensureDefaultCareerCatalogSeeded({ force = false } = {}) {
-  if (force) {
-    if (defaultCareerCatalogSeedPromise) {
-      try {
-        await defaultCareerCatalogSeedPromise;
-      } catch (error) {
-        console.error('[CareersService] Default career catalog seed promise failed before force reload', {
-          error: error?.message || error
-        });
-      }
-    }
-
-    defaultCareerCatalogSeedPromise = null;
-    defaultCareerCatalogSeedCompleted = false;
-    defaultCareerCatalogSeedInserted = false;
-    defaultCareerCatalogSeedEnsured = false;
-  }
-
-  if (defaultCareerCatalogSeedCompleted) {
-    return defaultCareerCatalogSeedEnsured;
-  }
-
-  if (!defaultCareerCatalogSeedPromise) {
-    defaultCareerCatalogSeedPromise = seedDefaultCareerCatalog()
-      .then(({ inserted, ensured }) => {
-        defaultCareerCatalogSeedCompleted = true;
-        defaultCareerCatalogSeedInserted = inserted > 0;
-        defaultCareerCatalogSeedEnsured = ensured;
-        return defaultCareerCatalogSeedEnsured;
-      })
-      .catch((error) => {
-        console.error('[CareersService] Failed to seed default career catalog', {
-          error: error?.message || error
-        });
-        defaultCareerCatalogSeedPromise = null;
-        defaultCareerCatalogSeedEnsured = false;
-        return false;
-      });
-  }
-
-  return defaultCareerCatalogSeedPromise;
-}
-
-function __resetDefaultCareerCatalogSeedForTests() {
-  defaultCareerCatalogSeedPromise = null;
-  defaultCareerCatalogSeedCompleted = false;
-  defaultCareerCatalogSeedInserted = false;
-  defaultCareerCatalogSeedEnsured = false;
-}
-
 async function deleteCareer({ id, category, career } = {}) {
   let normalizedId = null;
 
@@ -762,6 +661,5 @@ module.exports = {
   CareerCatalogError,
   listCareerCatalog,
   createCareer,
-  deleteCareer,
-  __resetDefaultCareerCatalogSeedForTests
+  deleteCareer
 };
