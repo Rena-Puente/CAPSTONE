@@ -511,37 +511,6 @@ async function fetchCareerCatalogFromTable(normalizedCategory) {
   return categories;
 }
 
-function buildCareerCatalogFromSeed(normalizedCategory) {
-  if (!Array.isArray(defaultCareerCatalogSeed) || defaultCareerCatalogSeed.length === 0) {
-    return [];
-  }
-
-  const filteredSeed = normalizedCategory
-    ? defaultCareerCatalogSeed.filter(
-        (entry) => entry.category.localeCompare(normalizedCategory, 'es', { sensitivity: 'base' }) === 0
-      )
-    : defaultCareerCatalogSeed;
-
-  const categories = filteredSeed
-    .map((entry) => ({
-      category: entry.category,
-      items: entry.careers
-        .map((name) => sanitizeString(name))
-        .filter((name) => name.length > 0)
-        .map((name) => ({ id: null, name }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
-    }))
-    .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
-
-  if (categories.length > 0) {
-    console.info('[CareersService] listCareerCatalog -> using in-memory seed fallback', {
-      categoryCount: categories.length,
-      categories: summarizeCategoriesForLog(categories)
-    });
-  }
-
-  return categories;
-}
 
 async function listCareerCatalog(category = null) {
   const normalizedCategory = normalizeCategory(category, { required: false });
@@ -552,9 +521,6 @@ async function listCareerCatalog(category = null) {
     categories = await fetchCareerCatalogFromTable(normalizedCategory);
   }
 
-  if (categories.length === 0) {
-    categories = buildCareerCatalogFromSeed(normalizedCategory);
-  }
 
   console.info('[CareersService] listCareerCatalog -> returning categories', {
     categoryCount: categories.length,

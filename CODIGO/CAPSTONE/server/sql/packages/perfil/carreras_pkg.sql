@@ -38,13 +38,13 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
       RAISE_APPLICATION_ERROR(-20002, 'La carrera es obligatoria.');
     END IF;
 
-    -- prevenir duplicado (categoria + carrera) case/space-insensitive
     BEGIN
       SELECT 1 INTO v_dummy
         FROM carreras
        WHERE UPPER(TRIM(categoria)) = UPPER(TRIM(p_categoria))
          AND UPPER(TRIM(carrera))   = UPPER(TRIM(p_carrera))
        FETCH FIRST 1 ROWS ONLY;
+
       RAISE_APPLICATION_ERROR(-20003, 'Ya existe esa carrera en la categoría indicada.');
     EXCEPTION
       WHEN NO_DATA_FOUND THEN NULL;
@@ -58,7 +58,7 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
   END sp_carrera_crear;
 
   --------------------------------------------------------------------
-  -- Eliminar carrera (por id o por categoria+carrera)
+  -- Eliminar carrera
   --------------------------------------------------------------------
   PROCEDURE sp_carrera_eliminar(
     p_id_carrera IN NUMBER   DEFAULT NULL,
@@ -88,38 +88,13 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
   END sp_carrera_eliminar;
 
   --------------------------------------------------------------------
-  -- Listar como JSON agrupado por categoría (ordenado y compatible)
-  -- Formato:
-  -- [
-  --   {"categoria":"X","items":[{"id":1,"carrera":"A"}, ...]},
-  --   {"categoria":"Y","items":[...]}
-  -- ]
+  -- Listar como JSON agrupado por categoría
   --------------------------------------------------------------------
   FUNCTION fn_carreras_por_categoria_json(
     p_categoria IN VARCHAR2 DEFAULT NULL
   ) RETURN CLOB IS
-    v_json            CLOB := '[]';
-    v_categoria_filtro carreras.categoria%TYPE := NULL;
+    v_json CLOB;
   BEGIN
-    /*
-      Notas de implementación:
-      - Se usa XMLAGG para concatenar piezas JSON en CLOB con ORDER BY,
-        evitando problemas de versiones con JSON_ARRAYAGG ORDER BY.
-      - Se garantizan dos órdenes:
-          * Categorías: alfabético
-          * Carreras dentro de cada categoría: alfabético
-      - Si no existen filas que cumplan con el filtro se retorna "[]"
-        en lugar de propagar NO_DATA_FOUND, facilitando el consumo
-        desde el API.
-    */
-
-    IF p_categoria IS NOT NULL THEN
-      v_categoria_filtro := TRIM(p_categoria);
-      IF v_categoria_filtro IS NULL OR LENGTH(v_categoria_filtro) = 0 THEN
-        v_categoria_filtro := NULL;
-      END IF;
-    END IF;
-
     SELECT
       '[' ||
       NVL(
@@ -162,32 +137,21 @@ CREATE OR REPLACE PACKAGE BODY carreras_pkg AS
               ''
             ) ||
             ']'
-          ) FORMAT JSON
+          )
           RETURNING CLOB
         ) AS cat_json
-      FROM (
-        SELECT
-          TRIM(categoria) AS categoria,
-          id_carrera,
-          TRIM(carrera)   AS carrera
-        FROM carreras
-        WHERE categoria IS NOT NULL
-          AND carrera   IS NOT NULL
-          AND TRIM(categoria) <> ''
-          AND TRIM(carrera)   <> ''
-          AND (
-            v_categoria_filtro IS NULL OR
-            UPPER(TRIM(categoria)) = UPPER(v_categoria_filtro)
-          )
-      )
+      FROM carreras
+      WHERE
+        p_categoria IS NULL
+        OR UPPER(TRIM(categoria)) = UPPER(TRIM(p_categoria))
       GROUP BY categoria
     );
 
     RETURN NVL(v_json, '[]');
+
   EXCEPTION
     WHEN NO_DATA_FOUND THEN
       RETURN '[]';
   END fn_carreras_por_categoria_json;
 
 END carreras_pkg;
-/
