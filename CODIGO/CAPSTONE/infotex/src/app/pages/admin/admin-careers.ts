@@ -165,7 +165,7 @@ export class AdminCareers implements OnInit {
     const rawId = item?.id ?? null;
     let sanitizedId: number | null = null;
 
-    if (rawId !== null && rawId !== undefined && rawId !== '') {
+    if (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') {
       const parsedId = Number.parseInt(String(rawId), 10);
 
       if (!Number.isInteger(parsedId) || parsedId <= 0) {
