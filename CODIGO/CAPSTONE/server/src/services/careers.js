@@ -1,5 +1,4 @@
 const { executeQuery, oracledb } = require('../db/oracle');
-const defaultCareerCatalogDataset = require('../data/default-career-catalog.json');
 
 const MAX_CATEGORY_LENGTH = 100;
 const MAX_CAREER_LENGTH = 150;
@@ -111,9 +110,6 @@ function normalizeDefaultCareerSeedDataset(rawDataset) {
 
   return categories;
 }
-
-const defaultCareerCatalogSeed = normalizeDefaultCareerSeedDataset(defaultCareerCatalogDataset);
-
 function normalizeCategory(value, { required = true } = {}) {
   const category = sanitizeString(value);
 
