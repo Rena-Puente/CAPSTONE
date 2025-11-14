@@ -10,6 +10,7 @@ const { registerSkillRoutes } = require('./routes/skills');
 const { registerCompanyRoutes } = require('./routes/companies');
 const { registerOfferRoutes } = require('./routes/offers');
 const { registerCareerRoutes } = require('./routes/careers');
+const { registerStudyHouseRoutes } = require('./routes/study-houses');
 const { registerApplicationRoutes } = require('./routes/applications');
 
 function createApp() {
@@ -27,6 +28,7 @@ function createApp() {
   registerCompanyRoutes(app);
   registerOfferRoutes(app);
   registerCareerRoutes(app);
+  registerStudyHouseRoutes(app);
   registerApplicationRoutes(app);
 
   return app;
