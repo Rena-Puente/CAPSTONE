@@ -164,6 +164,173 @@
 
   <div class="admin-careers__divider" role="presentation"></div>
 
+  <section class="admin-skills">
+    <header class="admin-skills__header">
+      <h3 class="admin-skills__title">Habilidades</h3>
+      <p class="admin-skills__subtitle">
+        Administra el catálogo de habilidades disponibles para los perfiles y las postulaciones.
+      </p>
+    </header>
+
+    <form
+      class="admin-careers__form admin-skills__form"
+      [formGroup]="skillForm"
+      (ngSubmit)="createSkill()"
+      novalidate
+    >
+      <div class="admin-careers__form-grid">
+        <div class="admin-careers__field">
+          <label for="skillCategory" class="admin-careers__label">Categoría</label>
+          <input
+            type="text"
+            id="skillCategory"
+            class="admin-careers__control"
+            placeholder="Ej. Lenguajes de programación"
+            formControlName="category"
+            [class.is-invalid]="shouldShowSkillError('category')"
+          />
+          <div class="admin-careers__error" *ngIf="getSkillControlError('category')">
+            {{ getSkillControlError('category') }}
+          </div>
+        </div>
+
+        <div class="admin-careers__field">
+          <label for="skillName" class="admin-careers__label">Habilidad</label>
+          <input
+            type="text"
+            id="skillName"
+            class="admin-careers__control"
+            placeholder="Ej. Angular"
+            formControlName="skill"
+            [class.is-invalid]="shouldShowSkillError('skill')"
+          />
+          <div class="admin-careers__error" *ngIf="getSkillControlError('skill')">
+            {{ getSkillControlError('skill') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-careers__actions">
+        <button type="submit" class="admin-careers__submit" [disabled]="skillIsSubmitting()">
+          <span class="admin-careers__spinner" *ngIf="skillIsSubmitting()" aria-hidden="true"></span>
+          Agregar habilidad
+        </button>
+        <span class="admin-careers__feedback admin-careers__feedback--success" *ngIf="skillSubmitSuccess()">
+          {{ skillSubmitSuccess() }}
+        </span>
+        <span class="admin-careers__feedback admin-careers__feedback--error" *ngIf="skillSubmitError()">
+          {{ skillSubmitError() }}
+        </span>
+      </div>
+    </form>
+
+    <section class="admin-careers__catalog admin-skills__catalog">
+      <div class="admin-careers__catalog-controls">
+        <button
+          type="button"
+          class="admin-careers__catalog-toggle"
+          (click)="toggleSkillCatalog()"
+          [attr.aria-expanded]="isSkillCatalogExpanded()"
+          aria-controls="adminSkillsCatalogPanel"
+        >
+          {{ isSkillCatalogExpanded() ? 'Ocultar catálogo' : 'Mostrar catálogo' }}
+        </button>
+
+        <span class="admin-careers__hint" *ngIf="!isSkillCatalogExpanded()">
+          Expande el catálogo cuando necesites revisar las habilidades registradas.
+        </span>
+      </div>
+
+      <div
+        *ngIf="isSkillCatalogExpanded()"
+        id="adminSkillsCatalogPanel"
+        class="admin-careers__catalog-panel"
+        aria-live="polite"
+      >
+        <div class="admin-careers__hint" *ngIf="skillsLoading()">Cargando catálogo...</div>
+
+        <div class="admin-careers__alert admin-careers__alert--error" *ngIf="skillsError()">
+          {{ skillsError() }}
+          <button type="button" class="admin-careers__retry" (click)="refreshSkills()">Reintentar</button>
+        </div>
+
+        <ng-container *ngIf="!skillsLoading() && !skillsError()">
+          <div class="admin-careers__hint" *ngIf="skills().length === 0">
+            Aún no hay habilidades registradas.
+          </div>
+
+          <div *ngIf="skills().length > 0" class="admin-careers__catalog-header">
+            <div class="admin-careers__catalog-header-text">
+              <h3 class="admin-careers__catalog-title">Catálogo de habilidades</h3>
+              <p class="admin-careers__catalog-subtitle">
+                Consulta y gestiona las habilidades disponibles en el sistema.
+              </p>
+            </div>
+            <span class="admin-careers__catalog-total">
+              {{ totalSkills() }} {{ totalSkills() === 1 ? 'habilidad' : 'habilidades' }}
+            </span>
+          </div>
+
+          <div class="admin-careers__list-wrapper" *ngIf="skillsByCategory().length > 0">
+            <ul class="admin-careers__hierarchy" aria-label="Catálogo de habilidades">
+              <li class="admin-careers__hierarchy-root">
+                <div class="admin-careers__root-label">
+                  <span class="admin-careers__root-text">Habilidades</span>
+                  <span class="admin-careers__count">
+                    {{ totalSkills() }} {{ totalSkills() === 1 ? 'habilidad' : 'habilidades' }}
+                  </span>
+                </div>
+
+                <ul class="admin-careers__categories-list">
+                  <li class="admin-careers__category-item" *ngFor="let group of skillsByCategory()">
+                    <div class="admin-careers__category-label">
+                      <span class="admin-careers__category-name">{{ group.category }}</span>
+                      <span class="admin-careers__count">
+                        {{ group.items.length }}
+                        {{ group.items.length === 1 ? 'habilidad' : 'habilidades' }}
+                      </span>
+                    </div>
+
+                    <ul class="admin-careers__careers-list">
+                      <li class="admin-careers__career-item" *ngFor="let skill of group.items">
+                        <div class="admin-careers__option" [attr.data-skill-id]="skill.id ?? 'sin-id'">
+                          <div class="admin-careers__option-info">
+                            <span
+                              class="admin-careers__badge"
+                              [class.admin-careers__badge--empty]="!skill.id"
+                              >{{ skill.id ?? 'Sin ID' }}</span
+                            >
+                            <span class="admin-careers__option-name">{{ skill.name }}</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            class="admin-careers__delete"
+                            (click)="deleteSkill(skill)"
+                            [disabled]="isSkillDeleting(skill)"
+                          >
+                            <span class="admin-careers__spinner" *ngIf="isSkillDeleting(skill)" aria-hidden="true"></span>
+                            <span>{{ isSkillDeleting(skill) ? 'Eliminando…' : 'Eliminar' }}</span>
+                          </button>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </ng-container>
+
+        <div class="admin-careers__alert admin-careers__alert--error" *ngIf="skillDeleteError()">
+          {{ skillDeleteError() }}
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <div class="admin-careers__divider" role="presentation"></div>
+
   <section class="admin-study-houses">
     <header class="admin-study-houses__header">
       <h3 class="admin-study-houses__title">Casas de estudios</h3>

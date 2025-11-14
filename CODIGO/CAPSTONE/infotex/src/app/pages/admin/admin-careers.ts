@@ -11,9 +11,19 @@ import {
   StudyHousesAdminService,
   StudyHouseItem
 } from '../../services/study-houses-admin.service';
+import {
+  SkillCatalogItem,
+  SkillsAdminService
+} from '../../services/skills-admin.service';
 
 type CareerFormControl = 'category' | 'career';
 type StudyHouseFormControl = 'house';
+type SkillFormControl = 'category' | 'skill';
+
+interface SkillCatalogGroup {
+  category: string;
+  items: SkillCatalogItem[];
+}
 
 @Component({
   selector: 'app-admin-careers',
@@ -26,6 +36,7 @@ export class AdminCareers {
   private readonly fb = inject(FormBuilder);
   private readonly careersService = inject(CareersAdminService);
   private readonly studyHousesService = inject(StudyHousesAdminService);
+  private readonly skillsService = inject(SkillsAdminService);
 
   protected readonly catalog = signal<CareerCatalogCategory[]>([]);
   protected readonly loading = signal(false);
@@ -55,6 +66,39 @@ export class AdminCareers {
   protected readonly isHouseCatalogExpanded = signal(false);
   private readonly hasLoadedHouses = signal(false);
   protected readonly totalStudyHouses = computed(() => this.houses().length);
+
+  protected readonly skillForm = this.fb.nonNullable.group({
+    category: ['', [Validators.required, Validators.maxLength(100)]],
+    skill: ['', [Validators.required, Validators.maxLength(150)]]
+  });
+  protected readonly skills = signal<SkillCatalogItem[]>([]);
+  protected readonly skillsLoading = signal(false);
+  protected readonly skillsError = signal<string | null>(null);
+  protected readonly skillIsSubmitting = signal(false);
+  protected readonly skillSubmitError = signal<string | null>(null);
+  protected readonly skillSubmitSuccess = signal<string | null>(null);
+  protected readonly skillDeletingKey = signal<string | null>(null);
+  protected readonly skillDeleteError = signal<string | null>(null);
+  protected readonly isSkillCatalogExpanded = signal(false);
+  private readonly hasLoadedSkills = signal(false);
+  protected readonly totalSkills = computed(() => this.skills().length);
+  protected readonly skillsByCategory = computed<SkillCatalogGroup[]>(() => {
+    const groups = new Map<string, SkillCatalogItem[]>();
+
+    for (const skill of this.skills()) {
+      const normalizedCategory = skill.category.trim() || 'Sin categoría';
+      const current = groups.get(normalizedCategory) ?? [];
+      current.push(skill);
+      groups.set(normalizedCategory, current);
+    }
+
+    return Array.from(groups.entries())
+      .map(([category, items]) => ({
+        category,
+        items: [...items].sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+      }))
+      .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+  });
 
   protected readonly form = this.fb.nonNullable.group({
     category: ['', [Validators.required, Validators.maxLength(100)]],
@@ -109,6 +153,31 @@ export class AdminCareers {
     await this.loadStudyHouses();
   }
 
+  protected async loadSkills(): Promise<void> {
+    this.skillsLoading.set(true);
+    this.skillsError.set(null);
+
+    try {
+      const skills = await firstValueFrom(this.skillsService.getCatalog());
+      this.skills.set(skills);
+      this.hasLoadedSkills.set(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar el catálogo de habilidades.';
+      this.skillsError.set(message);
+      this.skills.set([]);
+      this.hasLoadedSkills.set(false);
+    } finally {
+      this.skillsLoading.set(false);
+    }
+  }
+
+  protected async refreshSkills(): Promise<void> {
+    await this.loadSkills();
+  }
+
   protected shouldShowError(control: CareerFormControl): boolean {
     const field = this.form.controls[control];
     return field.invalid && (field.dirty || field.touched || this.isSubmitting());
@@ -131,6 +200,33 @@ export class AdminCareers {
       return control === 'category'
         ? 'La categoría puede tener como máximo 100 caracteres.'
         : 'El nombre de la carrera puede tener como máximo 150 caracteres.';
+    }
+
+    return null;
+  }
+
+  protected shouldShowSkillError(control: SkillFormControl): boolean {
+    const field = this.skillForm.controls[control];
+    return field.invalid && (field.dirty || field.touched || this.skillIsSubmitting());
+  }
+
+  protected getSkillControlError(control: SkillFormControl): string | null {
+    const field = this.skillForm.controls[control];
+
+    if (!this.shouldShowSkillError(control)) {
+      return null;
+    }
+
+    if (field.hasError('required')) {
+      return control === 'category'
+        ? 'La categoría es obligatoria.'
+        : 'El nombre de la habilidad es obligatorio.';
+    }
+
+    if (field.hasError('maxlength')) {
+      return control === 'category'
+        ? 'La categoría puede tener como máximo 100 caracteres.'
+        : 'El nombre de la habilidad puede tener como máximo 150 caracteres.';
     }
 
     return null;
@@ -165,6 +261,15 @@ export class AdminCareers {
 
     if (expanded && !this.hasLoadedCatalog()) {
       void this.loadCatalog();
+    }
+  }
+
+  protected toggleSkillCatalog(): void {
+    const expanded = !this.isSkillCatalogExpanded();
+    this.isSkillCatalogExpanded.set(expanded);
+
+    if (expanded && !this.hasLoadedSkills()) {
+      void this.loadSkills();
     }
   }
 
@@ -313,6 +418,141 @@ export class AdminCareers {
       this.deleteError.set(message);
     } finally {
       this.deletingKey.set(null);
+    }
+  }
+
+  protected async createSkill(): Promise<void> {
+    this.skillSubmitError.set(null);
+    this.skillSubmitSuccess.set(null);
+    this.skillForm.markAllAsTouched();
+
+    if (this.skillForm.invalid) {
+      return;
+    }
+
+    this.skillIsSubmitting.set(true);
+
+    const raw = this.skillForm.getRawValue();
+    const category = raw.category.trim();
+    const skill = raw.skill.trim();
+
+    try {
+      const created = await firstValueFrom(this.skillsService.createSkill(category, skill));
+
+      this.skills.update((entries) => {
+        const updated = [...entries, created];
+        return updated.sort((a, b) => {
+          const categoryComparison = a.category.localeCompare(b.category, 'es', {
+            sensitivity: 'base'
+          });
+
+          if (categoryComparison !== 0) {
+            return categoryComparison;
+          }
+
+          return a.name.localeCompare(b.name, 'es', { sensitivity: 'base' });
+        });
+      });
+
+      this.skillForm.reset({ category: '', skill: '' });
+      this.skillForm.markAsPristine();
+      this.skillForm.markAsUntouched();
+      this.skillSubmitSuccess.set('La habilidad se creó correctamente.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo crear la habilidad.';
+      this.skillSubmitError.set(message);
+    } finally {
+      this.skillIsSubmitting.set(false);
+    }
+  }
+
+  private buildSkillKey(item: SkillCatalogItem): string {
+    if (item?.id) {
+      return `id:${item.id}`;
+    }
+
+    const normalizedCategory = item.category.trim().toLocaleLowerCase('es');
+    const normalizedName = item.name.trim().toLocaleLowerCase('es');
+
+    return `name:${normalizedCategory}|${normalizedName}`;
+  }
+
+  protected isSkillDeleting(item: SkillCatalogItem): boolean {
+    const key = this.buildSkillKey(item);
+    const current = this.skillDeletingKey();
+
+    if (!key || !current) {
+      return false;
+    }
+
+    return current === key;
+  }
+
+  protected async deleteSkill(item: SkillCatalogItem): Promise<void> {
+    const deletingKey = this.buildSkillKey(item);
+
+    if (!item || (deletingKey && this.skillDeletingKey() === deletingKey)) {
+      return;
+    }
+
+    const rawId = item?.id ?? null;
+    let sanitizedId: number | null = null;
+
+    if (rawId !== null && rawId !== undefined && String(rawId).trim() !== '') {
+      const parsedId = Number.parseInt(String(rawId), 10);
+
+      if (!Number.isInteger(parsedId) || parsedId <= 0) {
+        this.skillDeleteError.set('El identificador de la habilidad no es válido.');
+        return;
+      }
+
+      sanitizedId = parsedId;
+    }
+
+    const normalizedName = item.name.trim();
+
+    if (sanitizedId === null && !normalizedName) {
+      this.skillDeleteError.set('Debes indicar el nombre de la habilidad a eliminar.');
+      return;
+    }
+
+    const categoryLabel = item.category.trim();
+    const confirmMessage = categoryLabel
+      ? `¿Deseas eliminar la habilidad "${item.name}" de "${categoryLabel}"?`
+      : `¿Deseas eliminar la habilidad "${item.name}"?`;
+
+    const confirmed = window.confirm(confirmMessage);
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.skillDeletingKey.set(deletingKey);
+    this.skillDeleteError.set(null);
+
+    try {
+      await firstValueFrom(this.skillsService.deleteSkill(sanitizedId, normalizedName));
+      const normalizedCategory = item.category.trim().toLocaleLowerCase('es');
+      const normalizedSkill = normalizedName.trim().toLocaleLowerCase('es');
+      const targetId = sanitizedId;
+
+      this.skills.update((entries) =>
+        entries.filter((current) => {
+          if (targetId && current.id) {
+            return current.id !== targetId;
+          }
+
+          return !(
+            current.category.trim().toLocaleLowerCase('es') === normalizedCategory &&
+            current.name.trim().toLocaleLowerCase('es') === normalizedSkill
+          );
+        })
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo eliminar la habilidad.';
+      this.skillDeleteError.set(message);
+    } finally {
+      this.skillDeletingKey.set(null);
     }
   }
 
