@@ -31,13 +31,25 @@ export class CompanyOfferCreate implements OnInit {
   protected readonly submitSuccess = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly submitAttempted = signal(false);
+  protected readonly customLocationTypeFlag = '__custom__';
+
+  protected readonly locationTypeOptions = ['Remoto', 'Híbrido', 'Presencial'];
+  protected readonly contractTypeOptions = ['Indefinido', 'Plazo fijo', '3 meses', '6 meses'];
+  protected readonly countryOptions = ['Chile'];
+
+  protected readonly locationTypeSelection = signal('');
+  protected readonly customLocationTypeValue = signal('');
+  protected readonly shouldShowCustomLocationTypeInput = computed(
+    () => this.locationTypeSelection() === this.customLocationTypeFlag
+  );
+
+  protected readonly cityOptions = signal<string[]>([]);
+  protected readonly citiesLoading = signal(false);
+  protected readonly citiesError = signal<string | null>(null);
+
   protected readonly seniorityOptions = signal<string[]>([]);
   protected readonly seniorityLoading = signal(false);
   protected readonly seniorityError = signal<string | null>(null);
-  protected readonly shouldUseSeniorityFallback = computed(
-    () =>
-      Boolean(this.seniorityError()) || (!this.seniorityLoading() && this.seniorityOptions().length === 0)
-  );
 
   protected readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(150)]],
@@ -50,7 +62,9 @@ export class CompanyOfferCreate implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
-    await this.loadSeniorityOptions();
+    this.form.controls.country.setValue(this.countryOptions[0] ?? '', { emitEvent: false });
+
+    await Promise.all([this.loadCityOptions(), this.loadSeniorityOptions()]);
   }
 
   protected async submit(): Promise<void> {
@@ -80,15 +94,7 @@ export class CompanyOfferCreate implements OnInit {
       const offer = await firstValueFrom(this.companyService.createOffer(payload));
       console.info('[CompanyOfferCreate] Offer created successfully', offer);
 
-      this.form.reset({
-        title: '',
-        description: '',
-        locationType: '',
-        city: '',
-        country: '',
-        seniority: '',
-        contractType: ''
-      });
+      this.resetFormState();
       this.submitAttempted.set(false);
       this.submitSuccess.set(true);
     } catch (error) {
@@ -190,8 +196,86 @@ export class CompanyOfferCreate implements OnInit {
       return;
     }
 
-    if (!this.shouldUseSeniorityFallback()) {
-      control.setValue('', { emitEvent: false });
+    control.setValue('', { emitEvent: false });
+  }
+
+  private async loadCityOptions(): Promise<void> {
+    this.citiesLoading.set(true);
+    this.citiesError.set(null);
+
+    try {
+      const cities = await firstValueFrom(this.profileFieldsService.getCities());
+      this.cityOptions.set(cities);
+      this.normalizeCity(this.form.controls.city.value);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudieron cargar las ciudades disponibles.';
+      this.citiesError.set(message);
+      this.cityOptions.set([]);
+      this.form.controls.city.reset('', { emitEvent: false });
+    } finally {
+      this.citiesLoading.set(false);
     }
+  }
+
+  private normalizeCity(value: string | null | undefined): void {
+    const control = this.form.controls.city;
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    const options = this.cityOptions();
+
+    if (!trimmed) {
+      control.setValue('', { emitEvent: false });
+      return;
+    }
+
+    if (options.includes(trimmed)) {
+      control.setValue(trimmed, { emitEvent: false });
+      return;
+    }
+
+    control.setValue('', { emitEvent: false });
+  }
+
+  protected handleLocationTypeSelectionChange(value: string): void {
+    this.locationTypeSelection.set(value);
+
+    if (value === this.customLocationTypeFlag) {
+      const currentCustom = this.customLocationTypeValue().trim();
+      this.form.controls.locationType.setValue(currentCustom, { emitEvent: false });
+    } else {
+      this.customLocationTypeValue.set('');
+      this.form.controls.locationType.setValue(value, { emitEvent: false });
+    }
+
+    this.form.controls.locationType.markAsTouched();
+    this.form.controls.locationType.updateValueAndValidity({ emitEvent: false });
+  }
+
+  protected handleCustomLocationTypeInput(value: string): void {
+    this.customLocationTypeValue.set(value);
+    this.form.controls.locationType.setValue(value, { emitEvent: false });
+    this.form.controls.locationType.markAsDirty();
+    this.form.controls.locationType.updateValueAndValidity({ emitEvent: false });
+  }
+
+  protected trackByValue(_: number, item: string): string {
+    return item;
+  }
+
+  private resetFormState(): void {
+    this.form.reset({
+      title: '',
+      description: '',
+      locationType: '',
+      city: '',
+      country: this.countryOptions[0] ?? '',
+      seniority: '',
+      contractType: ''
+    });
+
+    this.locationTypeSelection.set('');
+    this.customLocationTypeValue.set('');
   }
 }
