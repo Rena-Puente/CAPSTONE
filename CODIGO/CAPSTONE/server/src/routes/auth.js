@@ -16,7 +16,7 @@ const { getEducationStatus } = require('../services/education');
 const { getExperienceStatus } = require('../services/experience');
 const { getSkillStatus } = require('../services/skills');
 const { computeProfileMissingFields } = require('../services/profile');
-const { sendEmailVerification } = require('../services/email');
+const { sendEmailVerification, sendPasswordReset } = require('../services/email');
 const { USER_TYPE, getUserType } = require('../services/users');
 const {
   GithubOAuthError,
@@ -738,6 +738,165 @@ function registerAuthRoutes(app) {
       res.json({ ok: true });
     } catch (error) {
       handleOracleError(error, res, 'No se pudo verificar el correo.');
+    }
+  });
+
+  app.post('/auth/password/request', async (req, res) => {
+    const { email } = req.body ?? {};
+
+    if (!email || typeof email !== 'string' || email.trim() === '') {
+      return res.status(400).json({ ok: false, error: 'El correo es obligatorio.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    logAuthEvent('Password reset request received', {
+      email: normalizedEmail,
+      ip: getClientIp(req),
+      userAgent: req.headers['user-agent'] || null
+    });
+
+    try {
+      const result = await executeQuery(
+        `BEGIN
+           sp_crear_recuperacion_contrasena(
+             p_correo    => :correo,
+             o_token     => :token,
+             o_resultado => :resultado
+           );
+         END;`,
+        {
+          correo: normalizedEmail,
+          token: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 256 },
+          resultado: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 }
+        },
+        { autoCommit: true }
+      );
+
+      const outcome = result.outBinds?.resultado ?? 'OK';
+      const token = result.outBinds?.token;
+
+      logAuthEvent('Password reset request completed', {
+        email: normalizedEmail,
+        outcome,
+        hasToken: Boolean(token)
+      });
+
+      if (typeof outcome === 'string' && outcome.startsWith('ERROR:')) {
+        const code = outcome.slice('ERROR:'.length).toUpperCase();
+
+        if (code === 'EMAIL_REQUIRED') {
+          return res.status(400).json({ ok: false, error: 'El correo es obligatorio.' });
+        }
+
+        if (code !== '' && !code.startsWith('ORA-')) {
+          console.error('[Auth] Password reset request failed', { email: normalizedEmail, code });
+          return res.status(500).json({ ok: false, error: 'No se pudo procesar la solicitud de recuperación.' });
+        }
+      }
+
+      if (token) {
+        try {
+          await sendPasswordReset({ to: normalizedEmail, token });
+        } catch (emailError) {
+          console.error('[Auth] Failed to send password reset email', {
+            email: normalizedEmail,
+            error: emailError?.message || emailError
+          });
+        }
+      }
+
+      return res.json({ ok: true });
+    } catch (error) {
+      handleOracleError(error, res, 'No se pudo procesar la solicitud de recuperación.');
+    }
+  });
+
+  app.post('/auth/password/reset', async (req, res) => {
+    const { token, password, passwordConfirmation } = req.body ?? {};
+
+    if (!token || typeof token !== 'string' || token.trim() === '') {
+      return res.status(400).json({ ok: false, error: 'El token de recuperación es obligatorio.' });
+    }
+
+    if (!password || !passwordConfirmation) {
+      return res.status(400).json({ ok: false, error: 'Debes ingresar y confirmar la nueva contraseña.' });
+    }
+
+    logAuthEvent('Password reset confirmation received', {
+      token: summarizeToken(token),
+      ip: getClientIp(req)
+    });
+
+    try {
+      const result = await executeQuery(
+        `BEGIN
+           sp_confirmar_recuperacion_contrasena(
+             p_token      => :token,
+             p_password   => :password,
+             p_password2  => :password2,
+             o_resultado  => :resultado
+           );
+         END;`,
+        {
+          token,
+          password,
+          password2: passwordConfirmation,
+          resultado: { dir: oracledb.BIND_OUT, type: oracledb.STRING, maxSize: 512 }
+        },
+        { autoCommit: true }
+      );
+
+      const outcome = result.outBinds?.resultado ?? 'OK';
+
+      if (outcome !== 'OK') {
+        let message = 'No se pudo restablecer la contraseña.';
+        let statusCode = 400;
+
+        if (typeof outcome === 'string' && outcome.startsWith('ERROR:')) {
+          const code = outcome.slice('ERROR:'.length).toUpperCase();
+
+          switch (code) {
+            case 'TOKEN_INVALID':
+              message = 'El enlace de recuperación no es válido.';
+              break;
+            case 'TOKEN_EXPIRED':
+              message = 'El enlace de recuperación ha expirado.';
+              break;
+            case 'TOKEN_USED':
+              message = 'El enlace de recuperación ya fue utilizado.';
+              break;
+            case 'TOKEN_REQUIRED':
+              message = 'El token de recuperación es obligatorio.';
+              break;
+            case 'PASS_REQUIRED':
+              message = 'Debes ingresar y confirmar la nueva contraseña.';
+              break;
+            case 'PASS_NO_MATCH':
+              message = 'Las contraseñas no coinciden.';
+              break;
+            case 'USER_NOT_FOUND':
+              message = 'No se encontró al usuario asociado al token.';
+              statusCode = 404;
+              break;
+            default:
+              if (code.startsWith('ORA-')) {
+                statusCode = 500;
+                message = 'Ocurrió un error al restablecer la contraseña.';
+              }
+          }
+        }
+
+        return res.status(statusCode).json({ ok: false, error: message });
+      }
+
+      logAuthEvent('Password reset confirmation completed', {
+        token: summarizeToken(token)
+      });
+
+      return res.json({ ok: true });
+    } catch (error) {
+      handleOracleError(error, res, 'No se pudo restablecer la contraseña.');
     }
   });
 
