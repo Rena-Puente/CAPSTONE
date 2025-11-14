@@ -62,13 +62,62 @@ export interface CompanyOfferPayload {
 export interface CompanyOfferSummary {
   id: number;
   companyId: number;
-  title: string;
-  description: string;
-  locationType: string;
-  city: string;
-  country: string;
-  seniority: string;
-  contractType: string;
+  title: string | null;
+  description: string | null;
+  locationType: string | null;
+  city: string | null;
+  country: string | null;
+  seniority: string | null;
+  contractType: string | null;
+  createdAt: string | null;
+  active: boolean;
+  totalApplicants: number;
+}
+
+interface UpdateOfferStateResponse {
+  ok: boolean;
+  message?: string;
+  error?: string;
+  offer?: {
+    offerId?: number | null;
+    companyId?: number | null;
+    active?: boolean | number | null;
+    previousActive?: boolean | number | null;
+  } | null;
+}
+
+interface DeleteOfferResponse {
+  ok: boolean;
+  message?: string;
+  error?: string;
+}
+
+function normalizeBooleanFlag(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+
+    if (!normalized) {
+      return fallback;
+    }
+
+    if (['true', '1', 'si', 'sí', 'on', 'activo', 'activa'].includes(normalized)) {
+      return true;
+    }
+
+    if (['false', '0', 'no', 'off', 'inactivo', 'inactiva'].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return fallback;
 }
 
 interface CreateOfferResponse {
@@ -187,7 +236,22 @@ export class CompanyService {
           throw new Error(message);
         }
 
-        return response.offer;
+        const offer = response.offer;
+
+        return {
+          id: offer.id,
+          companyId: offer.companyId,
+          title: offer.title ?? null,
+          description: offer.description ?? null,
+          locationType: offer.locationType ?? null,
+          city: offer.city ?? null,
+          country: offer.country ?? null,
+          seniority: offer.seniority ?? null,
+          contractType: offer.contractType ?? null,
+          createdAt: (offer as { createdAt?: string | null })?.createdAt ?? null,
+          active: normalizeBooleanFlag((offer as { active?: boolean | number | null })?.active, true),
+          totalApplicants: Number((offer as { totalApplicants?: number | null })?.totalApplicants ?? 0)
+        } satisfies CompanyOfferSummary;
       }),
       catchError((error) => {
         const message =
@@ -258,14 +322,17 @@ export class CompanyService {
         return (response.offers ?? []).map((offer) => ({
           id: offer.id,
           companyId: offer.companyId,
-          title: offer.title,
-          description: offer.description,
-          locationType: offer.locationType,
-          city: offer.city,
-          country: offer.country,
-          seniority: offer.seniority,
-          contractType: offer.contractType
-        }));
+          title: offer.title ?? null,
+          description: offer.description ?? null,
+          locationType: offer.locationType ?? null,
+          city: offer.city ?? null,
+          country: offer.country ?? null,
+          seniority: offer.seniority ?? null,
+          contractType: offer.contractType ?? null,
+          createdAt: (offer as { createdAt?: string | null })?.createdAt ?? null,
+          active: normalizeBooleanFlag((offer as { active?: boolean | number | null })?.active, true),
+          totalApplicants: Number((offer as { totalApplicants?: number | null })?.totalApplicants ?? 0)
+        } satisfies CompanyOfferSummary));
       }),
       catchError((error) => {
         const message =
@@ -316,6 +383,95 @@ export class CompanyService {
             error?.error?.error || error?.error?.message || error?.message || 'No se pudo obtener la lista de postulantes.';
 
           console.error('[CompanyService] List applicants for offer failed', { error: message, offerId });
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  updateOfferActiveState(
+    offerId: number,
+    active: boolean
+  ): Observable<{ offerId: number; active: boolean; previousActive: boolean; message: string | null }> {
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return throwError(() => new Error('El identificador de la oferta no es válido.'));
+    }
+
+    let options: { headers: HttpHeaders };
+
+    try {
+      options = this.buildAuthOptions();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Debes iniciar sesión para continuar.';
+      return throwError(() => new Error(message));
+    }
+
+    return this.http
+      .patch<UpdateOfferStateResponse>(`${this.apiUrl}/companies/me/offers/${offerId}/active`, { active }, options)
+      .pipe(
+        map((response) => {
+          if (!response.ok || !response.offer) {
+            const message = response.error || response.message || 'No se pudo actualizar el estado de la oferta.';
+            throw new Error(message);
+          }
+
+          const offerResponse = response.offer;
+          const resolvedOfferId = Number(offerResponse.offerId ?? offerId) || offerId;
+          const normalizedActive = normalizeBooleanFlag(offerResponse.active, active);
+          const normalizedPrevious = normalizeBooleanFlag(offerResponse.previousActive, normalizedActive);
+
+          return {
+            offerId: resolvedOfferId,
+            active: normalizedActive,
+            previousActive: normalizedPrevious,
+            message: response.message ?? null
+          };
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error ||
+            error?.error?.message ||
+            error?.message ||
+            'No se pudo actualizar el estado de la oferta.';
+
+          console.error('[CompanyService] Update offer state failed', { error: message, offerId });
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  deleteOffer(offerId: number): Observable<{ offerId: number; message: string | null }> {
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return throwError(() => new Error('El identificador de la oferta no es válido.'));
+    }
+
+    let options: { headers: HttpHeaders };
+
+    try {
+      options = this.buildAuthOptions();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Debes iniciar sesión para continuar.';
+      return throwError(() => new Error(message));
+    }
+
+    return this.http
+      .delete<DeleteOfferResponse>(`${this.apiUrl}/companies/me/offers/${offerId}`, options)
+      .pipe(
+        map((response) => {
+          if (!response.ok) {
+            const message = response.error || 'No se pudo eliminar la oferta.';
+            throw new Error(message);
+          }
+
+          return {
+            offerId,
+            message: response.message ?? null
+          };
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error || error?.error?.message || error?.message || 'No se pudo eliminar la oferta.';
+
+          console.error('[CompanyService] Delete offer failed', { error: message, offerId });
           return throwError(() => new Error(message));
         })
       );

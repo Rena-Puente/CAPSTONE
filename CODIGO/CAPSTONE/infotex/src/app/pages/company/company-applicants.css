@@ -105,6 +105,12 @@
   color: #ffb8b0;
 }
 
+.company-applicants__alert--success {
+  background: rgba(13, 45, 34, 0.8);
+  border-color: rgba(63, 185, 80, 0.55);
+  color: #7ee787;
+}
+
 .company-applicants__empty {
   border-radius: 0.75rem;
   border: 1px dashed rgba(56, 139, 253, 0.4);
@@ -118,6 +124,169 @@
   border-style: solid;
   border-color: rgba(48, 54, 61, 0.65);
   background: rgba(13, 17, 23, 0.55);
+}
+
+.company-applicants__offer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(56, 139, 253, 0.35);
+  background: linear-gradient(135deg, rgba(13, 17, 23, 0.85), rgba(10, 14, 20, 0.9));
+  box-shadow: 0 26px 60px rgba(1, 4, 9, 0.55);
+}
+
+.company-applicants__offer-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.company-applicants__offer-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f0f6fc;
+}
+
+.company-applicants__offer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.company-applicants__switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.company-applicants__switch.company-applicants__switch--disabled {
+  cursor: not-allowed;
+}
+
+.company-applicants__switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.company-applicants__switch-slider {
+  position: relative;
+  display: inline-block;
+  width: 2.9rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: rgba(48, 54, 61, 0.85);
+  border: 1px solid rgba(56, 139, 253, 0.35);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.company-applicants__switch-slider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0.18rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: #f0f6fc;
+  transform: translate(0, -50%);
+  transition: transform 0.2s ease;
+  box-shadow: 0 3px 10px rgba(1, 4, 9, 0.55);
+}
+
+.company-applicants__switch-input:checked + .company-applicants__switch-slider {
+  background: rgba(35, 134, 54, 0.85);
+  border-color: rgba(63, 185, 80, 0.75);
+}
+
+.company-applicants__switch-input:checked + .company-applicants__switch-slider::after {
+  transform: translate(1.4rem, -50%);
+}
+
+.company-applicants__switch-input:focus-visible + .company-applicants__switch-slider {
+  box-shadow: 0 0 0 3px rgba(56, 139, 253, 0.45);
+}
+
+.company-applicants__switch-input:disabled + .company-applicants__switch-slider {
+  opacity: 0.5;
+}
+
+.company-applicants__switch-input:disabled ~ .company-applicants__switch-text {
+  opacity: 0.6;
+}
+
+.company-applicants__switch-text {
+  font-size: 0.95rem;
+}
+
+.company-applicants__delete-button {
+  border: 1px solid rgba(248, 81, 73, 0.55);
+  background: rgba(111, 24, 32, 0.75);
+  color: #ffb8b0;
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  border-radius: 0.65rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.company-applicants__delete-button:hover,
+.company-applicants__delete-button:focus-visible {
+  background: rgba(146, 35, 45, 0.85);
+  border-color: rgba(248, 81, 73, 0.75);
+  transform: translateY(-1px);
+}
+
+.company-applicants__delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.company-applicants__offer-description {
+  margin: 0;
+  color: #c9d1d9;
+  line-height: 1.6;
+}
+
+.company-applicants__offer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 0;
+}
+
+.company-applicants__offer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.company-applicants__offer-field dt {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #8b949e;
+}
+
+.company-applicants__offer-field dd {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 500;
+  color: #f0f6fc;
 }
 
 .company-applicants__table-wrapper {
@@ -181,6 +350,15 @@
 @media (max-width: 768px) {
   .company-applicants__controls {
     padding: 0.9rem 1rem;
+  }
+
+  .company-applicants__offer-card {
+    padding: 1.1rem 1.2rem;
+  }
+
+  .company-applicants__offer-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .company-applicants__table thead {
