@@ -149,3 +149,45 @@ Permite a una empresa autenticada mover el estado de una postulación. Utiliza e
 - Responde `403` cuando la postulación no pertenece a la empresa autenticada.
 - Responde `404` si la postulación no existe.
 - Devuelve `200` con `{ ok, message, application }`, donde `application` incluye el nuevo estado y el estado anterior.
+
+### `GET /companies/me/offers`
+
+Devuelve todas las ofertas creadas por la empresa autenticada. Internamente invoca `sp_empresas_pkg.sp_listar_ofertas_empresa` para obtener los datos normalizados desde Oracle, incluyendo el total de postulantes y el estado de publicación.
+
+- Requiere un token Bearer válido asociado a un usuario empresa.
+- Responde `401` si no se puede determinar al usuario autenticado.
+- Responde `404` cuando el usuario no tiene una empresa asociada.
+- Devuelve `200` con `{ ok, offers }`, donde cada elemento incluye `active`, `totalApplicants` y metadatos básicos de la oferta.
+
+### `GET /companies/me/offers/:offerId/applicants`
+
+Lista únicamente los postulantes de una oferta específica de la empresa. Llama a `sp_empresas_pkg.sp_listar_postulantes_oferta` para validar la pertenencia de la oferta y evitar filtraciones de datos entre empresas.
+
+- Requiere token Bearer válido y que la oferta pertenezca a la empresa autenticada.
+- Responde `400` cuando el identificador de la oferta es inválido.
+- Responde `401` si no se puede determinar el usuario autenticado.
+- Responde `403` cuando la oferta no pertenece a la empresa.
+- Responde `404` si la oferta no existe.
+- Devuelve `200` con `{ ok, applicants }` conteniendo sólo las postulaciones de la oferta indicada.
+
+### `PATCH /companies/me/offers/:offerId/active`
+
+Permite activar o desactivar una oferta sin eliminarla. Usa el procedimiento `sp_empresas_pkg.sp_actualizar_estado_oferta` para aplicar las reglas de negocio directamente en Oracle (incluyendo validaciones de pertenencia y valores permitidos para el flag `activa`).
+
+- El cuerpo puede incluir `active`, `activa`, `enabled`, `estado` o `state` con valores booleanos (`true/false`, `1/0`, `"si"/"no"`, etc.).
+- Responde `400` si el identificador de la oferta es inválido o si el estado recibido no es interpretable como activo/inactivo.
+- Responde `401` cuando no se puede determinar el usuario autenticado.
+- Responde `403` si la oferta no pertenece a la empresa.
+- Responde `404` cuando la oferta no existe.
+- Devuelve `200` con `{ ok, message, offer }`, donde `offer` incluye el estado nuevo y el anterior (`previousActive`).
+
+### `DELETE /companies/me/offers/:offerId`
+
+Elimina una oferta de la empresa siempre que no tenga postulaciones asociadas. Ejecuta `sp_empresas_pkg.sp_eliminar_oferta` para validar la pertenencia y evitar la eliminación si existen postulaciones vigentes.
+
+- Responde `400` si el identificador recibido es inválido.
+- Responde `401` cuando no se puede determinar el usuario autenticado.
+- Responde `403` si la oferta pertenece a otra empresa.
+- Responde `404` cuando la oferta no existe.
+- Responde `409` si hay postulaciones asociadas y debe desactivarse en lugar de eliminarse.
+- Devuelve `200` con `{ ok, message }` confirmando la eliminación.

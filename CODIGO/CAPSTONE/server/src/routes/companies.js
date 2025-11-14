@@ -6,9 +6,14 @@ const {
   getCompanyForUser,
   createOffer,
   listApplicants,
+  listCompanyOffers,
+  listApplicantsForOffer,
   getApplicationSummary,
   updateApplicationStatus,
   ApplicationStatusUpdateError,
+  updateOfferActiveState,
+  deleteOffer,
+  CompanyOfferError,
   APPLICATION_STATUS_VALUES
 } = require('../services/companies');
 const { getUserIdFromAccessToken } = require('../services/auth');
@@ -135,6 +140,157 @@ function registerCompanyRoutes(app) {
       });
 
       return res.status(500).json({ ok: false, error: 'No se pudo crear la oferta.' });
+    }
+  });
+
+  app.get('/companies/me/offers', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      const offers = await listCompanyOffers(company.id);
+
+      return res.json({ ok: true, offers });
+    } catch (error) {
+      console.error('[Companies] Failed to list company offers', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudieron obtener las ofertas de la empresa.' });
+    }
+  });
+
+  app.patch('/companies/me/offers/:offerId/active', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+    const offerId = Number.parseInt(req.params.offerId, 10);
+    const desiredState =
+      req.body?.active ?? req.body?.activa ?? req.body?.enabled ?? req.body?.estado ?? req.body?.state ?? null;
+
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de la oferta no es válido.' });
+    }
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      const offer = await updateOfferActiveState(company.id, offerId, desiredState);
+
+      return res.json({
+        ok: true,
+        message: offer.active
+          ? 'Oferta activada correctamente.'
+          : 'Oferta desactivada correctamente.',
+        offer
+      });
+    } catch (error) {
+      if (error instanceof CompanyOfferError) {
+        return res.status(error.statusCode).json({ ok: false, error: error.message, code: error.code });
+      }
+
+      console.error('[Companies] Failed to update offer state', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo actualizar el estado de la oferta.' });
+    }
+  });
+
+  app.delete('/companies/me/offers/:offerId', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+    const offerId = Number.parseInt(req.params.offerId, 10);
+
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de la oferta no es válido.' });
+    }
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      await deleteOffer(company.id, offerId);
+
+      return res.json({ ok: true, message: 'Oferta eliminada correctamente.' });
+    } catch (error) {
+      if (error instanceof CompanyOfferError) {
+        return res.status(error.statusCode).json({ ok: false, error: error.message, code: error.code });
+      }
+
+      console.error('[Companies] Failed to delete offer', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo eliminar la oferta.' });
+    }
+  });
+
+  app.get('/companies/me/offers/:offerId/applicants', requireAccessToken, async (req, res) => {
+    const accessToken = req.auth?.accessToken ?? null;
+    const offerId = Number.parseInt(req.params.offerId, 10);
+
+    if (!Number.isInteger(offerId) || offerId <= 0) {
+      return res.status(400).json({ ok: false, error: 'El identificador de la oferta no es válido.' });
+    }
+
+    try {
+      const userId = await getUserIdFromAccessToken(accessToken);
+
+      if (!userId) {
+        return res.status(401).json({ ok: false, error: 'No se pudo determinar el usuario de la sesión.' });
+      }
+
+      const company = await getCompanyForUser(userId);
+
+      if (!company || !company.id) {
+        return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
+      }
+
+      const applicants = await listApplicantsForOffer(company.id, offerId);
+
+      return res.json({ ok: true, applicants });
+    } catch (error) {
+      if (error instanceof CompanyOfferError) {
+        return res.status(error.statusCode).json({ ok: false, error: error.message, code: error.code });
+      }
+
+      console.error('[Companies] Failed to list applicants for offer', {
+        path: req.originalUrl,
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudieron obtener los postulantes de la oferta.' });
     }
   });
 
