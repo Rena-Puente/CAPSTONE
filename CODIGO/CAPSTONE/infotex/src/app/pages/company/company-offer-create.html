@@ -114,23 +114,30 @@
       </div>
 
       <div class="company-offer-create__field">
-        <label for="offerSeniority" class="company-offer-create__label">Seniority</label>
+        <label for="offerSeniority" class="company-offer-create__label">Carrera</label>
         <select
           id="offerSeniority"
           class="company-offer-create__control"
           formControlName="seniority"
           [class.is-invalid]="shouldShowError('seniority')"
-          [disabled]="seniorityLoading() || isSubmitting() || !!seniorityError() || seniorityOptions().length === 0"
-          aria-label="Selecciona el nivel de seniority"
+          [disabled]="seniorityLoading() || isSubmitting() || !!seniorityError() || !hasSeniorityOptions()"
+          aria-label="Selecciona la carrera asociada a la oferta"
         >
           <option value="" disabled [selected]="!form.controls.seniority.value">
-            {{ seniorityLoading() ? 'Cargando niveles disponibles...' : 'Selecciona un nivel' }}
+            {{ seniorityLoading() ? 'Cargando carreras disponibles...' : 'Selecciona una carrera' }}
           </option>
-          <option *ngFor="let option of seniorityOptions(); trackBy: trackByValue" [value]="option">
-            {{ option }}
-          </option>
+          <ng-container *ngFor="let group of seniorityOptionGroups(); trackBy: trackSeniorityCategory">
+            <optgroup [label]="group.name">
+              <option
+                *ngFor="let option of group.options; trackBy: trackSeniorityOption"
+                [value]="option"
+              >
+                {{ option }}
+              </option>
+            </optgroup>
+          </ng-container>
         </select>
-        <div class="company-offer-create__hint" *ngIf="seniorityLoading()">Cargando niveles de seniority...</div>
+        <div class="company-offer-create__hint" *ngIf="seniorityLoading()">Cargando carreras...</div>
         <div class="company-offer-create__error" *ngIf="seniorityError()">{{ seniorityError() }}</div>
         <div class="company-offer-create__error" *ngIf="getControlError('seniority')">
           {{ getControlError('seniority') }}

@@ -15,6 +15,8 @@ type OfferControlName =
   | 'seniority'
   | 'contractType';
 
+type CareerOptionGroup = { name: string; options: readonly string[] };
+
 @Component({
   selector: 'app-company-offer-create',
   standalone: true,
@@ -47,7 +49,17 @@ export class CompanyOfferCreate implements OnInit {
   protected readonly citiesLoading = signal(false);
   protected readonly citiesError = signal<string | null>(null);
 
-  protected readonly seniorityOptions = signal<string[]>([]);
+  protected readonly seniorityOptionsByCategory = signal<Record<string, readonly string[]>>({});
+  protected readonly seniorityCategories = signal<string[]>([]);
+  protected readonly seniorityOptionGroups = computed<CareerOptionGroup[]>(() =>
+    this.seniorityCategories().map((category) => ({
+      name: category,
+      options: this.seniorityOptionsByCategory()[category] ?? []
+    }))
+  );
+  protected readonly hasSeniorityOptions = computed(() =>
+    this.seniorityOptionGroups().some((group) => group.options.length > 0)
+  );
   protected readonly seniorityLoading = signal(false);
   protected readonly seniorityError = signal<string | null>(null);
 
@@ -57,7 +69,7 @@ export class CompanyOfferCreate implements OnInit {
     locationType: ['', [Validators.required, Validators.maxLength(20)]],
     city: ['', [Validators.required, Validators.maxLength(80)]],
     country: ['', [Validators.required, Validators.maxLength(80)]],
-    seniority: ['', [Validators.required, Validators.maxLength(30)]],
+    seniority: ['', [Validators.required, Validators.maxLength(80)]],
     contractType: ['', [Validators.required, Validators.maxLength(30)]]
   });
 
@@ -132,7 +144,7 @@ export class CompanyOfferCreate implements OnInit {
         case 'country':
           return 'Indica el país de la oferta.';
         case 'seniority':
-          return 'Indica el nivel de seniority requerido.';
+          return 'Selecciona la carrera asociada a la oferta.';
         case 'contractType':
           return 'Indica el tipo de contrato ofrecido.';
       }
@@ -151,7 +163,7 @@ export class CompanyOfferCreate implements OnInit {
         case 'country':
           return 'El país puede tener como máximo 80 caracteres.';
         case 'seniority':
-          return 'La seniority puede tener como máximo 30 caracteres.';
+          return 'La carrera puede tener como máximo 80 caracteres.';
         case 'contractType':
           return 'El tipo de contrato puede tener como máximo 30 caracteres.';
       }
@@ -165,16 +177,27 @@ export class CompanyOfferCreate implements OnInit {
     this.seniorityError.set(null);
 
     try {
-      const levels = await firstValueFrom(this.profileFieldsService.getSeniorityLevels());
-      this.seniorityOptions.set(levels);
+      const map = await firstValueFrom(this.profileFieldsService.getCareerMap());
+      const sortedCategories = Object.keys(map).sort((a, b) =>
+        a.localeCompare(b, 'es', { sensitivity: 'base' })
+      );
+      const orderedMap: Record<string, readonly string[]> = {};
+
+      for (const category of sortedCategories) {
+        orderedMap[category] = [...(map[category] ?? [])];
+      }
+
+      this.seniorityOptionsByCategory.set(orderedMap);
+      this.seniorityCategories.set(sortedCategories);
       this.normalizeSeniority(this.form.controls.seniority.value);
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : 'No se pudieron cargar los niveles de seniority.';
+          : 'No se pudo cargar el listado de carreras disponibles.';
       this.seniorityError.set(message);
-      this.seniorityOptions.set([]);
+      this.seniorityOptionsByCategory.set({});
+      this.seniorityCategories.set([]);
       this.form.controls.seniority.reset('', { emitEvent: false });
     } finally {
       this.seniorityLoading.set(false);
@@ -184,14 +207,16 @@ export class CompanyOfferCreate implements OnInit {
   private normalizeSeniority(value: string | null | undefined): void {
     const control = this.form.controls.seniority;
     const trimmed = typeof value === 'string' ? value.trim() : '';
-    const options = this.seniorityOptions();
+    const options = this.seniorityOptionsByCategory();
 
     if (!trimmed) {
       control.setValue('', { emitEvent: false });
       return;
     }
 
-    if (options.includes(trimmed)) {
+    const exists = Object.values(options).some((list) => list.includes(trimmed));
+
+    if (exists) {
       control.setValue(trimmed, { emitEvent: false });
       return;
     }
@@ -258,6 +283,14 @@ export class CompanyOfferCreate implements OnInit {
     this.form.controls.locationType.setValue(value, { emitEvent: false });
     this.form.controls.locationType.markAsDirty();
     this.form.controls.locationType.updateValueAndValidity({ emitEvent: false });
+  }
+
+  protected trackSeniorityCategory(_: number, group: CareerOptionGroup): string {
+    return group.name;
+  }
+
+  protected trackSeniorityOption(_: number, option: string): string {
+    return option;
   }
 
   protected trackByValue(_: number, item: string): string {
