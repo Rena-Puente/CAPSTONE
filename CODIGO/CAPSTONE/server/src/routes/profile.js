@@ -160,6 +160,7 @@ function registerProfileRoutes(app) {
                 biografia,
                 pais,
                 ciudad,
+                telefono,
                 url_avatar,
                 slug
            FROM perfiles
@@ -492,6 +493,7 @@ function registerProfileRoutes(app) {
                 biografia,
                 pais,
                 ciudad,
+                telefono,
                 url_avatar,
                 slug,
                 perfil_completo
@@ -512,6 +514,7 @@ function registerProfileRoutes(app) {
         experienceSummary,
         skillsSummary
       );
+      const profileValues = row ? mapRowToProfile(row) : null;
       const githubAccount = await fetchGithubAccountStatus(userId);
 
       if (!row) {
@@ -531,15 +534,7 @@ function registerProfileRoutes(app) {
 
       res.json({
         ok: true,
-        profile: {
-          displayName: row.NOMBRE_MOSTRAR ?? null,
-          career: row.TITULAR ?? null,
-          biography: row.BIOGRAFIA ?? null,
-          country: row.PAIS ?? null,
-          city: row.CIUDAD ?? null,
-          avatarUrl: row.URL_AVATAR ?? null,
-          slug: row.SLUG ?? null
-        },
+        profile: profileValues,
         isComplete,
         missingFields,
         educationSummary,
@@ -604,6 +599,7 @@ function registerProfileRoutes(app) {
                 biografia,
                 pais,
                 ciudad,
+                telefono,
                 url_avatar,
                 slug,
                 perfil_completo
@@ -913,6 +909,7 @@ function registerProfileRoutes(app) {
                 biografia,
                 pais,
                 ciudad,
+                telefono,
                 url_avatar,
                 slug
            FROM perfiles
@@ -949,6 +946,7 @@ function registerProfileRoutes(app) {
         biography: validation.values.biography || null,
         country: validation.values.country || null,
         city: validation.values.city || null,
+        phoneNumber: validation.values.phoneNumber || null,
         avatarUrl: validation.values.avatarUrl || null,
         slug: validation.values.slug || null
       };
@@ -995,6 +993,7 @@ function registerProfileRoutes(app) {
                        :biography AS biografia,
                        :country AS pais,
                        :city AS ciudad,
+                       :phoneNumber AS telefono,
                        :avatarUrl AS url_avatar,
                        :slug AS slug
                   FROM dual) src
@@ -1006,6 +1005,7 @@ function registerProfileRoutes(app) {
                  dest.biografia = src.biografia,
                  dest.pais = src.pais,
                  dest.ciudad = src.ciudad,
+                 dest.telefono = src.telefono,
                  dest.url_avatar = src.url_avatar,
                  dest.slug = src.slug
         WHEN NOT MATCHED THEN
@@ -1016,6 +1016,7 @@ function registerProfileRoutes(app) {
             biografia,
             pais,
             ciudad,
+            telefono,
             url_avatar,
             slug
           ) VALUES (
@@ -1025,6 +1026,7 @@ function registerProfileRoutes(app) {
             src.biografia,
             src.pais,
             src.ciudad,
+            src.telefono,
             src.url_avatar,
             src.slug
           )`,
@@ -1047,6 +1049,7 @@ function registerProfileRoutes(app) {
                 biografia,
                 pais,
                 ciudad,
+                telefono,
                 url_avatar,
                 slug,
                 perfil_completo

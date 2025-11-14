@@ -408,6 +408,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     biography: ['', [Validators.required, minTrimmedLengthValidator(80)]],
     country: [DEFAULT_COUNTRY, [Validators.required]],
     city: ['', [Validators.required]],
+    phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{9}$/)]],
     career: ['', [Validators.required]],
     avatarUrl: ['', [Validators.required, avatarUrlValidator()]],
     slug: ['', [Validators.required, Validators.pattern(SLUG_PATTERN)]]
@@ -738,6 +739,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
         biography: '',
         country: DEFAULT_COUNTRY,
         city: '',
+        phoneNumber: '',
         career: '',
         avatarUrl: '',
         slug: ''
@@ -767,6 +769,10 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
   protected get cityControl() {
     return this.profileForm.controls.city;
+  }
+
+  protected get phoneNumberControl() {
+    return this.profileForm.controls.phoneNumber;
   }
 
   protected get careerControl() {
@@ -831,6 +837,23 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
           : 'No se pudo copiar el enlace automáticamente. Copia la URL manualmente.';
       this.publicLinkFeedback.set({ type: 'error', message });
     }
+  }
+
+  protected formatPhoneNumber(value: string | null | undefined): string | null {
+    const digits = this.normalizePhoneNumber(value);
+
+    if (!digits) {
+      return null;
+    }
+
+    if (digits.length === 9) {
+      const first = digits.slice(0, 1);
+      const middle = digits.slice(1, 5);
+      const end = digits.slice(5);
+      return `+56 ${first} ${middle} ${end}`;
+    }
+
+    return `+56 ${digits}`;
   }
 
   protected async startGithubLink(): Promise<void> {
@@ -929,11 +952,13 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.profileForm.disable({ emitEvent: false });
 
     const rawValue = this.profileForm.getRawValue();
+    const sanitizedPhoneNumber = this.sanitizePhoneNumberInput(rawValue.phoneNumber);
     const payload: UpdateProfilePayload = {
       displayName: rawValue.displayName.trim(),
       biography: rawValue.biography.trim(),
       country: rawValue.country.trim(),
       city: rawValue.city.trim(),
+      phoneNumber: sanitizedPhoneNumber,
       career: rawValue.career.trim(),
       avatarUrl: rawValue.avatarUrl.trim(),
       slug: rawValue.slug.trim().toLowerCase()
@@ -1459,6 +1484,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
         biography: '',
         country: DEFAULT_COUNTRY,
         city: '',
+        phoneNumber: '',
         career: '',
         avatarUrl: '',
         slug: ''
@@ -1597,6 +1623,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
       biography: status.biography ?? '',
       country: status.country?.trim() || DEFAULT_COUNTRY,
       city: this.normalizeCity(status.city),
+      phoneNumber: this.normalizePhoneNumber(status.phoneNumber),
       career: this.normalizeCareer(status.career),
       avatarUrl: status.avatarUrl ?? '',
       slug: status.slug ?? ''
@@ -1839,6 +1866,15 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     return normalized;
   }
 
+  private normalizePhoneNumber(value: string | null | undefined): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const digits = value.replace(/\D/g, '');
+    return digits.slice(0, 9);
+  }
+
   private normalizeCareer(value: string | null | undefined): string {
     if (typeof value !== 'string') {
       return '';
@@ -1847,6 +1883,14 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     const normalized = value.trim();
     this.ensureCareerInOptions(normalized);
     return normalized;
+  }
+
+  private sanitizePhoneNumberInput(value: string | null | undefined): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    return value.replace(/\D/g, '').slice(0, 9);
   }
 
   private ensureInstitutionInOptions(institution: string | null | undefined): void {

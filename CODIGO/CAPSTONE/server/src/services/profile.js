@@ -5,7 +5,8 @@ const PROFILE_FIELD_LABELS = {
   PAIS: 'País',
   CIUDAD: 'Ciudad',
   URL_AVATAR: 'Foto de perfil',
-  SLUG: 'URL personalizada'
+  SLUG: 'URL personalizada',
+  TELEFONO: 'Número de teléfono'
 };
 
 const EDUCATION_SECTION_LABEL = 'Historial educativo';
@@ -14,7 +15,16 @@ const EXPERIENCE_SECTION_LABEL = 'Experiencia laboral';
 const EXPERIENCE_DATES_NOTE = 'Experiencia laboral (revisa las fechas)';
 const SKILLS_SECTION_LABEL = 'Habilidades profesionales';
 
-const PROFILE_FIELD_KEYS = ['displayName', 'career', 'biography', 'country', 'city', 'avatarUrl', 'slug'];
+const PROFILE_FIELD_KEYS = [
+  'displayName',
+  'career',
+  'biography',
+  'country',
+  'city',
+  'phoneNumber',
+  'avatarUrl',
+  'slug'
+];
 
 const PROFILE_FIELD_METADATA = {
   displayName: { column: 'NOMBRE_MOSTRAR', label: PROFILE_FIELD_LABELS.NOMBRE_MOSTRAR },
@@ -22,11 +32,13 @@ const PROFILE_FIELD_METADATA = {
   biography: { column: 'BIOGRAFIA', label: PROFILE_FIELD_LABELS.BIOGRAFIA },
   country: { column: 'PAIS', label: PROFILE_FIELD_LABELS.PAIS },
   city: { column: 'CIUDAD', label: PROFILE_FIELD_LABELS.CIUDAD },
+  phoneNumber: { column: 'TELEFONO', label: PROFILE_FIELD_LABELS.TELEFONO },
   avatarUrl: { column: 'URL_AVATAR', label: PROFILE_FIELD_LABELS.URL_AVATAR },
   slug: { column: 'SLUG', label: PROFILE_FIELD_LABELS.SLUG }
 };
 
 const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
+const PHONE_NUMBER_PATTERN = /^[0-9]{9}$/;
 
 function isSlugValid(slug) {
   if (typeof slug !== 'string') {
@@ -60,6 +72,12 @@ function mapRowToProfile(row) {
   for (const field of PROFILE_FIELD_KEYS) {
     const metadata = PROFILE_FIELD_METADATA[field];
     const value = row[metadata.column];
+
+    if (field === 'phoneNumber') {
+      profile[field] = normalizePhoneNumber(value) || null;
+      continue;
+    }
+
     if (typeof value === 'string') {
       profile[field] = value.trim();
     } else if (value === undefined || value === null) {
@@ -158,6 +176,15 @@ function sanitizeSlugInput(value) {
   return sanitized.toLowerCase();
 }
 
+function normalizePhoneNumber(value) {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  const stringValue = typeof value === 'string' ? value : String(value);
+  return stringValue.replace(/\D/g, '');
+}
+
 function isValidUrl(value) {
   if (!value || typeof value !== 'string') {
     return false;
@@ -200,6 +227,8 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
 
     if (field === 'slug') {
       values[field] = sanitizeSlugInput(sourceValue);
+    } else if (field === 'phoneNumber') {
+      values[field] = normalizePhoneNumber(sourceValue);
     } else {
       values[field] = sanitizeProfileInput(sourceValue);
     }
@@ -228,6 +257,15 @@ function validateProfilePayload(payload = {}, currentProfile = null) {
 
   if (!values.city) {
     statuses.city = { ok: false, error: 'Ingresa tu ciudad.' };
+  }
+
+  if (!values.phoneNumber) {
+    statuses.phoneNumber = { ok: false, error: 'Ingresa tu número de teléfono.' };
+  } else if (!PHONE_NUMBER_PATTERN.test(values.phoneNumber)) {
+    statuses.phoneNumber = {
+      ok: false,
+      error: 'Ingresa un número de teléfono chileno válido de 9 dígitos.'
+    };
   }
 
   if (!values.slug) {
@@ -308,6 +346,11 @@ function computeProfileMissingFields(
 
   if (!row.CIUDAD) {
     missing.push(PROFILE_FIELD_LABELS.CIUDAD);
+  }
+
+  const telefono = normalizePhoneNumber(row.TELEFONO);
+  if (!telefono || !PHONE_NUMBER_PATTERN.test(telefono)) {
+    missing.push(PROFILE_FIELD_LABELS.TELEFONO);
   }
 
   if (!row.URL_AVATAR) {

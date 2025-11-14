@@ -106,7 +106,7 @@
                             {{ profile()?.career || 'Carrera no registrada' }}
                           </p>
 
-                          <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 profile-details">
+                          <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 profile-details">
                             <div class="col">
                               <div class="profile-detail">
                                 <span class="profile-detail-label">País</span>
@@ -120,6 +120,14 @@
                                 <span class="profile-detail-label">Ciudad</span>
                                 <span class="profile-detail-value" [class.text-secondary]="!profile()?.city">
                                   {{ profile()?.city || 'Sin registrar' }}
+                                </span>
+                              </div>
+                            </div>
+                            <div class="col">
+                              <div class="profile-detail">
+                                <span class="profile-detail-label">Teléfono</span>
+                                <span class="profile-detail-value" [class.text-secondary]="!profile()?.phoneNumber">
+                                  {{ formatPhoneNumber(profile()?.phoneNumber) || 'Sin registrar' }}
                                 </span>
                               </div>
                             </div>
@@ -993,6 +1001,41 @@
               </div>
             </div>
 
+            <div class="col-md-6 col-lg-4">
+              <label for="profilePhoneNumber" class="form-label">Teléfono</label>
+              <div class="input-group">
+                <span class="input-group-text text-secondary">+56</span>
+                <input
+                  id="profilePhoneNumber"
+                  type="tel"
+                  class="form-control"
+                  maxlength="9"
+                  inputmode="numeric"
+                  formControlName="phoneNumber"
+                  placeholder="912345678"
+                  [class.is-invalid]="
+                    (phoneNumberControl.invalid && (phoneNumberControl.dirty || phoneNumberControl.touched)) ||
+                    fieldState().phoneNumber.ok === false
+                  "
+                />
+              </div>
+              <div class="form-text text-secondary">Ingresa 9 dígitos sin incluir el prefijo.</div>
+              <div
+                class="invalid-feedback"
+                *ngIf="phoneNumberControl.hasError('required') && (phoneNumberControl.dirty || phoneNumberControl.touched)"
+              >
+                El número de teléfono es obligatorio.
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="phoneNumberControl.hasError('pattern') && (phoneNumberControl.dirty || phoneNumberControl.touched)"
+              >
+                Debes ingresar exactamente 9 dígitos.
+              </div>
+              <div class="invalid-feedback" *ngIf="fieldState().phoneNumber.ok === false">
+                {{ fieldState().phoneNumber.error || 'El servidor reportó un problema con este campo.' }}
+              </div>
+            </div>
           </div>
 
           <div class="mb-4 mt-3">

@@ -14,6 +14,7 @@ export type ProfileField =
   | 'biography'
   | 'country'
   | 'city'
+  | 'phoneNumber'
   | 'career'
   | 'avatarUrl'
   | 'slug';
@@ -25,6 +26,7 @@ export const PROFILE_FIELDS: readonly ProfileField[] = [
   'biography',
   'country',
   'city',
+  'phoneNumber',
   'career',
   'avatarUrl',
   'slug'
@@ -166,6 +168,7 @@ export interface UpdateProfilePayload {
   biography: string;
   country: string;
   city: string;
+  phoneNumber: string;
   career: string;
   avatarUrl: string;
   slug: string;
@@ -177,6 +180,7 @@ export interface PublicProfileData {
     biography: string | null;
     country: string | null;
     city: string | null;
+    phoneNumber: string | null;
     career: string | null;
     avatarUrl: string | null;
     slug: string | null;
@@ -946,6 +950,7 @@ export class ProfileService {
       biography: this.toNullableString(baseData['biography']),
       country: this.toNullableString(baseData['country']),
       city: this.toNullableString(baseData['city']),
+      phoneNumber: this.toNullableString(baseData['phoneNumber']),
       career: this.toNullableString(baseData['career']),
       avatarUrl: this.toNullableString(baseData['avatarUrl']),
       slug: this.toNullableString(baseData['slug']),
@@ -953,6 +958,10 @@ export class ProfileService {
       ok_biography: this.toBoolean(this.pickValidationFlag('biography', baseData, validations, response), true),
       ok_country: this.toBoolean(this.pickValidationFlag('country', baseData, validations, response), true),
       ok_city: this.toBoolean(this.pickValidationFlag('city', baseData, validations, response), true),
+      ok_phoneNumber: this.toBoolean(
+        this.pickValidationFlag('phoneNumber', baseData, validations, response),
+        true
+      ),
       ok_career: this.toBoolean(this.pickValidationFlag('career', baseData, validations, response), true),
       ok_avatarUrl: this.toBoolean(this.pickValidationFlag('avatarUrl', baseData, validations, response), true),
       ok_slug: this.toBoolean(this.pickValidationFlag('slug', baseData, validations, response), true),
@@ -960,6 +969,7 @@ export class ProfileService {
       error_biography: this.pickValidationError('biography', baseData, validations, errors, response),
       error_country: this.pickValidationError('country', baseData, validations, errors, response),
       error_city: this.pickValidationError('city', baseData, validations, errors, response),
+      error_phoneNumber: this.pickValidationError('phoneNumber', baseData, validations, errors, response),
       error_career: this.pickValidationError('career', baseData, validations, errors, response),
       error_avatarUrl: this.pickValidationError('avatarUrl', baseData, validations, errors, response),
       error_slug: this.pickValidationError('slug', baseData, validations, errors, response),
@@ -1113,6 +1123,7 @@ export class ProfileService {
         biography: this.toNullableString(profileRecord['biography']),
         country: this.toNullableString(profileRecord['country']),
         city: this.toNullableString(profileRecord['city']),
+        phoneNumber: this.toNullableString(profileRecord['phoneNumber']),
         career: this.toNullableString(profileRecord['career']),
         avatarUrl: this.toNullableString(profileRecord['avatarUrl']),
         slug: this.toNullableString(profileRecord['slug'])
