@@ -76,6 +76,8 @@ const SLUG_PATTERN = /^[a-z0-9-]{3,40}$/;
 type SlugAvailabilityStatus = 'idle' | 'checking' | 'available' | 'unavailable' | 'invalid' | 'error';
 type PublicLinkFeedback = { type: 'success' | 'error'; message: string };
 
+const OTHER_INSTITUTION_OPTION = '__other__';
+
 const DEFAULT_GITHUB_ACCOUNT: GithubAccountStatus = {
   linked: false,
   username: null,
@@ -134,6 +136,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   private readonly document = inject(DOCUMENT);
 
   private slugAvailabilitySubscription: Subscription | null = null;
+  private educationInstitutionSubscription: Subscription | null = null;
 
   @ViewChild('alertPlaceholder', { static: true })
   private alertPlaceholderRef?: ElementRef<HTMLDivElement>;
@@ -163,6 +166,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   protected readonly institutionOptions = signal<string[]>([]);
   protected readonly institutionsLoading = signal(false);
   protected readonly institutionsError = signal<string | null>(null);
+  protected readonly otherInstitutionOption = OTHER_INSTITUTION_OPTION;
   protected readonly experience = signal<ExperienceEntry[]>([]);
   protected readonly experienceSummary = signal<ExperienceSummary | null>(null);
   protected readonly experienceLoading = signal(false);
@@ -399,6 +403,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
   protected readonly educationForm = this.fb.nonNullable.group({
     institution: ['', [Validators.required]],
+    institutionOther: [''],
     degree: [''],
     fieldOfStudy: [''],
     startDate: [''],
@@ -429,10 +434,17 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.slugAvailabilitySubscription?.unsubscribe();
     this.slugAvailabilitySubscription = null;
+    this.educationInstitutionSubscription?.unsubscribe();
+    this.educationInstitutionSubscription = null;
   }
 
   async ngOnInit(): Promise<void> {
     this.observeSlugChanges();
+    const institutionControl = this.educationForm.controls.institution;
+    this.educationInstitutionSubscription?.unsubscribe();
+    this.educationInstitutionSubscription = institutionControl.valueChanges
+      .pipe(startWith(institutionControl.value))
+      .subscribe((value) => this.handleEducationInstitutionChange(value));
     await Promise.all([
       this.loadCities(),
       this.loadCareers(),
@@ -944,6 +956,10 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     return option;
   }
 
+  protected educationInstitutionRequiresDetails(): boolean {
+    return this.educationForm.controls.institution.value === OTHER_INSTITUTION_OPTION;
+  }
+
   protected trackCityOption(index: number, option: string): string {
     return option;
   }
@@ -971,6 +987,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.editingEducationId.set(entry.id);
     this.educationForm.setValue({
       institution: this.normalizeInstitution(entry.institution),
+      institutionOther: '',
       degree: entry.degree ?? '',
       fieldOfStudy: entry.fieldOfStudy ?? '',
       startDate: entry.startDate ?? '',
@@ -1004,8 +1021,13 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.educationSaving.set(true);
 
     const raw = this.educationForm.getRawValue();
+    const selectedInstitution =
+      raw.institution === OTHER_INSTITUTION_OPTION
+        ? raw.institutionOther.trim()
+        : raw.institution.trim();
+
     const payload: EducationPayload = {
-      institution: raw.institution.trim(),
+      institution: selectedInstitution,
       degree: raw.degree.trim() || null,
       fieldOfStudy: raw.fieldOfStudy.trim() || null,
       startDate: raw.startDate.trim() || null,
@@ -1672,6 +1694,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   private resetEducationForm(): void {
     this.educationForm.reset({
       institution: '',
+      institutionOther: '',
       degree: '',
       fieldOfStudy: '',
       startDate: '',
@@ -1680,6 +1703,24 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     });
     this.educationForm.markAsPristine();
     this.educationForm.markAsUntouched();
+    this.handleEducationInstitutionChange(this.educationForm.controls.institution.value);
+  }
+
+  private handleEducationInstitutionChange(value: unknown): void {
+    const selected = typeof value === 'string' ? value : '';
+    const otherControl = this.educationForm.controls.institutionOther;
+
+    if (selected === OTHER_INSTITUTION_OPTION) {
+      otherControl.setValidators([Validators.required]);
+    } else {
+      otherControl.setValidators([]);
+
+      if (otherControl.value) {
+        otherControl.setValue('', { emitEvent: false });
+      }
+    }
+
+    otherControl.updateValueAndValidity({ emitEvent: false });
   }
 
   private resetExperienceForm(): void {
@@ -1755,11 +1796,15 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private normalizeInstitution(value: string | null | undefined): string {
-    if (typeof value !== 'string') {
+    if (typeof value !== 'string' || value === OTHER_INSTITUTION_OPTION) {
       return '';
     }
 
     const normalized = value.trim();
+    if (!normalized) {
+      return '';
+    }
+
     this.ensureInstitutionInOptions(normalized);
     return normalized;
   }
