@@ -17,6 +17,25 @@
   z-index: 1;
 }
 
+.welcome__banner {
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(63, 185, 80, 0.2), rgba(13, 110, 253, 0.2));
+  border: 1px solid rgba(63, 185, 80, 0.45);
+  color: #0f172a;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(6px);
+}
+
+.welcome__banner-icon {
+  font-size: 1.5rem;
+}
+
+.welcome__banner-message {
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .welcome__card {
   background: linear-gradient(160deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
   border: 1px solid rgba(48, 54, 61, 0.7);

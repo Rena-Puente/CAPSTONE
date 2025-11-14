@@ -63,6 +63,18 @@ interface RegisterResponse {
   error?: string;
 }
 
+interface PasswordResetRequestResponse {
+  ok: boolean;
+  error?: string | null;
+  message?: string | null;
+}
+
+interface PasswordResetResponse {
+  ok: boolean;
+  error?: string | null;
+  message?: string | null;
+}
+
 interface VerifyEmailResponse {
   ok: boolean;
   error?: string | null;
@@ -247,6 +259,94 @@ export class AuthService {
         catchError((error) => {
           const message = error?.error?.error || error?.message || 'No se pudo crear la cuenta.';
           console.error('[AuthService] Registration failed', { email, error: message });
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  requestPasswordReset(email: string): Observable<string> {
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail) {
+      return throwError(
+        () => new Error('Ingresa el correo con el que creaste tu cuenta para continuar.')
+      );
+    }
+
+    return this.http
+      .post<PasswordResetRequestResponse>(`${this.apiUrl}/auth/password/request`, {
+        email: normalizedEmail
+      })
+      .pipe(
+        map((response) => {
+          if (!response.ok) {
+            const message =
+              response.error || 'No se pudo enviar el enlace de restablecimiento.';
+            throw new Error(message);
+          }
+
+          const friendlyMessage =
+            typeof response.message === 'string' && response.message.trim().length > 0
+              ? response.message.trim()
+              : 'Si tu correo está registrado, recibirás un enlace para restablecer tu contraseña.';
+
+          return friendlyMessage;
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error ||
+            error?.message ||
+            'No se pudo enviar el enlace de restablecimiento.';
+
+          console.error('[AuthService] Password reset request failed', {
+            email: normalizedEmail,
+            error: message
+          });
+
+          return throwError(() => new Error(message));
+        })
+      );
+  }
+
+  resetPassword(token: string, password: string, passwordConfirmation: string): Observable<string> {
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
+
+    if (!normalizedToken) {
+      return throwError(() => new Error('El enlace de restablecimiento no es válido.'));
+    }
+
+    return this.http
+      .post<PasswordResetResponse>(`${this.apiUrl}/auth/password/reset`, {
+        token: normalizedToken,
+        password,
+        passwordConfirmation
+      })
+      .pipe(
+        map((response) => {
+          if (!response.ok) {
+            const message =
+              response.error || 'No se pudo restablecer la contraseña. Intenta nuevamente.';
+            throw new Error(message);
+          }
+
+          const friendlyMessage =
+            typeof response.message === 'string' && response.message.trim().length > 0
+              ? response.message.trim()
+              : 'Tu contraseña se actualizó correctamente. Ahora puedes iniciar sesión.';
+
+          return friendlyMessage;
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error ||
+            error?.message ||
+            'No se pudo restablecer la contraseña. Intenta nuevamente.';
+
+          console.error('[AuthService] Password reset failed', {
+            error: message,
+            token: summarizeToken(normalizedToken)
+          });
+
           return throwError(() => new Error(message));
         })
       );

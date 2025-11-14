@@ -7,12 +7,31 @@ Servidor de desarrollo
 
 Para iniciar un servidor local de desarrollo, ejecuta:
 
-bash
+```bash
 ng serve
-
+```
 
 Una vez que el servidor esté en funcionamiento, abre tu navegador y navega a http://localhost:4200/.
 La aplicación se recargará automáticamente cada vez que modifiques alguno de los archivos fuente.
+
+## Restablecimiento de contraseña
+
+El flujo completo de recuperación de credenciales en el front-end se compone de dos vistas públicas:
+
+1. **Solicitar restablecimiento** (`/auth/forgot-password`): formulario standalone con validación de correo electrónico. Llama al servicio `AuthService.requestPasswordReset(email)` y muestra un mensaje de confirmación amable, además de un acceso directo para volver a la pantalla de inicio de sesión.
+2. **Definir nueva contraseña** (`/auth/reset-password?token=...`): formulario reactivo protegido por `guestGuard` que exige contraseñas de al menos 8 caracteres y coincidencia entre ambos campos. Consume `AuthService.resetPassword(token, password, confirmation)` y bloquea la edición cuando el enlace no es válido.
+
+Tras completar cualquiera de los pasos, la pantalla de bienvenida (`/welcome`) despliega un banner informativo para guiar al usuario sobre el siguiente paso (revisar su correo o iniciar sesión con la nueva clave).
+
+Para probar el flujo manualmente:
+
+```bash
+ng serve
+# Abrir http://localhost:4200/auth/forgot-password para solicitar el correo
+# Abrir el enlace recibido (o simulado) con el token en http://localhost:4200/auth/reset-password?token=<token>
+```
+
+Los métodos del servicio gestionan errores de la API y devuelven mensajes amigables que se muestran directamente en la interfaz.
 
 Generación de código (Scaffolding)
 
