@@ -46,9 +46,9 @@
     <article class="metric-card">
       <i class="bi bi-calendar2-check-fill"></i>
       <div>
-        <p class="metric-label">Última actualización</p>
+        <p class="metric-label">Última postulación</p>
         <p class="metric-value" *ngIf="stats().lastUpdate as lastUpdate; else noUpdates">
-          {{ lastUpdate | date: 'medium' }}
+          {{ lastUpdate | date: 'MMM d, y, h:mm a' }}
         </p>
         <ng-template #noUpdates>
           <span class="metric-placeholder">Sin registros</span>

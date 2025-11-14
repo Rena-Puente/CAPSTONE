@@ -866,13 +866,12 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
   ------------------------------------------------------------------
   -- NUEVO: Eliminar oferta propia (si no tiene postulaciones)
   ------------------------------------------------------------------
-  PROCEDURE sp_eliminar_oferta(
+PROCEDURE sp_eliminar_oferta(
     p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
     p_id_oferta  IN OFERTAS.ID_OFERTA%TYPE
-  ) IS
+) IS
     v_id_empresa_oferta   EMPRESAS.ID_EMPRESA%TYPE;
-    v_count_postulaciones NUMBER;
-  BEGIN
+BEGIN
     IF p_id_empresa IS NULL THEN
       RAISE_APPLICATION_ERROR(-20095, 'El identificador de la empresa es obligatorio.');
     END IF;
@@ -881,6 +880,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       RAISE_APPLICATION_ERROR(-20096, 'Debes indicar una oferta válida.');
     END IF;
 
+    -- Validar que la oferta exista
     BEGIN
       SELECT id_empresa
         INTO v_id_empresa_oferta
@@ -891,26 +891,27 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
         RAISE_APPLICATION_ERROR(-20096, 'La oferta indicada no existe.');
     END;
 
+    -- Validar que la oferta pertenece a la empresa
     IF v_id_empresa_oferta <> p_id_empresa THEN
       RAISE_APPLICATION_ERROR(-20095, 'No tienes permisos para eliminar esta oferta.');
     END IF;
 
-    SELECT COUNT(*)
-      INTO v_count_postulaciones
-      FROM postulaciones
+    --------------------------------------------------------------------
+    -- 1) Borrar postulaciones asociadas a la oferta
+    --------------------------------------------------------------------
+    DELETE FROM postulaciones
      WHERE id_oferta = p_id_oferta;
 
-    IF v_count_postulaciones > 0 THEN
-      RAISE_APPLICATION_ERROR(-20097, 'No puedes eliminar la oferta porque tiene postulaciones asociadas. Desactívala en su lugar.');
-    END IF;
-
+    --------------------------------------------------------------------
+    -- 2) Borrar la oferta
+    --------------------------------------------------------------------
     DELETE FROM ofertas
      WHERE id_oferta = p_id_oferta;
 
     IF SQL%ROWCOUNT = 0 THEN
       RAISE_APPLICATION_ERROR(-20096, 'No se encontró la oferta que se intentó eliminar.');
     END IF;
-  END sp_eliminar_oferta;
+END sp_eliminar_oferta;
 
 END sp_empresas_pkg;
 /
