@@ -969,24 +969,24 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="educationInstitution" class="form-label">Institución</label>
-              <input
+              <select
                 id="educationInstitution"
-                type="text"
-                class="form-control"
+                class="form-select"
                 formControlName="institution"
-                list="educationInstitutionOptions"
-                autocomplete="off"
                 [class.is-invalid]="
                   educationForm.controls.institution.invalid &&
                   (educationForm.controls.institution.dirty || educationForm.controls.institution.touched)
                 "
-              />
-              <datalist id="educationInstitutionOptions">
+              >
+                <option value="" disabled>Selecciona una institución</option>
                 <option
                   *ngFor="let option of institutionOptions(); trackBy: trackInstitutionOption"
                   [value]="option"
-                ></option>
-              </datalist>
+                >
+                  {{ option }}
+                </option>
+                <option [value]="otherInstitutionOption">Otra institución</option>
+              </select>
               <div class="form-text text-light" *ngIf="institutionsLoading()">
                 Cargando instituciones...
               </div>
@@ -994,6 +994,21 @@
                 {{ institutionsError() }}
               </div>
               <div class="invalid-feedback">La institución es obligatoria.</div>
+              <div class="mt-3" *ngIf="educationInstitutionRequiresDetails()">
+                <label for="educationInstitutionOther" class="form-label">Especifica la institución</label>
+                <input
+                  id="educationInstitutionOther"
+                  type="text"
+                  class="form-control"
+                  formControlName="institutionOther"
+                  [class.is-invalid]="
+                    educationForm.controls.institutionOther.invalid &&
+                    (educationForm.controls.institutionOther.dirty ||
+                      educationForm.controls.institutionOther.touched)
+                  "
+                />
+                <div class="invalid-feedback">La institución es obligatoria.</div>
+              </div>
             </div>
             <div class="col-md-6">
               <label for="educationDegree" class="form-label">Grado o certificación</label>
