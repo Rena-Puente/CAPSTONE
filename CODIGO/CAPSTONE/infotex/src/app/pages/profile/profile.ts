@@ -61,6 +61,7 @@ function minTrimmedLengthValidator(minLength: number): ValidatorFn {
 }
 
 type FieldState = Record<ProfileField, { ok: boolean; error: string | null }>;
+type ProfileSectionKey = 'overview' | 'biography' | 'education' | 'experience' | 'skills' | 'github';
 
 function createEmptyFieldState(): FieldState {
   return PROFILE_FIELDS.reduce((acc, field) => {
@@ -92,6 +93,15 @@ type CareerOptionGroup = { name: string; options: readonly string[] };
 
 type AlertContent = { text: string } | { html: string };
 type AlertType = 'success' | 'warning' | 'danger';
+
+const DEFAULT_EXPANDED_SECTIONS: Record<ProfileSectionKey, boolean> = {
+  overview: true,
+  biography: false,
+  education: false,
+  experience: false,
+  skills: false,
+  github: false
+};
 
 function avatarUrlValidator(): ValidatorFn {
   const relativePathPattern = /^\/[\w\-./]+$/;
@@ -154,6 +164,9 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   protected readonly editorOpen = signal(false);
   protected readonly avatarHasError = signal(false);
   protected readonly avatarSelectorOpen = signal(false);
+  protected readonly expandedSections = signal<Record<ProfileSectionKey, boolean>>({
+    ...DEFAULT_EXPANDED_SECTIONS
+  });
   protected readonly education = signal<EducationEntry[]>([]);
   protected readonly educationSummary = signal<EducationSummary | null>(null);
   protected readonly educationLoading = signal(false);
@@ -474,6 +487,13 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
     this.editorOpen.set(true);
     this.profileForm.enable({ emitEvent: false });
+  }
+
+  protected toggleSection(section: ProfileSectionKey): void {
+    this.expandedSections.update((state) => ({
+      ...state,
+      [section]: !state[section]
+    }));
   }
 
   private observeSlugChanges(): void {
