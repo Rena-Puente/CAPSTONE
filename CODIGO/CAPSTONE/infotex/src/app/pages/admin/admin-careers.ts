@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -17,7 +17,7 @@ type CareerFormControl = 'category' | 'career';
   templateUrl: './admin-careers.html',
   styleUrl: './admin-careers.css'
 })
-export class AdminCareers implements OnInit {
+export class AdminCareers {
   private readonly fb = inject(FormBuilder);
   private readonly careersService = inject(CareersAdminService);
 
@@ -32,15 +32,13 @@ export class AdminCareers implements OnInit {
   protected readonly totalCareers = computed(() =>
     this.catalog().reduce((total, category) => total + category.items.length, 0)
   );
+  protected readonly isCatalogExpanded = signal(false);
+  private readonly hasLoadedCatalog = signal(false);
 
   protected readonly form = this.fb.nonNullable.group({
     category: ['', [Validators.required, Validators.maxLength(100)]],
     career: ['', [Validators.required, Validators.maxLength(150)]]
   });
-
-  async ngOnInit(): Promise<void> {
-    await this.loadCatalog();
-  }
 
   protected async loadCatalog(): Promise<void> {
     this.loading.set(true);
@@ -49,11 +47,13 @@ export class AdminCareers implements OnInit {
     try {
       const catalog = await firstValueFrom(this.careersService.getCatalog());
       this.catalog.set(catalog);
+      this.hasLoadedCatalog.set(true);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'No se pudo cargar el catálogo de carreras.';
       this.error.set(message);
       this.catalog.set([]);
+      this.hasLoadedCatalog.set(false);
     } finally {
       this.loading.set(false);
     }
@@ -88,6 +88,15 @@ export class AdminCareers implements OnInit {
     }
 
     return null;
+  }
+
+  protected toggleCatalog(): void {
+    const expanded = !this.isCatalogExpanded();
+    this.isCatalogExpanded.set(expanded);
+
+    if (expanded && !this.hasLoadedCatalog()) {
+      void this.loadCatalog();
+    }
   }
 
   protected async createCareer(): Promise<void> {

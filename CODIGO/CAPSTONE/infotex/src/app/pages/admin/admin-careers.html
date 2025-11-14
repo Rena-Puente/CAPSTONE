@@ -54,88 +54,111 @@
   </form>
 
   <section class="admin-careers__catalog">
-    <div class="admin-careers__hint" *ngIf="loading()">Cargando catálogo...</div>
+    <div class="admin-careers__catalog-controls">
+      <button
+        type="button"
+        class="admin-careers__catalog-toggle"
+        (click)="toggleCatalog()"
+        [attr.aria-expanded]="isCatalogExpanded()"
+        aria-controls="adminCareersCatalogPanel"
+      >
+        {{ isCatalogExpanded() ? 'Ocultar catálogo' : 'Mostrar catálogo' }}
+      </button>
 
-    <div class="admin-careers__alert admin-careers__alert--error" *ngIf="error()">
-      {{ error() }}
-      <button type="button" class="admin-careers__retry" (click)="refreshCatalog()">Reintentar</button>
+      <span class="admin-careers__hint" *ngIf="!isCatalogExpanded()">
+        Expande el catálogo cuando necesites revisar las carreras registradas.
+      </span>
     </div>
 
-    <ng-container *ngIf="!loading() && !error()">
-      <div class="admin-careers__hint" *ngIf="catalog().length === 0">
-        Aún no hay carreras registradas.
+    <div
+      *ngIf="isCatalogExpanded()"
+      id="adminCareersCatalogPanel"
+      class="admin-careers__catalog-panel"
+      aria-live="polite"
+    >
+      <div class="admin-careers__hint" *ngIf="loading()">Cargando catálogo...</div>
+
+      <div class="admin-careers__alert admin-careers__alert--error" *ngIf="error()">
+        {{ error() }}
+        <button type="button" class="admin-careers__retry" (click)="refreshCatalog()">Reintentar</button>
       </div>
 
-      <div *ngIf="catalog().length > 0" class="admin-careers__catalog-header">
-        <div class="admin-careers__catalog-header-text">
-          <h3 class="admin-careers__catalog-title">Listado por categoría</h3>
-          <p class="admin-careers__catalog-subtitle">Explora y gestiona todas las carreras disponibles.</p>
+      <ng-container *ngIf="!loading() && !error()">
+        <div class="admin-careers__hint" *ngIf="catalog().length === 0">
+          Aún no hay carreras registradas.
         </div>
-        <span class="admin-careers__catalog-total">
-          {{ totalCareers() }} {{ totalCareers() === 1 ? 'carrera' : 'carreras' }}
-        </span>
-      </div>
 
-      <div class="admin-careers__list-wrapper" *ngIf="catalog().length > 0">
-        <ul class="admin-careers__hierarchy" aria-label="Catálogo de carreras">
-          <li class="admin-careers__hierarchy-root">
-            <div class="admin-careers__root-label">
-              <span class="admin-careers__root-text">Carreras</span>
-              <span class="admin-careers__count">
-                {{ totalCareers() }}
-                {{ totalCareers() === 1 ? 'carrera' : 'carreras' }}
-              </span>
-            </div>
+        <div *ngIf="catalog().length > 0" class="admin-careers__catalog-header">
+          <div class="admin-careers__catalog-header-text">
+            <h3 class="admin-careers__catalog-title">Listado por categoría</h3>
+            <p class="admin-careers__catalog-subtitle">Explora y gestiona todas las carreras disponibles.</p>
+          </div>
+          <span class="admin-careers__catalog-total">
+            {{ totalCareers() }} {{ totalCareers() === 1 ? 'carrera' : 'carreras' }}
+          </span>
+        </div>
 
-            <ul class="admin-careers__categories-list">
-              <li class="admin-careers__category-item" *ngFor="let category of catalog()">
-                <div class="admin-careers__category-label">
-                  <span class="admin-careers__category-name">{{ category.category }}</span>
-                  <span class="admin-careers__count">
-                    {{ category.items.length }}
-                    {{ category.items.length === 1 ? 'carrera' : 'carreras' }}
-                  </span>
-                </div>
+        <div class="admin-careers__list-wrapper" *ngIf="catalog().length > 0">
+          <ul class="admin-careers__hierarchy" aria-label="Catálogo de carreras">
+            <li class="admin-careers__hierarchy-root">
+              <div class="admin-careers__root-label">
+                <span class="admin-careers__root-text">Carreras</span>
+                <span class="admin-careers__count">
+                  {{ totalCareers() }}
+                  {{ totalCareers() === 1 ? 'carrera' : 'carreras' }}
+                </span>
+              </div>
 
-                <ul class="admin-careers__careers-list">
-                  <li class="admin-careers__career-item" *ngFor="let item of category.items">
-                    <div class="admin-careers__option" [attr.data-career-id]="item.id ?? 'sin-id'">
-                      <div class="admin-careers__option-info">
-                        <span
-                          class="admin-careers__badge"
-                          [class.admin-careers__badge--empty]="!item.id"
-                          >{{ item.id ?? 'Sin ID' }}</span
+              <ul class="admin-careers__categories-list">
+                <li class="admin-careers__category-item" *ngFor="let category of catalog()">
+                  <div class="admin-careers__category-label">
+                    <span class="admin-careers__category-name">{{ category.category }}</span>
+                    <span class="admin-careers__count">
+                      {{ category.items.length }}
+                      {{ category.items.length === 1 ? 'carrera' : 'carreras' }}
+                    </span>
+                  </div>
+
+                  <ul class="admin-careers__careers-list">
+                    <li class="admin-careers__career-item" *ngFor="let item of category.items">
+                      <div class="admin-careers__option" [attr.data-career-id]="item.id ?? 'sin-id'">
+                        <div class="admin-careers__option-info">
+                          <span
+                            class="admin-careers__badge"
+                            [class.admin-careers__badge--empty]="!item.id"
+                            >{{ item.id ?? 'Sin ID' }}</span
+                          >
+                          <span class="admin-careers__option-name">{{ item.name }}</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          class="admin-careers__delete"
+                          (click)="deleteCareer(category, item)"
+                          [disabled]="isDeleting(category, item)"
                         >
-                        <span class="admin-careers__option-name">{{ item.name }}</span>
+                          <span class="admin-careers__spinner" *ngIf="isDeleting(category, item)" aria-hidden="true"></span>
+                          <span>{{ isDeleting(category, item) ? 'Eliminando…' : 'Eliminar' }}</span>
+                        </button>
                       </div>
+                    </li>
 
-                      <button
-                        type="button"
-                        class="admin-careers__delete"
-                        (click)="deleteCareer(category, item)"
-                        [disabled]="isDeleting(category, item)"
-                      >
-                        <span class="admin-careers__spinner" *ngIf="isDeleting(category, item)" aria-hidden="true"></span>
-                        <span>{{ isDeleting(category, item) ? 'Eliminando…' : 'Eliminar' }}</span>
-                      </button>
-                    </div>
-                  </li>
+                    <li class="admin-careers__career-item" *ngIf="category.items.length === 0">
+                      <div class="admin-careers__empty">
+                        Esta categoría aún no tiene carreras registradas.
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </ng-container>
 
-                  <li class="admin-careers__career-item" *ngIf="category.items.length === 0">
-                    <div class="admin-careers__empty">
-                      Esta categoría aún no tiene carreras registradas.
-                    </div>
-                  </li>
-                </ul>
-              </li>
-            </ul>
-          </li>
-        </ul>
+      <div class="admin-careers__alert admin-careers__alert--error" *ngIf="deleteError()">
+        {{ deleteError() }}
       </div>
-    </ng-container>
-
-    <div class="admin-careers__alert admin-careers__alert--error" *ngIf="deleteError()">
-      {{ deleteError() }}
     </div>
   </section>
 </section>
