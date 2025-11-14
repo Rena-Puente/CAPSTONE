@@ -46,6 +46,13 @@ describe('ForgotPassword', () => {
     expect(authService.requestPasswordReset).not.toHaveBeenCalled();
   });
 
+  it('should reject emails with unsupported characters', () => {
+    component.form.setValue({ email: 'usuario<>@example.com' });
+
+    expect(component.form.invalid).toBeTrue();
+    expect(component.emailControl.hasError('invalidCharacters')).toBeTrue();
+  });
+
   it('should call the service when the form is valid', async () => {
     component.form.setValue({ email: 'user@example.com' });
 

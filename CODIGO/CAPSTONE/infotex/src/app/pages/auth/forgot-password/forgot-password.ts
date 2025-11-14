@@ -1,10 +1,28 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../../services/auth.service';
+
+const EMAIL_ALLOWED_CHARACTERS = /^[a-zA-Z0-9._%+@-]+$/;
+
+function allowedEmailCharactersValidator(control: AbstractControl): ValidationErrors | null {
+  const value = control.value as string | null;
+
+  if (!value) {
+    return null;
+  }
+
+  return EMAIL_ALLOWED_CHARACTERS.test(value) ? null : { invalidCharacters: true };
+}
 
 @Component({
   selector: 'app-forgot-password',
@@ -19,7 +37,7 @@ export class ForgotPassword {
   private readonly router = inject(Router);
 
   readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]]
+    email: ['', [Validators.required, Validators.email, allowedEmailCharactersValidator]]
   });
 
   readonly loading = signal(false);
