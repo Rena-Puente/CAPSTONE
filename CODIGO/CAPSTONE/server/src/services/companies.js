@@ -521,6 +521,16 @@ function mapApplicantRow(row) {
     applicantId: Number(row.ID_USUARIO ?? row.id_usuario ?? null) || null,
     applicantName: toNullableTrimmedString(row.NOMBRE_POSTULANTE ?? row.nombre_postulante ?? row.NOMBRE_MOSTRAR ?? row.nombre_mostrar),
     applicantEmail: toNullableTrimmedString(row.CORREO_POSTULANTE ?? row.correo_postulante ?? row.CORREO ?? row.correo),
+    applicantPhone: toNullableTrimmedString(
+      row.TELEFONO_POSTULANTE ??
+        row.telefono_postulante ??
+        row.TELEFONO ??
+        row.telefono ??
+        row.TELEFONO_CONTACTO ??
+        row.telefono_contacto ??
+        row.CELULAR ??
+        row.celular
+    ),
     applicantProfileSlug: toNullableTrimmedString(row.SLUG_PERFIL ?? row.slug_perfil ?? row.SLUG ?? row.slug),
     status: toNullableTrimmedString(row.ESTADO ?? row.estado),
     submittedAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null)
