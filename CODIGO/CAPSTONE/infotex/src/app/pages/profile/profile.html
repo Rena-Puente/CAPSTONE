@@ -34,13 +34,27 @@
           <ng-container *ngIf="!loading()">
             <ng-container *ngIf="!loadError()">
               <ng-container *ngIf="profile(); else noProfileData">
-                <div class="profile-grid mt-4">
-                  <section class="profile-section profile-section--overview">
+                <div class="profile-accordion mt-4">
+                  <section
+                    class="profile-section profile-accordion__item profile-section--overview"
+                    [class.profile-accordion__item--expanded]="expandedSections().overview"
+                  >
                     <div class="profile-section__header">
-                      <div>
-                        <span class="profile-section__eyebrow">Resumen</span>
-                        <h3 class="profile-section__title mb-0">Información general</h3>
-                      </div>
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('overview')"
+                        [attr.aria-expanded]="expandedSections().overview"
+                        aria-controls="profile-section-overview"
+                      >
+                        <span class="profile-section__chevron" aria-hidden="true">
+                          <i class="bi bi-chevron-down"></i>
+                        </span>
+                        <span class="profile-section__heading">
+                          <span class="profile-section__eyebrow">Resumen</span>
+                          <span class="profile-section__title">Información general</span>
+                        </span>
+                      </button>
                       <div class="profile-section__actions">
                         <button
                           type="button"
@@ -53,7 +67,12 @@
                       </div>
                     </div>
 
-                    <div class="profile-section__body">
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-overview"
+                      [class.profile-section__body--collapsed]="!expandedSections().overview"
+                      [attr.aria-hidden]="!expandedSections().overview"
+                    >
                       <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
                         <div class="profile-avatar-wrapper">
                           <ng-container *ngIf="profile()?.avatarUrl && !avatarHasError(); else avatarPlaceholder">
@@ -139,13 +158,27 @@
                     </div>
                   </section>
 
-                  <section class="profile-section profile-section--biography">
+                  <section
+                    class="profile-section profile-accordion__item profile-section--biography"
+                    [class.profile-accordion__item--expanded]="expandedSections().biography"
+                  >
                     <div class="profile-section__header">
-                      <div>
-                        <span class="profile-section__eyebrow">Historia</span>
-                        <h3 class="profile-section__title mb-0">Biografía</h3>
-                        <p class="profile-section__subtitle text-secondary mb-0">Comparte quién eres y tu experiencia.</p>
-                      </div>
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('biography')"
+                        [attr.aria-expanded]="expandedSections().biography"
+                        aria-controls="profile-section-biography"
+                      >
+                        <span class="profile-section__chevron" aria-hidden="true">
+                          <i class="bi bi-chevron-down"></i>
+                        </span>
+                        <span class="profile-section__heading">
+                          <span class="profile-section__eyebrow">Historia</span>
+                          <span class="profile-section__title">Biografía</span>
+                          <span class="profile-section__subtitle">Comparte quién eres y tu experiencia.</span>
+                        </span>
+                      </button>
                       <div class="profile-section__actions">
                         <button
                           type="button"
@@ -158,35 +191,54 @@
                       </div>
                     </div>
 
-                    <div class="profile-section__body">
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-biography"
+                      [class.profile-section__body--collapsed]="!expandedSections().biography"
+                      [attr.aria-hidden]="!expandedSections().biography"
+                    >
                       <p class="mb-0" [class.text-secondary]="!profile()?.biography">
                         {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
                       </p>
                     </div>
                   </section>
 
-                  <section class="profile-section profile-section--education">
+                  <section
+                    class="profile-section profile-accordion__item profile-section--education"
+                    [class.profile-accordion__item--expanded]="expandedSections().education"
+                  >
                     <div class="profile-section__header">
-                      <div>
-                        <span class="profile-section__eyebrow">Formación</span>
-                        <h3 class="profile-section__title mb-1">Educación</h3>
-                        <p class="profile-section__subtitle text-secondary mb-0">
-                          <ng-container *ngIf="educationSummary() as summary; else educationSummaryFallback">
-                            <ng-container *ngIf="summary.totalRecords > 0; else noEducationRecords">
-                              {{ summary.totalRecords === 1 ? '1 registro educativo' : summary.totalRecords + ' registros educativos' }}.
-                              <ng-container *ngIf="summary.invalidDateCount > 0">
-                                {{ summary.invalidDateCount === 1 ? 'Un registro' : summary.invalidDateCount + ' registros' }} requiere revisar las fechas.
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('education')"
+                        [attr.aria-expanded]="expandedSections().education"
+                        aria-controls="profile-section-education"
+                      >
+                        <span class="profile-section__chevron" aria-hidden="true">
+                          <i class="bi bi-chevron-down"></i>
+                        </span>
+                        <span class="profile-section__heading">
+                          <span class="profile-section__eyebrow">Formación</span>
+                          <span class="profile-section__title">Educación</span>
+                          <span class="profile-section__subtitle">
+                            <ng-container *ngIf="educationSummary() as summary; else educationSummaryFallback">
+                              <ng-container *ngIf="summary.totalRecords > 0; else noEducationRecords">
+                                {{ summary.totalRecords === 1 ? '1 registro educativo' : summary.totalRecords + ' registros educativos' }}.
+                                <ng-container *ngIf="summary.invalidDateCount > 0">
+                                  {{ summary.invalidDateCount === 1 ? 'Un registro' : summary.invalidDateCount + ' registros' }} requiere revisar las fechas.
+                                </ng-container>
                               </ng-container>
+                              <ng-template #noEducationRecords>
+                                Aún no has agregado tu educación.
+                              </ng-template>
                             </ng-container>
-                            <ng-template #noEducationRecords>
+                            <ng-template #educationSummaryFallback>
                               Aún no has agregado tu educación.
                             </ng-template>
-                          </ng-container>
-                          <ng-template #educationSummaryFallback>
-                            Aún no has agregado tu educación.
-                          </ng-template>
-                        </p>
-                      </div>
+                          </span>
+                        </span>
+                      </button>
                       <div class="profile-section__actions">
                         <button
                           type="button"
@@ -199,7 +251,12 @@
                       </div>
                     </div>
 
-                    <div class="profile-section__body">
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-education"
+                      [class.profile-section__body--collapsed]="!expandedSections().education"
+                      [attr.aria-hidden]="!expandedSections().education"
+                    >
                       <div *ngIf="educationError()" class="alert alert-danger" role="alert">
                         {{ educationError() }}
                       </div>
@@ -246,31 +303,45 @@
                     </div>
                   </section>
 
-                  <section class="profile-section profile-section--experience">
+                  <section
+                    class="profile-section profile-accordion__item profile-section--experience"
+                    [class.profile-accordion__item--expanded]="expandedSections().experience"
+                  >
                     <div class="profile-section__header">
-                      <div>
-                        <span class="profile-section__eyebrow">Trayectoria</span>
-                        <h3 class="profile-section__title mb-1">Experiencia</h3>
-                        <p class="profile-section__subtitle text-secondary mb-0">
-                          <ng-container *ngIf="experienceSummary() as summary; else experienceSummaryFallback">
-                            <ng-container *ngIf="summary.totalRecords > 0; else noExperienceRecords">
-                              {{ summary.totalRecords === 1 ? '1 experiencia laboral' : summary.totalRecords + ' experiencias laborales' }}.
-                              <ng-container *ngIf="summary.invalidDateCount > 0">
-                                {{ summary.invalidDateCount === 1 ? 'Un registro requiere' : summary.invalidDateCount + ' registros requieren' }} revisar las fechas.
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('experience')"
+                        [attr.aria-expanded]="expandedSections().experience"
+                        aria-controls="profile-section-experience"
+                      >
+                        <span class="profile-section__chevron" aria-hidden="true">
+                          <i class="bi bi-chevron-down"></i>
+                        </span>
+                        <span class="profile-section__heading">
+                          <span class="profile-section__eyebrow">Trayectoria</span>
+                          <span class="profile-section__title">Experiencia</span>
+                          <span class="profile-section__subtitle">
+                            <ng-container *ngIf="experienceSummary() as summary; else experienceSummaryFallback">
+                              <ng-container *ngIf="summary.totalRecords > 0; else noExperienceRecords">
+                                {{ summary.totalRecords === 1 ? '1 experiencia laboral' : summary.totalRecords + ' experiencias laborales' }}.
+                                <ng-container *ngIf="summary.invalidDateCount > 0">
+                                  {{ summary.invalidDateCount === 1 ? 'Un registro requiere' : summary.invalidDateCount + ' registros requieren' }} revisar las fechas.
+                                </ng-container>
+                                <ng-container *ngIf="summary.currentCount > 0">
+                                  {{ summary.currentCount === 1 ? 'Actualmente 1 rol activo.' : 'Actualmente ' + summary.currentCount + ' roles activos.' }}
+                                </ng-container>
                               </ng-container>
-                              <ng-container *ngIf="summary.currentCount > 0">
-                                {{ summary.currentCount === 1 ? 'Actualmente 1 rol activo.' : 'Actualmente ' + summary.currentCount + ' roles activos.' }}
-                              </ng-container>
+                              <ng-template #noExperienceRecords>
+                                Aún no has agregado tu experiencia laboral.
+                              </ng-template>
                             </ng-container>
-                            <ng-template #noExperienceRecords>
+                            <ng-template #experienceSummaryFallback>
                               Aún no has agregado tu experiencia laboral.
                             </ng-template>
-                          </ng-container>
-                          <ng-template #experienceSummaryFallback>
-                            Aún no has agregado tu experiencia laboral.
-                          </ng-template>
-                        </p>
-                      </div>
+                          </span>
+                        </span>
+                      </button>
                       <div class="profile-section__actions">
                         <button
                           type="button"
@@ -283,7 +354,12 @@
                       </div>
                     </div>
 
-                    <div class="profile-section__body">
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-experience"
+                      [class.profile-section__body--collapsed]="!expandedSections().experience"
+                      [attr.aria-hidden]="!expandedSections().experience"
+                    >
                       <div *ngIf="experienceError()" class="alert alert-danger" role="alert">
                         {{ experienceError() }}
                       </div>
@@ -332,31 +408,45 @@
                     </div>
                   </section>
 
-                  <section class="profile-section profile-section--skills">
+                  <section
+                    class="profile-section profile-accordion__item profile-section--skills"
+                    [class.profile-accordion__item--expanded]="expandedSections().skills"
+                  >
                     <div class="profile-section__header">
-                      <div>
-                        <span class="profile-section__eyebrow">Talento</span>
-                        <h3 class="profile-section__title mb-1">Habilidades</h3>
-                        <p class="profile-section__subtitle text-secondary mb-0">
-                          <ng-container *ngIf="skillsSummary() as summary; else skillsSummaryFallback">
-                            <ng-container *ngIf="summary.totalSkills > 0; else noSkillsRecords">
-                              {{ summary.totalSkills === 1 ? '1 habilidad registrada' : summary.totalSkills + ' habilidades registradas' }}.
-                              <ng-container *ngIf="summary.averageLevel !== null">
-                                Nivel promedio {{ summary.averageLevel | number:'1.1-1' }} / 5.
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('skills')"
+                        [attr.aria-expanded]="expandedSections().skills"
+                        aria-controls="profile-section-skills"
+                      >
+                        <span class="profile-section__chevron" aria-hidden="true">
+                          <i class="bi bi-chevron-down"></i>
+                        </span>
+                        <span class="profile-section__heading">
+                          <span class="profile-section__eyebrow">Talento</span>
+                          <span class="profile-section__title">Habilidades</span>
+                          <span class="profile-section__subtitle">
+                            <ng-container *ngIf="skillsSummary() as summary; else skillsSummaryFallback">
+                              <ng-container *ngIf="summary.totalSkills > 0; else noSkillsRecords">
+                                {{ summary.totalSkills === 1 ? '1 habilidad registrada' : summary.totalSkills + ' habilidades registradas' }}.
+                                <ng-container *ngIf="summary.averageLevel !== null">
+                                  Nivel promedio {{ summary.averageLevel | number:'1.1-1' }} / 5.
+                                </ng-container>
+                                <ng-container *ngIf="summary.maxLevel !== null && summary.minLevel !== null">
+                                  Rango {{ summary.minLevel }}–{{ summary.maxLevel }}.
+                                </ng-container>
                               </ng-container>
-                              <ng-container *ngIf="summary.maxLevel !== null && summary.minLevel !== null">
-                                Rango {{ summary.minLevel }}–{{ summary.maxLevel }}.
-                              </ng-container>
+                              <ng-template #noSkillsRecords>
+                                Aún no has agregado tus habilidades.
+                              </ng-template>
                             </ng-container>
-                            <ng-template #noSkillsRecords>
+                            <ng-template #skillsSummaryFallback>
                               Aún no has agregado tus habilidades.
                             </ng-template>
-                          </ng-container>
-                          <ng-template #skillsSummaryFallback>
-                            Aún no has agregado tus habilidades.
-                          </ng-template>
-                        </p>
-                      </div>
+                          </span>
+                        </span>
+                      </button>
                       <div class="profile-section__actions">
                         <button
                           type="button"
@@ -370,7 +460,12 @@
                       </div>
                     </div>
 
-                    <div class="profile-section__body">
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-skills"
+                      [class.profile-section__body--collapsed]="!expandedSections().skills"
+                      [attr.aria-hidden]="!expandedSections().skills"
+                    >
                       <div *ngIf="skillsError()" class="alert alert-danger" role="alert">
                         {{ skillsError() }}
                       </div>
@@ -447,18 +542,37 @@
                     </div>
                   </section>
 
-                  <section class="profile-section profile-section--github">
+                  <section
+                    class="profile-section profile-accordion__item profile-section--github"
+                    [class.profile-accordion__item--expanded]="expandedSections().github"
+                  >
                     <div class="profile-section__header">
-                      <div>
-                        <span class="profile-section__eyebrow">Integraciones</span>
-                        <h3 class="profile-section__title mb-1">Cuenta de GitHub</h3>
-                        <p class="profile-section__subtitle text-secondary mb-0">
-                          Vincula tu cuenta de GitHub para compartir tus proyectos e identidad profesional en InfoTex.
-                        </p>
-                      </div>
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('github')"
+                        [attr.aria-expanded]="expandedSections().github"
+                        aria-controls="profile-section-github"
+                      >
+                        <span class="profile-section__chevron" aria-hidden="true">
+                          <i class="bi bi-chevron-down"></i>
+                        </span>
+                        <span class="profile-section__heading">
+                          <span class="profile-section__eyebrow">Integraciones</span>
+                          <span class="profile-section__title">Cuenta de GitHub</span>
+                          <span class="profile-section__subtitle">
+                            Vincula tu cuenta de GitHub para compartir tus proyectos e identidad profesional en InfoTex.
+                          </span>
+                        </span>
+                      </button>
                     </div>
 
-                    <div class="profile-section__body">
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-github"
+                      [class.profile-section__body--collapsed]="!expandedSections().github"
+                      [attr.aria-hidden]="!expandedSections().github"
+                    >
                       <div *ngIf="githubErrorMessage()" class="alert alert-danger" role="alert">
                         {{ githubErrorMessage() }}
                       </div>
