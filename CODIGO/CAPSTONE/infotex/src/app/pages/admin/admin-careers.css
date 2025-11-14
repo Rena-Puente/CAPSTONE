@@ -166,6 +166,55 @@
   gap: 1.25rem;
 }
 
+.admin-careers__catalog-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid #21262d;
+  background: rgba(13, 17, 23, 0.75);
+}
+
+.admin-careers__catalog-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-careers__catalog-title {
+  margin: 0;
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  color: #f0f6fc;
+  font-weight: 600;
+}
+
+.admin-careers__catalog-subtitle {
+  margin: 0;
+  color: #8b949e;
+  font-size: 0.9rem;
+}
+
+.admin-careers__catalog-total {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(46, 160, 67, 0.15);
+  color: #7ee787;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.admin-careers__categories {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
 .admin-careers__hint {
   color: #8b949e;
   font-size: 0.9rem;
@@ -203,6 +252,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 340px;
 }
 
 .admin-careers__category-header {
@@ -245,6 +295,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  flex: 1;
 }
 
 .admin-careers__select-label {
@@ -264,6 +315,7 @@
   background: #0d1117;
   padding: 0.35rem;
   max-height: 320px;
+  min-height: 240px;
   overflow-y: auto;
 }
 
@@ -344,6 +396,15 @@
 
   .admin-careers__submit {
     width: 100%;
+  }
+
+  .admin-careers__catalog-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-careers__categories {
+    grid-template-columns: 1fr;
   }
 
   .admin-careers__option {
