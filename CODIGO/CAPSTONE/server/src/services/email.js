@@ -17,11 +17,9 @@ function ensureEmailServiceConfigured() {
   throw error;
 }
 
-function buildVerificationUrl(token) {
-  const baseUrl = config.email.verificationBaseUrl;
-
+function buildUrlWithToken(baseUrl, token, description) {
   if (!baseUrl || typeof baseUrl !== 'string') {
-    throw new Error('La URL base de verificación no está configurada.');
+    throw new Error(`La URL base de ${description} no está configurada.`);
   }
 
   if (baseUrl.includes('{token}')) {
@@ -44,6 +42,14 @@ function buildVerificationUrl(token) {
     const separator = baseUrl.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
   }
+}
+
+function buildVerificationUrl(token) {
+  return buildUrlWithToken(config.email.verificationBaseUrl, token, 'verificación');
+}
+
+function buildPasswordResetUrl(token) {
+  return buildUrlWithToken(config.email.passwordResetBaseUrl, token, 'recuperación de contraseña');
 }
 
 async function sendEmailVerification({ to, token }) {
@@ -99,7 +105,62 @@ async function sendEmailVerification({ to, token }) {
   return { verificationUrl };
 }
 
+async function sendPasswordReset({ to, token }) {
+  if (!to || !token) {
+    throw new Error('El correo y el token son obligatorios para enviar la recuperación.');
+  }
+
+  ensureEmailServiceConfigured();
+
+  const resetUrl = buildPasswordResetUrl(token);
+  const payload = {
+    from: config.email.from,
+    to: [to],
+    subject: 'Restablece tu contraseña',
+    html: `<!DOCTYPE html><html lang="es"><body style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2933;">` +
+      `<h1 style=\"font-size:20px;\">Recuperación de contraseña</h1>` +
+      `<p>Recibimos una solicitud para restablecer tu contraseña. Si fuiste tú, usa el siguiente botón:</p>` +
+      `<p style=\"text-align:center;margin:24px 0;\"><a href=\"${resetUrl}\" style=\"background-color:#2563eb;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;\">Restablecer contraseña</a></p>` +
+      `<p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>` +
+      `<p style=\"word-break:break-all;\"><a href=\"${resetUrl}\">${resetUrl}</a></p>` +
+      `<p>Si no solicitaste este cambio, puedes ignorar este correo.</p>` +
+      `<p style=\"margin-top:32px;\">Equipo de InfoTex</p>` +
+      `</body></html>`,
+    text: `Solicitaste restablecer tu contraseña. Completa el proceso en: ${resetUrl}`
+  };
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.email.resendApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Resend respondió con estado ${response.status}`;
+
+    try {
+      const details = await response.text();
+      if (details) {
+        errorMessage += `: ${details}`;
+      }
+    } catch (readError) {
+      // Ignorado
+    }
+
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    throw error;
+  }
+
+  return { resetUrl };
+}
+
 module.exports = {
   sendEmailVerification,
-  buildVerificationUrl
+  sendPasswordReset,
+  buildVerificationUrl,
+  buildPasswordResetUrl
 };

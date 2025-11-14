@@ -35,6 +35,17 @@ Las variables de entorno exigidas por `src/config/index.js` antes de iniciar el 
 - `ACCESS_TOKEN_MINUTES`
 - `REFRESH_TOKEN_DAYS`
 
+### Configuración de correo electrónico
+
+Para habilitar el envío de correos transaccionales (verificación de cuenta y recuperación de contraseña) debes definir además:
+
+- `RESEND_API_KEY`
+- `EMAIL_FROM`
+- `EMAIL_VERIFICATION_BASE_URL`
+- `EMAIL_PASSWORD_RESET_BASE_URL`
+
+Las URLs base aceptan plantillas con `{token}`, `{{token}}` o `%token%`. Si no utilizas un marcador, el token se añadirá como parámetro de consulta (`?token=`).
+
 ## Rutas públicas
 
 ### `GET /profiles/:slug`
@@ -120,6 +131,14 @@ Versión autenticada para que el dueño del perfil consulte sus repositorios vin
 - Ante errores con GitHub (ej. límites de cuota agotados) responde con un código HTTP propagado por el servicio (`502`, `429`, etc.) y un mensaje genérico.
 
 Los resultados se cachean temporalmente para reducir llamadas redundantes y se implementan reintentos exponenciales ante errores transitorios o límites de cuota informados por GitHub.
+
+### `POST /auth/password/request`
+
+Inicia el flujo de recuperación de contraseña. Recibe `{ "email": "correo@dominio" }`, normaliza el correo y ejecuta el procedimiento `sp_crear_recuperacion_contrasena`. Siempre responde `{ ok: true }` para evitar la enumeración de cuentas y, si se generó un token, envía el correo de recuperación usando Resend.
+
+### `POST /auth/password/reset`
+
+Completa el restablecimiento de contraseña recibiendo `{ "token": "...", "password": "...", "passwordConfirmation": "..." }`. Internamente valida el token mediante `sp_confirmar_recuperacion_contrasena`, actualiza el hash y revoca sesiones activas. En caso de error devuelve un mensaje descriptivo indicando si el token es inválido, expiró o ya fue utilizado.
 
 ### `PATCH /companies/me/applicants/:applicationId/status`
 

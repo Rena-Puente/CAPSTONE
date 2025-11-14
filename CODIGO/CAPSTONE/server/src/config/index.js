@@ -17,7 +17,8 @@ const {
   GITHUB_SCOPE,
   RESEND_API_KEY,
   EMAIL_FROM,
-  EMAIL_VERIFICATION_BASE_URL
+  EMAIL_VERIFICATION_BASE_URL,
+  EMAIL_PASSWORD_RESET_BASE_URL
 } = process.env;
 
 function normalizeOptionalEnv(value) {
@@ -59,13 +60,15 @@ const githubScopeList = githubScope
 const emailConfig = {
   resendApiKey: normalizeOptionalEnv(RESEND_API_KEY),
   from: normalizeOptionalEnv(EMAIL_FROM),
-  verificationBaseUrl: normalizeOptionalEnv(EMAIL_VERIFICATION_BASE_URL)
+  verificationBaseUrl: normalizeOptionalEnv(EMAIL_VERIFICATION_BASE_URL),
+  passwordResetBaseUrl: normalizeOptionalEnv(EMAIL_PASSWORD_RESET_BASE_URL)
 };
 
 const missingEmailVariables = Object.entries({
   RESEND_API_KEY: emailConfig.resendApiKey,
   EMAIL_FROM: emailConfig.from,
-  EMAIL_VERIFICATION_BASE_URL: emailConfig.verificationBaseUrl
+  EMAIL_VERIFICATION_BASE_URL: emailConfig.verificationBaseUrl,
+  EMAIL_PASSWORD_RESET_BASE_URL: emailConfig.passwordResetBaseUrl
 })
   .filter(([, value]) => !value)
   .map(([name]) => name);
