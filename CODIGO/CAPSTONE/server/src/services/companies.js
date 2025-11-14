@@ -47,6 +47,65 @@ function sanitizeString(value) {
   return String(value).trim();
 }
 
+function normalizeBooleanInput(value) {
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0;
+  }
+
+  if (typeof value === 'number') {
+    if (Number.isNaN(value)) {
+      return null;
+    }
+
+    if (value === 1) {
+      return 1;
+    }
+
+    if (value === 0) {
+      return 0;
+    }
+
+    return null;
+  }
+
+  const sanitized = sanitizeString(value);
+
+  if (!sanitized) {
+    return null;
+  }
+
+  const normalized = sanitized
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (
+    normalized === '1' ||
+    normalized === 'true' ||
+    normalized === 'si' ||
+    normalized === 'on' ||
+    normalized === 'enabled' ||
+    normalized === 'activo' ||
+    normalized === 'activa'
+  ) {
+    return 1;
+  }
+
+  if (
+    normalized === '0' ||
+    normalized === 'false' ||
+    normalized === 'no' ||
+    normalized === 'off' ||
+    normalized === 'disabled' ||
+    normalized === 'inactivo' ||
+    normalized === 'inactiva'
+  ) {
+    return 0;
+  }
+
+  return null;
+}
+
 function assertRequired(value, label) {
   if (!value) {
     throw new Error(`${label} es obligatorio.`);
@@ -468,10 +527,41 @@ function mapApplicantRow(row) {
   };
 }
 
+function mapOfferRow(row) {
+  if (!row) {
+    return null;
+  }
+
+  const activeFlag = toNonNegativeInteger(row.ACTIVA ?? row.activa ?? 1);
+
+  return {
+    id: Number(row.ID_OFERTA ?? row.id_oferta ?? null) || null,
+    title: toNullableTrimmedString(row.TITULO ?? row.titulo),
+    description: toNullableTrimmedString(row.DESCRIPCION ?? row.descripcion),
+    locationType: toNullableTrimmedString(row.TIPO_UBICACION ?? row.tipo_ubicacion),
+    city: toNullableTrimmedString(row.CIUDAD ?? row.ciudad),
+    country: toNullableTrimmedString(row.PAIS ?? row.pais),
+    seniority: toNullableTrimmedString(row.SENIORITY ?? row.seniority),
+    contractType: toNullableTrimmedString(row.TIPO_CONTRATO ?? row.tipo_contrato),
+    createdAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null),
+    active: activeFlag === 1,
+    totalApplicants: toNonNegativeInteger(row.TOTAL_POSTULANTES ?? row.total_postulantes)
+  };
+}
+
 class ApplicationStatusUpdateError extends Error {
   constructor(message, statusCode = 400, code = 'APPLICATION_STATUS_ERROR') {
     super(message);
     this.name = 'ApplicationStatusUpdateError';
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+class CompanyOfferError extends Error {
+  constructor(message, statusCode = 400, code = 'COMPANY_OFFER_ERROR') {
+    super(message);
+    this.name = 'CompanyOfferError';
     this.statusCode = statusCode;
     this.code = code;
   }
@@ -644,6 +734,79 @@ async function listApplicants(companyId) {
   });
 }
 
+async function listCompanyOffers(companyId) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    return [];
+  }
+
+  return withConnection(async (connection) => {
+    const result = await connection.execute(
+      `BEGIN sp_empresas_pkg.sp_listar_ofertas_empresa(
+         p_id_empresa => :companyId,
+         o_ofertas    => :cursor
+       ); END;`,
+      {
+        companyId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+      }
+    );
+
+    const cursor = result.outBinds?.cursor || null;
+    const rows = await fetchCursorRows(cursor);
+
+    return rows
+      .map((row) => mapOfferRow(row))
+      .filter((item) => item && item.id);
+  });
+}
+
+async function listApplicantsForOffer(companyId, offerId) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    throw new CompanyOfferError('El identificador de la empresa no es válido.', 400, 'INVALID_COMPANY');
+  }
+
+  if (!Number.isInteger(offerId) || offerId <= 0) {
+    throw new CompanyOfferError('El identificador de la oferta no es válido.', 400, 'INVALID_OFFER');
+  }
+
+  try {
+    return await withConnection(async (connection) => {
+      const result = await connection.execute(
+        `BEGIN sp_empresas_pkg.sp_listar_postulantes_oferta(
+           p_id_empresa  => :companyId,
+           p_id_oferta   => :offerId,
+           o_postulantes => :cursor
+         ); END;`,
+        {
+          companyId,
+          offerId,
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR }
+        }
+      );
+
+      const cursor = result.outBinds?.cursor || null;
+      const rows = await fetchCursorRows(cursor);
+
+      return rows
+        .map((row) => mapApplicantRow(row))
+        .filter((item) => item && item.applicationId);
+    });
+  } catch (error) {
+    if (typeof error?.errorNum === 'number') {
+      switch (error.errorNum) {
+        case 20090:
+          throw new CompanyOfferError('La oferta indicada no existe.', 404, 'OFFER_NOT_FOUND');
+        case 20091:
+          throw new CompanyOfferError('La empresa no puede ver los postulantes de esta oferta.', 403, 'OFFER_FORBIDDEN');
+        default:
+          break;
+      }
+    }
+
+    throw error;
+  }
+}
+
 async function getApplicationSummary(companyId) {
   if (!Number.isInteger(companyId) || companyId <= 0) {
     return createDefaultApplicationSummary();
@@ -749,21 +912,138 @@ async function updateApplicationStatus(companyId, applicationId, status) {
   }
 }
 
+async function updateOfferActiveState(companyId, offerId, active) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    throw new CompanyOfferError('El identificador de la empresa no es válido.', 400, 'INVALID_COMPANY');
+  }
+
+  if (!Number.isInteger(offerId) || offerId <= 0) {
+    throw new CompanyOfferError('El identificador de la oferta no es válido.', 400, 'INVALID_OFFER');
+  }
+
+  const normalizedActive = normalizeBooleanInput(active);
+
+  if (normalizedActive === null) {
+    throw new CompanyOfferError(
+      'Debes indicar si la oferta debe estar activa o inactiva.',
+      400,
+      'INVALID_OFFER_STATE'
+    );
+  }
+
+  try {
+    const result = await executeQuery(
+      `BEGIN sp_empresas_pkg.sp_actualizar_estado_oferta(
+         p_id_empresa       => :companyId,
+         p_id_oferta        => :offerId,
+         p_activa           => :activeFlag,
+         o_activa_nueva     => :newActive,
+         o_activa_anterior  => :previousActive
+       ); END;`,
+      {
+        companyId,
+        offerId,
+        activeFlag: normalizedActive,
+        newActive: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER },
+        previousActive: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      { autoCommit: true }
+    );
+
+    const newFlag = toNonNegativeInteger(result.outBinds?.newActive);
+    const previousFlag = toNonNegativeInteger(result.outBinds?.previousActive);
+
+    return {
+      offerId,
+      companyId,
+      active: newFlag === 1,
+      previousActive: previousFlag === 1
+    };
+  } catch (error) {
+    if (typeof error?.errorNum === 'number') {
+      switch (error.errorNum) {
+        case 20092:
+          throw new CompanyOfferError('La empresa no puede administrar esta oferta.', 403, 'OFFER_FORBIDDEN');
+        case 20093:
+          throw new CompanyOfferError('La oferta indicada no existe.', 404, 'OFFER_NOT_FOUND');
+        case 20094:
+          throw new CompanyOfferError('El estado indicado para la oferta no es válido.', 400, 'INVALID_OFFER_STATE');
+        default:
+          break;
+      }
+    }
+
+    throw error;
+  }
+}
+
+async function deleteOffer(companyId, offerId) {
+  if (!Number.isInteger(companyId) || companyId <= 0) {
+    throw new CompanyOfferError('El identificador de la empresa no es válido.', 400, 'INVALID_COMPANY');
+  }
+
+  if (!Number.isInteger(offerId) || offerId <= 0) {
+    throw new CompanyOfferError('El identificador de la oferta no es válido.', 400, 'INVALID_OFFER');
+  }
+
+  try {
+    await executeQuery(
+      `BEGIN sp_empresas_pkg.sp_eliminar_oferta(
+         p_id_empresa => :companyId,
+         p_id_oferta  => :offerId
+       ); END;`,
+      {
+        companyId,
+        offerId
+      },
+      { autoCommit: true }
+    );
+  } catch (error) {
+    if (typeof error?.errorNum === 'number') {
+      switch (error.errorNum) {
+        case 20095:
+          throw new CompanyOfferError('La empresa no puede eliminar esta oferta.', 403, 'OFFER_FORBIDDEN');
+        case 20096:
+          throw new CompanyOfferError('La oferta indicada no existe.', 404, 'OFFER_NOT_FOUND');
+        case 20097:
+          throw new CompanyOfferError(
+            'No puedes eliminar la oferta porque tiene postulaciones asociadas.',
+            409,
+            'OFFER_HAS_APPLICATIONS'
+          );
+        default:
+          break;
+      }
+    }
+
+    throw error;
+  }
+
+  return { offerId, companyId };
+}
+
 module.exports = {
   normalizeCompanyPayload,
   createCompany,
   mapCompanyRow,
+  mapOfferRow,
   getCompanyForUser,
   createOffer,
   listApplicants,
+  listCompanyOffers,
+  listApplicantsForOffer,
   getApplicationSummary,
   updateApplicationStatus,
+  updateOfferActiveState,
+  deleteOffer,
   normalizeApplicationStatus,
   ApplicationStatusUpdateError,
+  CompanyOfferError,
   APPLICATION_STATUS_VALUES,
   __test__: {
     createDefaultApplicationSummary,
     mapApplicationSummaryRow,
-    toNonNegativeInteger
+    toNonNegativeInteger,
+    normalizeBooleanInput
   }
 };
