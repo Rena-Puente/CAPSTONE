@@ -41,6 +41,21 @@ export class CompanyApplicants {
   protected readonly offerActionError = signal<string | null>(null);
   protected readonly offerActionMessage = signal<string | null>(null);
 
+    protected formatOfferOption(offer: CompanyOfferSummary | null): string {
+    if (!offer) {
+      return 'Oferta sin título';
+    }
+
+    const title = offer.title?.trim() || `Oferta #${offer.id}`;
+    const statusLabel = offer.active ? 'activo' : 'inactivo';
+    const totalApplicants =
+      typeof offer.totalApplicants === 'number' && Number.isFinite(offer.totalApplicants)
+        ? offer.totalApplicants
+        : 0;
+    const applicantsLabel = totalApplicants === 1 ? '1 postulante' : `${totalApplicants} postulantes`;
+
+    return `${title} (${statusLabel}) · ${applicantsLabel}`;
+  }
   constructor() {
     void this.initialize();
   }

@@ -523,13 +523,13 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
   ------------------------------------------------------------------
   -- NUEVO: listar postulantes de UNA oferta específica de la empresa
   ------------------------------------------------------------------
-  PROCEDURE sp_listar_postulantes_oferta(
+PROCEDURE sp_listar_postulantes_oferta(
     p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
     p_id_oferta   IN OFERTAS.ID_OFERTA%TYPE,
     o_postulantes OUT SYS_REFCURSOR
-  ) IS
+) IS
     v_id_empresa_oferta EMPRESAS.ID_EMPRESA%TYPE;
-  BEGIN
+BEGIN
     IF p_id_empresa IS NULL OR p_id_oferta IS NULL THEN
       OPEN o_postulantes FOR
         SELECT NULL AS id_postulacion,
@@ -538,6 +538,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
                NULL AS id_usuario,
                NULL AS nombre_postulante,
                NULL AS correo_postulante,
+               NULL AS telefono_postulante,
                NULL AS slug_perfil,
                NULL AS estado,
                CAST(NULL AS TIMESTAMP) AS fecha_creacion
@@ -567,6 +568,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
              p.id_usuario,
              pr.nombre_mostrar AS nombre_postulante,
              u.correo AS correo_postulante,
+             pr.telefono AS telefono_postulante,  -- ← ahora desde PERFILES
              pr.slug AS slug_perfil,
              p.estado,
              p.fecha_creacion
@@ -579,7 +581,8 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
           ON pr.id_usuario = p.id_usuario
        WHERE p.id_oferta = p_id_oferta
        ORDER BY p.fecha_creacion DESC;
-  END sp_listar_postulantes_oferta;
+END sp_listar_postulantes_oferta;
+
 
   PROCEDURE sp_listar_ofertas_publicas(
     o_ofertas OUT SYS_REFCURSOR

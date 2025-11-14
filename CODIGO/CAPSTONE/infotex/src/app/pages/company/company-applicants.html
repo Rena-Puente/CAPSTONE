@@ -20,7 +20,7 @@
       >
         <option value="">Selecciona una oferta</option>
         <option *ngFor="let offer of offers()" [value]="offer.id" [selected]="offer.id === selectedOfferId()">
-          {{ offer.title || ('Oferta #' + offer.id) }}
+          {{ formatOfferOption(offer) }}
         </option>
       </select>
     </div>
