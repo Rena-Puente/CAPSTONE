@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -29,6 +29,9 @@ export class AdminCareers implements OnInit {
   protected readonly submitSuccess = signal<string | null>(null);
   protected readonly deletingKey = signal<string | null>(null);
   protected readonly deleteError = signal<string | null>(null);
+  protected readonly totalCareers = computed(() =>
+    this.catalog().reduce((total, category) => total + category.items.length, 0)
+  );
 
   protected readonly form = this.fb.nonNullable.group({
     category: ['', [Validators.required, Validators.maxLength(100)]],
