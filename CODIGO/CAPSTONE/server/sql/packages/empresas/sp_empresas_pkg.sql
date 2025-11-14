@@ -64,9 +64,42 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     o_estado_nuevo      OUT POSTULACIONES.ESTADO%TYPE,
     o_estado_anterior   OUT POSTULACIONES.ESTADO%TYPE
   );
+
+  ------------------------------------------------------------------
+  -- NUEVOS PROCEDIMIENTOS PARA FLUJO DE EMPRESA / MIS OFERTAS
+  ------------------------------------------------------------------
+
+  -- Listar solo las ofertas de una empresa (vista "Mis ofertas")
+  PROCEDURE sp_listar_ofertas_empresa(
+    p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
+    o_ofertas    OUT SYS_REFCURSOR
+  );
+
+  -- Listar postulantes de una oferta específica (detalle al hacer click)
+  PROCEDURE sp_listar_postulantes_oferta(
+    p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_oferta   IN OFERTAS.ID_OFERTA%TYPE,
+    o_postulantes OUT SYS_REFCURSOR
+  );
+
+  -- Activar / desactivar una oferta propia (switch activa/inactiva)
+  PROCEDURE sp_actualizar_estado_oferta(
+    p_id_empresa       IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_oferta        IN OFERTAS.ID_OFERTA%TYPE,
+    p_activa           IN OFERTAS.ACTIVA%TYPE,
+    o_activa_nueva     OUT OFERTAS.ACTIVA%TYPE,
+    o_activa_anterior  OUT OFERTAS.ACTIVA%TYPE
+  );
+
+  -- Eliminar una oferta propia (con control de postulaciones)
+  PROCEDURE sp_eliminar_oferta(
+    p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_oferta  IN OFERTAS.ID_OFERTA%TYPE
+  );
+
 END sp_empresas_pkg;
 /
-
+--------------------------------------------------------------------------------
 CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
   c_tipo_usuario_empresa CONSTANT NUMBER := 3;
 
@@ -339,13 +372,13 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       RAISE_APPLICATION_ERROR(-20070, 'El identificador de la empresa es obligatorio.');
     END IF;
 
-    v_titulo := TRIM(p_titulo);
-    v_descripcion := p_descripcion;
+    v_titulo         := TRIM(p_titulo);
+    v_descripcion    := p_descripcion;
     v_tipo_ubicacion := TRIM(p_tipo_ubicacion);
-    v_ciudad := TRIM(p_ciudad);
-    v_pais := TRIM(p_pais);
-    v_seniority := TRIM(p_seniority);
-    v_tipo_contrato := TRIM(p_tipo_contrato);
+    v_ciudad         := TRIM(p_ciudad);
+    v_pais           := TRIM(p_pais);
+    v_seniority      := TRIM(p_seniority);
+    v_tipo_contrato  := TRIM(p_tipo_contrato);
 
     IF v_titulo IS NULL OR v_titulo = '' THEN
       RAISE_APPLICATION_ERROR(-20071, 'El título de la oferta es obligatorio.');
@@ -400,6 +433,51 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
     ) RETURNING id_oferta INTO o_id_oferta;
   END sp_crear_oferta;
 
+  ------------------------------------------------------------------
+  -- NUEVO: listar ofertas propias de la empresa (para "Mis ofertas")
+  ------------------------------------------------------------------
+  PROCEDURE sp_listar_ofertas_empresa(
+    p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
+    o_ofertas    OUT SYS_REFCURSOR
+  ) IS
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      OPEN o_ofertas FOR
+        SELECT NULL AS id_oferta,
+               NULL AS titulo,
+               NULL AS descripcion,
+               NULL AS tipo_ubicacion,
+               NULL AS ciudad,
+               NULL AS pais,
+               NULL AS seniority,
+               NULL AS tipo_contrato,
+               CAST(NULL AS TIMESTAMP) AS fecha_creacion,
+               NULL AS activa,
+               0    AS total_postulantes
+          FROM dual
+         WHERE 1 = 0;
+      RETURN;
+    END IF;
+
+    OPEN o_ofertas FOR
+      SELECT o.id_oferta,
+             o.titulo,
+             o.descripcion,
+             o.tipo_ubicacion,
+             o.ciudad,
+             o.pais,
+             o.seniority,
+             o.tipo_contrato,
+             o.fecha_creacion,
+             NVL(o.activa, 1) AS activa,
+             (SELECT COUNT(*)
+                FROM postulaciones p
+               WHERE p.id_oferta = o.id_oferta) AS total_postulantes
+        FROM ofertas o
+       WHERE o.id_empresa = p_id_empresa
+       ORDER BY o.fecha_creacion DESC;
+  END sp_listar_ofertas_empresa;
+
   PROCEDURE sp_listar_postulantes(
     p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
     o_postulantes OUT SYS_REFCURSOR
@@ -442,6 +520,67 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
        ORDER BY p.fecha_creacion DESC;
   END sp_listar_postulantes;
 
+  ------------------------------------------------------------------
+  -- NUEVO: listar postulantes de UNA oferta específica de la empresa
+  ------------------------------------------------------------------
+  PROCEDURE sp_listar_postulantes_oferta(
+    p_id_empresa  IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_oferta   IN OFERTAS.ID_OFERTA%TYPE,
+    o_postulantes OUT SYS_REFCURSOR
+  ) IS
+    v_id_empresa_oferta EMPRESAS.ID_EMPRESA%TYPE;
+  BEGIN
+    IF p_id_empresa IS NULL OR p_id_oferta IS NULL THEN
+      OPEN o_postulantes FOR
+        SELECT NULL AS id_postulacion,
+               NULL AS id_oferta,
+               NULL AS titulo_oferta,
+               NULL AS id_usuario,
+               NULL AS nombre_postulante,
+               NULL AS correo_postulante,
+               NULL AS slug_perfil,
+               NULL AS estado,
+               CAST(NULL AS TIMESTAMP) AS fecha_creacion
+          FROM dual
+         WHERE 1 = 0;
+      RETURN;
+    END IF;
+
+    BEGIN
+      SELECT id_empresa
+        INTO v_id_empresa_oferta
+        FROM ofertas
+       WHERE id_oferta = p_id_oferta;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20090, 'La oferta indicada no existe.');
+    END;
+
+    IF v_id_empresa_oferta <> p_id_empresa THEN
+      RAISE_APPLICATION_ERROR(-20091, 'No tienes permisos para ver los postulantes de esta oferta.');
+    END IF;
+
+    OPEN o_postulantes FOR
+      SELECT p.id_postulacion,
+             p.id_oferta,
+             o.titulo AS titulo_oferta,
+             p.id_usuario,
+             pr.nombre_mostrar AS nombre_postulante,
+             u.correo AS correo_postulante,
+             pr.slug AS slug_perfil,
+             p.estado,
+             p.fecha_creacion
+        FROM postulaciones p
+        JOIN ofertas o
+          ON o.id_oferta = p.id_oferta
+       JOIN usuarios u
+          ON u.id_usuario = p.id_usuario
+        LEFT JOIN perfiles pr
+          ON pr.id_usuario = p.id_usuario
+       WHERE p.id_oferta = p_id_oferta
+       ORDER BY p.fecha_creacion DESC;
+  END sp_listar_postulantes_oferta;
+
   PROCEDURE sp_listar_ofertas_publicas(
     o_ofertas OUT SYS_REFCURSOR
   ) IS
@@ -462,7 +601,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
              e.pais        AS pais_empresa,
              e.ciudad      AS ciudad_empresa,
              e.url_avatar  AS url_avatar_empresa
-       FROM ofertas o
+        FROM ofertas o
         JOIN empresas e
           ON e.id_empresa = o.id_empresa
        WHERE NVL(o.activa, 1) = 1
@@ -505,15 +644,15 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
           JOIN ofertas_empresa oe
             ON oe.id_oferta = p.id_oferta
       )
-      SELECT (SELECT COUNT(*) FROM ofertas_empresa)                         AS total_ofertas,
-             (SELECT COUNT(*) FROM ofertas_empresa WHERE activa = 1)        AS ofertas_activas,
-             (SELECT COUNT(*) FROM postulaciones_empresa)                   AS total_postulaciones,
-             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'enviada')    AS enviadas,
+      SELECT (SELECT COUNT(*) FROM ofertas_empresa)                              AS total_ofertas,
+             (SELECT COUNT(*) FROM ofertas_empresa WHERE activa = 1)            AS ofertas_activas,
+             (SELECT COUNT(*) FROM postulaciones_empresa)                        AS total_postulaciones,
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'enviada')     AS enviadas,
              (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'en_revision') AS en_revision,
-             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'aceptada')   AS aceptadas,
-             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'rechazada')  AS rechazadas,
-             (SELECT MAX(fecha_creacion) FROM postulaciones_empresa)         AS ultima_postulacion,
-             (SELECT MAX(fecha_creacion) FROM postulaciones_empresa)         AS ultima_actualizacion
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'aceptada')    AS aceptadas,
+             (SELECT COUNT(*) FROM postulaciones_empresa WHERE estado = 'rechazada')   AS rechazadas,
+             (SELECT MAX(fecha_creacion) FROM postulaciones_empresa)             AS ultima_postulacion,
+             (SELECT MAX(fecha_creacion) FROM postulaciones_empresa)             AS ultima_actualizacion
         FROM dual;
   END sp_resumen_postulaciones_empresa;
 
@@ -661,5 +800,117 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
 
     o_estado_nuevo := v_estado_normal;
   END sp_actualizar_estado_postulacion;
+
+  ------------------------------------------------------------------
+  -- NUEVO: Activar / desactivar oferta propia
+  ------------------------------------------------------------------
+  PROCEDURE sp_actualizar_estado_oferta(
+    p_id_empresa       IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_oferta        IN OFERTAS.ID_OFERTA%TYPE,
+    p_activa           IN OFERTAS.ACTIVA%TYPE,
+    o_activa_nueva     OUT OFERTAS.ACTIVA%TYPE,
+    o_activa_anterior  OUT OFERTAS.ACTIVA%TYPE
+  ) IS
+    v_id_empresa_oferta EMPRESAS.ID_EMPRESA%TYPE;
+    v_activa_actual     OFERTAS.ACTIVA%TYPE;
+    v_activa_normal     NUMBER(1,0);
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20092, 'El identificador de la empresa es obligatorio.');
+    END IF;
+
+    IF p_id_oferta IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20093, 'Debes indicar una oferta válida.');
+    END IF;
+
+    v_activa_normal := NVL(p_activa, 0);
+
+    IF v_activa_normal NOT IN (0, 1) THEN
+      RAISE_APPLICATION_ERROR(-20094, 'El estado de la oferta debe ser 0 (inactiva) o 1 (activa).');
+    END IF;
+
+    BEGIN
+      SELECT o.id_empresa,
+             NVL(o.activa, 1)
+        INTO v_id_empresa_oferta,
+             v_activa_actual
+        FROM ofertas o
+       WHERE o.id_oferta = p_id_oferta;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20093, 'La oferta indicada no existe.');
+    END;
+
+    IF v_id_empresa_oferta IS NULL OR v_id_empresa_oferta <> p_id_empresa THEN
+      RAISE_APPLICATION_ERROR(-20092, 'No tienes permisos para actualizar esta oferta.');
+    END IF;
+
+    o_activa_anterior := v_activa_actual;
+
+    IF v_activa_actual = v_activa_normal THEN
+      o_activa_nueva := v_activa_actual;
+      RETURN;
+    END IF;
+
+    UPDATE ofertas
+       SET activa = v_activa_normal
+     WHERE id_oferta = p_id_oferta;
+
+    IF SQL%ROWCOUNT = 0 THEN
+      RAISE_APPLICATION_ERROR(-20093, 'No se encontró la oferta que se intentó actualizar.');
+    END IF;
+
+    o_activa_nueva := v_activa_normal;
+  END sp_actualizar_estado_oferta;
+
+  ------------------------------------------------------------------
+  -- NUEVO: Eliminar oferta propia (si no tiene postulaciones)
+  ------------------------------------------------------------------
+  PROCEDURE sp_eliminar_oferta(
+    p_id_empresa IN EMPRESAS.ID_EMPRESA%TYPE,
+    p_id_oferta  IN OFERTAS.ID_OFERTA%TYPE
+  ) IS
+    v_id_empresa_oferta   EMPRESAS.ID_EMPRESA%TYPE;
+    v_count_postulaciones NUMBER;
+  BEGIN
+    IF p_id_empresa IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20095, 'El identificador de la empresa es obligatorio.');
+    END IF;
+
+    IF p_id_oferta IS NULL THEN
+      RAISE_APPLICATION_ERROR(-20096, 'Debes indicar una oferta válida.');
+    END IF;
+
+    BEGIN
+      SELECT id_empresa
+        INTO v_id_empresa_oferta
+        FROM ofertas
+       WHERE id_oferta = p_id_oferta;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        RAISE_APPLICATION_ERROR(-20096, 'La oferta indicada no existe.');
+    END;
+
+    IF v_id_empresa_oferta <> p_id_empresa THEN
+      RAISE_APPLICATION_ERROR(-20095, 'No tienes permisos para eliminar esta oferta.');
+    END IF;
+
+    SELECT COUNT(*)
+      INTO v_count_postulaciones
+      FROM postulaciones
+     WHERE id_oferta = p_id_oferta;
+
+    IF v_count_postulaciones > 0 THEN
+      RAISE_APPLICATION_ERROR(-20097, 'No puedes eliminar la oferta porque tiene postulaciones asociadas. Desactívala en su lugar.');
+    END IF;
+
+    DELETE FROM ofertas
+     WHERE id_oferta = p_id_oferta;
+
+    IF SQL%ROWCOUNT = 0 THEN
+      RAISE_APPLICATION_ERROR(-20096, 'No se encontró la oferta que se intentó eliminar.');
+    END IF;
+  END sp_eliminar_oferta;
+
 END sp_empresas_pkg;
 /
