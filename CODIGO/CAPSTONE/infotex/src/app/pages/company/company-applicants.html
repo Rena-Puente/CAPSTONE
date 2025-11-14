@@ -8,8 +8,27 @@
     </div>
   </header>
 
+  <div *ngIf="offers().length > 0" class="company-applicants__controls">
+    <label class="company-applicants__label" for="offer-selector">Oferta publicada</label>
+    <div class="company-applicants__select-wrapper">
+      <select
+        id="offer-selector"
+        class="company-applicants__select"
+        [value]="selectedOfferId() ?? ''"
+        (change)="onOfferSelected($event)"
+        [disabled]="loading()"
+      >
+        <option value="">Selecciona una oferta</option>
+        <option *ngFor="let offer of offers()" [value]="offer.id" [selected]="offer.id === selectedOfferId()">
+          {{ offer.title || ('Oferta #' + offer.id) }}
+        </option>
+      </select>
+    </div>
+    <p class="company-applicants__helper">Selecciona una oferta para revisar los postulantes asociados.</p>
+  </div>
+
   <div *ngIf="loading()" class="company-applicants__alert company-applicants__alert--info" role="status">
-    Cargando postulantes...
+    Cargando información...
   </div>
 
   <div *ngIf="error()" class="company-applicants__alert company-applicants__alert--error" role="alert">
@@ -17,45 +36,58 @@
   </div>
 
   <ng-container *ngIf="!loading() && !error()">
-    <div *ngIf="applicants().length === 0" class="company-applicants__empty">
-      Aún no hay postulantes para tus ofertas.
+    <div *ngIf="offers().length === 0" class="company-applicants__empty company-applicants__empty--muted">
+      Aún no has publicado ofertas. Crea una oferta para comenzar a recibir postulantes.
     </div>
 
-    <div class="company-applicants__table-wrapper" *ngIf="applicants().length > 0">
-      <table class="company-applicants__table">
-        <thead>
-          <tr>
-            <th scope="col">Oferta</th>
-            <th scope="col">Postulante</th>
-            <th scope="col">Correo</th>
-            <th scope="col">Perfil</th>
-            <th scope="col">Estado</th>
-            <th scope="col">Fecha</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let applicant of applicants()">
-            <td data-title="Oferta">{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
-            <td data-title="Postulante">{{ applicant.applicantName || 'Sin nombre' }}</td>
-            <td data-title="Correo">{{ applicant.applicantEmail || 'Sin correo' }}</td>
-            <td data-title="Perfil">
-              <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
-                <a
-                  [href]="profileUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="company-applicants__link"
-                >
-                  Ver perfil
-                </a>
-              </ng-container>
-              <ng-template #noProfile>Sin perfil</ng-template>
-            </td>
-            <td data-title="Estado">{{ applicant.status || 'En revisión' }}</td>
-            <td data-title="Fecha">{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <ng-container *ngIf="offers().length > 0">
+      <div *ngIf="selectedOfferId() === null" class="company-applicants__empty company-applicants__empty--muted">
+        Selecciona una oferta para ver los postulantes relacionados.
+      </div>
+
+      <div *ngIf="selectedOfferId() !== null && applicants().length === 0" class="company-applicants__empty">
+        Aún no hay postulantes para esta oferta.
+      </div>
+
+      <div
+        class="company-applicants__table-wrapper"
+        *ngIf="selectedOfferId() !== null && applicants().length > 0"
+      >
+        <table class="company-applicants__table">
+          <thead>
+            <tr>
+              <th scope="col">Oferta</th>
+              <th scope="col">Postulante</th>
+              <th scope="col">Correo</th>
+              <th scope="col">Perfil</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let applicant of applicants()">
+              <td data-title="Oferta">{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
+              <td data-title="Postulante">{{ applicant.applicantName || 'Sin nombre' }}</td>
+              <td data-title="Correo">{{ applicant.applicantEmail || 'Sin correo' }}</td>
+              <td data-title="Perfil">
+                <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
+                  <a
+                    [href]="profileUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="company-applicants__link"
+                  >
+                    Ver perfil
+                  </a>
+                </ng-container>
+                <ng-template #noProfile>Sin perfil</ng-template>
+              </td>
+              <td data-title="Estado">{{ applicant.status || 'En revisión' }}</td>
+              <td data-title="Fecha">{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
   </ng-container>
 </section>
