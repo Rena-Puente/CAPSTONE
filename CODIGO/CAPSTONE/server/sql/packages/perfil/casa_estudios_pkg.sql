@@ -81,7 +81,7 @@ CREATE OR REPLACE PACKAGE BODY casa_estudios_pkg AS
   -- Listar como JSON (opcionalmente filtrado por nombre exacto)
   -- Salida: [{"id":1,"casa_estudios":"Duoc UC"}, ...]
   --------------------------------------------------------------------
-  FUNCTION fn_casa_listar_json(
+FUNCTION fn_casa_listar_json(
   p_casa_estudios IN VARCHAR2 DEFAULT NULL
 ) RETURN CLOB IS
   v_json CLOB;
@@ -119,6 +119,7 @@ EXCEPTION
   WHEN NO_DATA_FOUND THEN
     RETURN '[]';
 END fn_casa_listar_json;
+
 
 END casa_estudios_pkg;
 /
