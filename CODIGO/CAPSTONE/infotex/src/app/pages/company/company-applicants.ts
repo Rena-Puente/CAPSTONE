@@ -1,5 +1,5 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import {
@@ -23,6 +23,23 @@ export class CompanyApplicants {
   protected readonly applicants = signal<CompanyApplicant[]>([]);
   protected readonly offers = signal<CompanyOfferSummary[]>([]);
   protected readonly selectedOfferId = signal<number | null>(null);
+  protected readonly selectedOffer = computed<CompanyOfferSummary | null>(() => {
+    const selectedId = this.selectedOfferId();
+
+    if (selectedId === null) {
+      return null;
+    }
+
+    if (!Number.isInteger(selectedId)) {
+      return null;
+    }
+
+    return this.offers().find((offer) => offer.id === selectedId) ?? null;
+  });
+  protected readonly updatingOfferState = signal(false);
+  protected readonly deletingOffer = signal(false);
+  protected readonly offerActionError = signal<string | null>(null);
+  protected readonly offerActionMessage = signal<string | null>(null);
 
   constructor() {
     void this.initialize();
@@ -36,12 +53,25 @@ export class CompanyApplicants {
     this.loading.set(true);
     this.error.set(null);
     this.offers.set([]);
+    this.offerActionError.set(null);
+    this.offerActionMessage.set(null);
 
     let offerToAutoload: number | null = null;
 
     try {
       const offers = await firstValueFrom(this.companyService.listMyOffers());
       this.offers.set(offers);
+
+      const currentlySelectedOfferId = this.selectedOfferId();
+
+      if (currentlySelectedOfferId !== null) {
+        const stillExists = offers.some((offer) => offer.id === currentlySelectedOfferId);
+
+        if (!stillExists) {
+          this.selectedOfferId.set(null);
+          this.applicants.set([]);
+        }
+      }
 
       if (offers.length === 0) {
         this.selectedOfferId.set(null);
@@ -73,6 +103,9 @@ export class CompanyApplicants {
     const target = event.target as HTMLSelectElement | null;
     const value = target?.value ?? '';
 
+    this.offerActionError.set(null);
+    this.offerActionMessage.set(null);
+
     if (!value) {
       this.selectedOfferId.set(null);
       this.applicants.set([]);
@@ -89,6 +122,100 @@ export class CompanyApplicants {
 
     this.selectedOfferId.set(offerId);
     await this.loadApplicantsForOffer(offerId);
+  }
+
+  protected async onOfferActiveToggled(event: Event, offer: CompanyOfferSummary | null): Promise<void> {
+    if (!offer || !Number.isInteger(offer.id) || offer.id <= 0) {
+      return;
+    }
+
+    const input = event.target as HTMLInputElement | null;
+
+    if (!input) {
+      return;
+    }
+
+    const desiredState = input.checked;
+    const previousState = offer.active;
+
+    if (desiredState === previousState) {
+      return;
+    }
+
+    this.updatingOfferState.set(true);
+    this.offerActionError.set(null);
+    this.offerActionMessage.set(null);
+
+    try {
+      const result = await firstValueFrom(this.companyService.updateOfferActiveState(offer.id, desiredState));
+
+      this.offers.update((current) =>
+        current.map((item) => (item.id === offer.id ? { ...item, active: result.active } : item))
+      );
+
+      const message = result.message ?? (result.active ? 'La oferta se activó correctamente.' : 'La oferta se desactivó correctamente.');
+      this.offerActionMessage.set(message);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo actualizar el estado de la oferta.';
+
+      this.offerActionError.set(message);
+      input.checked = previousState;
+    } finally {
+      this.updatingOfferState.set(false);
+    }
+  }
+
+  protected async onDeleteOffer(offer: CompanyOfferSummary | null): Promise<void> {
+    if (!offer || !Number.isInteger(offer.id) || offer.id <= 0) {
+      return;
+    }
+
+    const confirmationMessage =
+      '¿Seguro que quieres eliminar esta oferta? Esta acción no se puede deshacer.';
+    const defaultView = this.document?.defaultView;
+
+    if (defaultView && typeof defaultView.confirm === 'function') {
+      const confirmed = defaultView.confirm(confirmationMessage);
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    this.deletingOffer.set(true);
+    this.offerActionError.set(null);
+    this.offerActionMessage.set(null);
+
+    try {
+      const result = await firstValueFrom(this.companyService.deleteOffer(offer.id));
+
+      const remainingOffers = this.offers().filter((item) => item.id !== offer.id);
+
+      this.offers.set(remainingOffers);
+
+      const selectedId = this.selectedOfferId();
+
+      if (selectedId === offer.id) {
+        this.selectedOfferId.set(null);
+        this.applicants.set([]);
+
+        const nextOffer = remainingOffers[0] ?? null;
+
+        if (nextOffer && Number.isInteger(nextOffer.id) && nextOffer.id > 0) {
+          this.selectedOfferId.set(nextOffer.id);
+          await this.loadApplicantsForOffer(nextOffer.id);
+        }
+      }
+
+      const message = result.message ?? 'Oferta eliminada correctamente.';
+      this.offerActionMessage.set(message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo eliminar la oferta.';
+      this.offerActionError.set(message);
+    } finally {
+      this.deletingOffer.set(false);
+    }
   }
 
   private async loadApplicantsForOffer(offerId: number): Promise<void> {

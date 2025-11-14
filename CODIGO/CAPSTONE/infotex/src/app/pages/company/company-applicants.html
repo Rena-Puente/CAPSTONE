@@ -36,58 +36,153 @@
   </div>
 
   <ng-container *ngIf="!loading() && !error()">
+    <div
+      *ngIf="offers().length === 0 && !offerActionError() && offerActionMessage()"
+      class="company-applicants__alert company-applicants__alert--success"
+      role="status"
+    >
+      {{ offerActionMessage() }}
+    </div>
+
     <div *ngIf="offers().length === 0" class="company-applicants__empty company-applicants__empty--muted">
       Aún no has publicado ofertas. Crea una oferta para comenzar a recibir postulantes.
     </div>
 
     <ng-container *ngIf="offers().length > 0">
-      <div *ngIf="selectedOfferId() === null" class="company-applicants__empty company-applicants__empty--muted">
+      <div
+        *ngIf="(!selectedOffer() || offers().length === 0) && !offerActionError() && offerActionMessage()"
+        class="company-applicants__alert company-applicants__alert--success"
+        role="status"
+      >
+        {{ offerActionMessage() }}
+      </div>
+
+      <div *ngIf="!selectedOffer()" class="company-applicants__empty company-applicants__empty--muted">
         Selecciona una oferta para ver los postulantes relacionados.
       </div>
 
-      <div *ngIf="selectedOfferId() !== null && applicants().length === 0" class="company-applicants__empty">
-        Aún no hay postulantes para esta oferta.
-      </div>
+      <ng-container *ngIf="selectedOffer() as offer">
+        <section class="company-applicants__offer-card" aria-label="Información de la oferta seleccionada">
+          <div class="company-applicants__offer-card-header">
+            <h3 class="company-applicants__offer-card-title">Detalles de la oferta</h3>
+            <div class="company-applicants__offer-actions">
+              <label
+                class="company-applicants__switch"
+                [class.company-applicants__switch--disabled]="deletingOffer() || updatingOfferState()"
+              >
+                <input
+                  type="checkbox"
+                  class="company-applicants__switch-input"
+                  [checked]="offer.active"
+                  [disabled]="updatingOfferState() || deletingOffer()"
+                  (change)="onOfferActiveToggled($event, offer)"
+                  aria-label="Activar o desactivar oferta"
+                />
+                <span class="company-applicants__switch-slider" aria-hidden="true"></span>
+                <span class="company-applicants__switch-text">
+                  {{ offer.active ? 'Oferta activa' : 'Oferta inactiva' }}
+                </span>
+              </label>
 
-      <div
-        class="company-applicants__table-wrapper"
-        *ngIf="selectedOfferId() !== null && applicants().length > 0"
-      >
-        <table class="company-applicants__table">
-          <thead>
-            <tr>
-              <th scope="col">Oferta</th>
-              <th scope="col">Postulante</th>
-              <th scope="col">Correo</th>
-              <th scope="col">Perfil</th>
-              <th scope="col">Estado</th>
-              <th scope="col">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let applicant of applicants()">
-              <td data-title="Oferta">{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
-              <td data-title="Postulante">{{ applicant.applicantName || 'Sin nombre' }}</td>
-              <td data-title="Correo">{{ applicant.applicantEmail || 'Sin correo' }}</td>
-              <td data-title="Perfil">
-                <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
-                  <a
-                    [href]="profileUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="company-applicants__link"
-                  >
-                    Ver perfil
-                  </a>
-                </ng-container>
-                <ng-template #noProfile>Sin perfil</ng-template>
-              </td>
-              <td data-title="Estado">{{ applicant.status || 'En revisión' }}</td>
-              <td data-title="Fecha">{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              <button
+                type="button"
+                class="company-applicants__delete-button"
+                (click)="onDeleteOffer(offer)"
+                [disabled]="deletingOffer() || updatingOfferState()"
+              >
+                Borrar oferta
+              </button>
+            </div>
+          </div>
+
+          <p class="company-applicants__offer-description">
+            {{ offer.description || 'Sin descripción disponible.' }}
+          </p>
+
+          <div *ngIf="offerActionError()" class="company-applicants__alert company-applicants__alert--error" role="alert">
+            {{ offerActionError() }}
+          </div>
+          <div
+            *ngIf="!offerActionError() && offerActionMessage()"
+            class="company-applicants__alert company-applicants__alert--success"
+            role="status"
+          >
+            {{ offerActionMessage() }}
+          </div>
+
+          <dl class="company-applicants__offer-grid">
+            <div class="company-applicants__offer-field">
+              <dt>Tipo de ubicación</dt>
+              <dd>{{ offer.locationType || 'Sin especificar' }}</dd>
+            </div>
+            <div class="company-applicants__offer-field">
+              <dt>Ciudad</dt>
+              <dd>{{ offer.city || 'Sin especificar' }}</dd>
+            </div>
+            <div class="company-applicants__offer-field">
+              <dt>País</dt>
+              <dd>{{ offer.country || 'Sin especificar' }}</dd>
+            </div>
+            <div class="company-applicants__offer-field">
+              <dt>Seniority</dt>
+              <dd>{{ offer.seniority || 'Sin especificar' }}</dd>
+            </div>
+            <div class="company-applicants__offer-field">
+              <dt>Tipo de contrato</dt>
+              <dd>{{ offer.contractType || 'Sin especificar' }}</dd>
+            </div>
+            <div class="company-applicants__offer-field">
+              <dt>Fecha de publicación</dt>
+              <dd>{{ offer.createdAt ? (offer.createdAt | date: 'medium') : '—' }}</dd>
+            </div>
+            <div class="company-applicants__offer-field">
+              <dt>Total de postulantes</dt>
+              <dd>{{ offer.totalApplicants || 0 }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <div *ngIf="applicants().length === 0" class="company-applicants__empty">
+          Aún no hay postulantes para esta oferta.
+        </div>
+
+        <div class="company-applicants__table-wrapper" *ngIf="applicants().length > 0">
+          <table class="company-applicants__table">
+            <thead>
+              <tr>
+                <th scope="col">Oferta</th>
+                <th scope="col">Postulante</th>
+                <th scope="col">Correo</th>
+                <th scope="col">Perfil</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let applicant of applicants()">
+                <td data-title="Oferta">{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
+                <td data-title="Postulante">{{ applicant.applicantName || 'Sin nombre' }}</td>
+                <td data-title="Correo">{{ applicant.applicantEmail || 'Sin correo' }}</td>
+                <td data-title="Perfil">
+                  <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
+                    <a
+                      [href]="profileUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="company-applicants__link"
+                    >
+                      Ver perfil
+                    </a>
+                  </ng-container>
+                  <ng-template #noProfile>Sin perfil</ng-template>
+                </td>
+                <td data-title="Estado">{{ applicant.status || 'En revisión' }}</td>
+                <td data-title="Fecha">{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
     </ng-container>
   </ng-container>
 </section>
