@@ -1,5 +1,20 @@
 <section class="welcome py-5 py-lg-6">
   <div class="welcome__container container">
+    <div
+      class="welcome__banner alert alert-success d-flex align-items-center gap-3"
+      *ngIf="passwordResetBannerMessage()"
+      role="status"
+    >
+      <span class="welcome__banner-icon" aria-hidden="true">🔒</span>
+      <div class="welcome__banner-message">{{ passwordResetBannerMessage() }}</div>
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-light ms-auto"
+        (click)="dismissPasswordResetBanner()"
+      >
+        Cerrar
+      </button>
+    </div>
     <div class="row g-4 g-xl-5 align-items-stretch justify-content-center">
       <div class="col-12 col-lg-7 col-xl-8 d-flex">
         <article class="welcome__card card border-0 shadow-lg w-100">
@@ -244,7 +259,7 @@
             <input type="checkbox" />
             <span>Recordarme</span>
           </label>
-          <a class="login-menu__link" href="#">¿Olvidaste tu contraseña?</a>
+          <a class="login-menu__link" routerLink="/auth/forgot-password">¿Olvidaste tu contraseña?</a>
         </div>
 
         <button type="submit" class="login-menu__submit" [disabled]="loginLoading()">

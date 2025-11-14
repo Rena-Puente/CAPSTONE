@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -7,7 +7,7 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { CANDIDATE_USER_TYPE, resolveDefaultRouteForUserType } from '../../constants/user-type-routing';
@@ -33,10 +33,11 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
   templateUrl: './welcome.html',
   styleUrl: './welcome.scss'
 })
-export class Welcome {
+export class Welcome implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly isMenuOpen = signal(false);
   protected readonly activeTab = signal<AuthPanelTab>('login');
@@ -47,6 +48,7 @@ export class Welcome {
   protected readonly registerErrorMessage = signal<string | null>(null);
   protected readonly githubLoading = signal(false);
   protected readonly githubErrorMessage = signal<string | null>(null);
+  protected readonly passwordResetBannerMessage = signal<string | null>(null);
 
   protected readonly loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -120,6 +122,38 @@ export class Welcome {
 
   protected get registerPasswordConfirmationControl() {
     return this.registerForm.controls.passwordConfirmation;
+  }
+
+  ngOnInit(): void {
+    const queryParams = this.route.snapshot.queryParamMap;
+    const requestFlag = queryParams.get('passwordResetRequested');
+    const completedFlag = queryParams.get('passwordResetCompleted');
+
+    if (requestFlag === '1') {
+      this.passwordResetBannerMessage.set(
+        'Si tu correo está registrado, recibirás un enlace de restablecimiento en los próximos minutos.'
+      );
+    } else if (completedFlag === '1') {
+      this.passwordResetBannerMessage.set(
+        'Tu contraseña se actualizó correctamente. Inicia sesión con tu nueva credencial.'
+      );
+    }
+
+    if (requestFlag || completedFlag) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {
+          passwordResetRequested: null,
+          passwordResetCompleted: null
+        },
+        queryParamsHandling: 'merge',
+        replaceUrl: true
+      });
+    }
+  }
+
+  protected dismissPasswordResetBanner(): void {
+    this.passwordResetBannerMessage.set(null);
   }
 
   protected async submitLogin(): Promise<void> {

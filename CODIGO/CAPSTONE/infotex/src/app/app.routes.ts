@@ -16,6 +16,8 @@ import { companyGuard } from './guards/company.guard';
 import { adminGuard } from './guards/admin.guard';
 import { AdminCareers } from './pages/admin/admin-careers';
 import { Aplications } from './pages/aplications/aplications';
+import { ForgotPassword } from './pages/auth/forgot-password/forgot-password';
+import { ResetPassword } from './pages/auth/reset-password/reset-password';
 
 export const routes: Routes = [
   { path: 'home', component: Home, canActivate: [authGuard] },
@@ -36,6 +38,8 @@ export const routes: Routes = [
   },
   { path: 'admin/careers', component: AdminCareers, canActivate: [authGuard, adminGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },
+  { path: 'auth/forgot-password', component: ForgotPassword, canActivate: [guestGuard] },
+  { path: 'auth/reset-password', component: ResetPassword, canActivate: [guestGuard] },
   { path: 'auth/github/callback', component: GithubCallback },
   { path: 'auth/verify-email', component: VerifyEmail },
   {
