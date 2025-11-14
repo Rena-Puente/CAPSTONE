@@ -11,6 +11,7 @@ import {
 
 /** ciudades.json: Record<Region, Record<CiudadId, CiudadNombre>> */
 type CityDataset = Record<string, Record<string, string>>;
+type InstitutionDataset = readonly string[];
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
@@ -46,6 +47,32 @@ export class ProfileFieldsService {
       catchError((error) => {
         console.error('[ProfileFieldsService] Falló carga de ciudades', error);
         return throwError(() => new Error('No se pudo cargar el listado de ciudades.'));
+      }),
+      shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+  /** ====== Instituciones ====== */
+  private readonly institutions$ = this.http
+    .get<InstitutionDataset>('assets/data/instituciones.json')
+    .pipe(
+      map((dataset) => {
+        const institutions = new Set<string>();
+
+        if (Array.isArray(dataset)) {
+          for (const item of dataset) {
+            if (typeof item !== 'string') continue;
+            const normalized = item.trim();
+            if (normalized.length > 0) institutions.add(normalized);
+          }
+        }
+
+        return Array.from(institutions).sort((a, b) =>
+          a.localeCompare(b, 'es', { sensitivity: 'base' })
+        );
+      }),
+      catchError((error) => {
+        console.error('[ProfileFieldsService] Falló carga de instituciones', error);
+        return throwError(() => new Error('No se pudo cargar el listado de instituciones.'));
       }),
       shareReplay({ bufferSize: 1, refCount: true })
     );
@@ -112,6 +139,11 @@ export class ProfileFieldsService {
   // Ciudades
   getCities(): Observable<string[]> {
     return this.cities$;
+  }
+
+  // Instituciones
+  getInstitutions(): Observable<string[]> {
+    return this.institutions$;
   }
 
   // Carreras

@@ -160,6 +160,9 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   protected readonly educationSubmitError = signal<string | null>(null);
   protected readonly editingEducationId = signal<number | null>(null);
   protected readonly educationDeletingId = signal<number | null>(null);
+  protected readonly institutionOptions = signal<string[]>([]);
+  protected readonly institutionsLoading = signal(false);
+  protected readonly institutionsError = signal<string | null>(null);
   protected readonly experience = signal<ExperienceEntry[]>([]);
   protected readonly experienceSummary = signal<ExperienceSummary | null>(null);
   protected readonly experienceLoading = signal(false);
@@ -430,7 +433,12 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
   async ngOnInit(): Promise<void> {
     this.observeSlugChanges();
-    await Promise.all([this.loadCities(), this.loadCareers(), this.loadSkillCatalog()]);
+    await Promise.all([
+      this.loadCities(),
+      this.loadCareers(),
+      this.loadInstitutions(),
+      this.loadSkillCatalog()
+    ]);
     await this.loadProfile();
     await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills()]);
     this.initializeAlertEffects();
@@ -438,7 +446,13 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
   protected async retry(): Promise<void> {
     await this.loadProfile();
-    await Promise.all([this.loadEducation(), this.loadExperience(), this.loadSkills(), this.loadSkillCatalog()]);
+    await Promise.all([
+      this.loadEducation(),
+      this.loadExperience(),
+      this.loadSkills(),
+      this.loadSkillCatalog(),
+      this.loadInstitutions()
+    ]);
   }
 
   protected openEditor(): void {
@@ -926,6 +940,10 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     return item.skillId;
   }
 
+  protected trackInstitutionOption(index: number, option: string): string {
+    return option;
+  }
+
   protected trackCityOption(index: number, option: string): string {
     return option;
   }
@@ -952,7 +970,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.educationEditorOpen.set(true);
     this.editingEducationId.set(entry.id);
     this.educationForm.setValue({
-      institution: entry.institution ?? '',
+      institution: this.normalizeInstitution(entry.institution),
       degree: entry.degree ?? '',
       fieldOfStudy: entry.fieldOfStudy ?? '',
       startDate: entry.startDate ?? '',
@@ -996,6 +1014,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     };
 
     const editingId = this.editingEducationId();
+    let savedInstitution: string | null = null;
 
     try {
       if (editingId) {
@@ -1006,6 +1025,7 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
             items.map((item) => (item.id === editingId ? response.education : item))
           )
         );
+        savedInstitution = response.education?.institution ?? payload.institution;
       } else {
         const response = await firstValueFrom(this.profileService.createEducation(payload));
         this.educationSummary.set(response.educationSummary ?? null);
@@ -1015,8 +1035,10 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
             ...items.filter((item) => item.id !== response.education.id)
           ])
         );
+        savedInstitution = response.education?.institution ?? payload.institution;
       }
 
+      this.ensureInstitutionInOptions(savedInstitution);
       this.educationEditorOpen.set(false);
       this.editingEducationId.set(null);
       this.resetEducationForm();
@@ -1316,6 +1338,25 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  private async loadInstitutions(): Promise<void> {
+    this.institutionsLoading.set(true);
+    this.institutionsError.set(null);
+
+    try {
+      const institutions = await firstValueFrom(this.PFService.getInstitutions());
+      this.institutionOptions.set(institutions);
+      this.normalizeInstitution(this.educationForm.controls.institution.value);
+      this.education().forEach((entry) => this.ensureInstitutionInOptions(entry.institution));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo cargar el listado de instituciones.';
+      this.institutionsError.set(message);
+      this.institutionOptions.set([]);
+    } finally {
+      this.institutionsLoading.set(false);
+    }
+  }
+
   private async loadCareers(): Promise<void> {
     this.careersLoading.set(true);
     this.careersError.set(null);
@@ -1441,7 +1482,9 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
 
     try {
       const result = await firstValueFrom(this.profileService.getEducation());
-      this.education.set(this.sortEducationEntries(result.education));
+      const sorted = this.sortEducationEntries(result.education);
+      this.education.set(sorted);
+      sorted.forEach((entry) => this.ensureInstitutionInOptions(entry.institution));
       this.educationSummary.set(result.educationSummary ?? null);
     } catch (error) {
       const message =
@@ -1711,6 +1754,16 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.fieldState.set(next);
   }
 
+  private normalizeInstitution(value: string | null | undefined): string {
+    if (typeof value !== 'string') {
+      return '';
+    }
+
+    const normalized = value.trim();
+    this.ensureInstitutionInOptions(normalized);
+    return normalized;
+  }
+
   private normalizeCity(value: string | null | undefined): string {
     if (typeof value !== 'string') {
       return '';
@@ -1729,6 +1782,32 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     const normalized = value.trim();
     this.ensureCareerInOptions(normalized);
     return normalized;
+  }
+
+  private ensureInstitutionInOptions(institution: string | null | undefined): void {
+    if (typeof institution !== 'string') {
+      return;
+    }
+
+    const normalized = institution.trim();
+
+    if (!normalized) {
+      return;
+    }
+
+    const options = this.institutionOptions();
+    const exists = options.some(
+      (option) => option.localeCompare(normalized, 'es', { sensitivity: 'accent' }) === 0
+    );
+
+    if (exists) {
+      return;
+    }
+
+    const updated = [...options, normalized].sort((a, b) =>
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
+    );
+    this.institutionOptions.set(updated);
   }
 
   private ensureCityInOptions(city: string): void {

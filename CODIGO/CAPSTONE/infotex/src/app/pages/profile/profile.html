@@ -974,11 +974,25 @@
                 type="text"
                 class="form-control"
                 formControlName="institution"
+                list="educationInstitutionOptions"
+                autocomplete="off"
                 [class.is-invalid]="
                   educationForm.controls.institution.invalid &&
                   (educationForm.controls.institution.dirty || educationForm.controls.institution.touched)
                 "
               />
+              <datalist id="educationInstitutionOptions">
+                <option
+                  *ngFor="let option of institutionOptions(); trackBy: trackInstitutionOption"
+                  [value]="option"
+                ></option>
+              </datalist>
+              <div class="form-text text-light" *ngIf="institutionsLoading()">
+                Cargando instituciones...
+              </div>
+              <div class="form-text text-warning" *ngIf="institutionsError()">
+                {{ institutionsError() }}
+              </div>
               <div class="invalid-feedback">La institución es obligatoria.</div>
             </div>
             <div class="col-md-6">
