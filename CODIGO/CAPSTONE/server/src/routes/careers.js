@@ -8,6 +8,10 @@ const {
   deleteCareer,
   CareerCatalogError
 } = require('../services/careers');
+function getSkillCatalogServices() {
+  // eslint-disable-next-line global-require
+  return require('../services/skills');
+}
 
 async function resolveAdminUser(req, res) {
   const accessToken = req.auth?.accessToken ?? null;
@@ -193,6 +197,136 @@ function registerCareerRoutes(app) {
       });
 
       return res.status(500).json({ ok: false, error: 'No se pudo eliminar la carrera.' });
+    }
+  });
+
+  app.get('/admin/careers/skills', requireAccessToken, async (req, res) => {
+    const rawCategory = req.query?.category ?? req.query?.categoria ?? null;
+
+    try {
+      const adminUserId = await resolveAdminUser(req, res);
+
+      if (!adminUserId) {
+        return;
+      }
+
+      const { listAdminSkillCatalog, SkillCatalogError } = getSkillCatalogServices();
+      const skills = await listAdminSkillCatalog(rawCategory);
+
+      return res.json({
+        ok: true,
+        skills,
+        count: skills.length
+      });
+    } catch (error) {
+      const { SkillCatalogError } = getSkillCatalogServices();
+      if (error instanceof SkillCatalogError) {
+        return res.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+          code: error.code
+        });
+      }
+
+      console.error('[Careers] Failed to list skills catalog', {
+        path: req.originalUrl,
+        method: req.method,
+        ip: getClientIp(req),
+        error: error?.message || error
+      });
+
+      return res
+        .status(500)
+        .json({ ok: false, error: 'No se pudo obtener el catálogo de habilidades.' });
+    }
+  });
+
+  app.post('/admin/careers/skills', requireAccessToken, async (req, res) => {
+    const rawCategory = req.body?.category ?? req.body?.categoria ?? null;
+    const rawSkillName =
+      req.body?.skill ?? req.body?.nombre ?? req.body?.name ?? req.body?.habilidad ?? null;
+
+    try {
+      const adminUserId = await resolveAdminUser(req, res);
+
+      if (!adminUserId) {
+        return;
+      }
+
+      const { createSkillCatalogEntry } = getSkillCatalogServices();
+      const created = await createSkillCatalogEntry({ category: rawCategory, name: rawSkillName });
+
+      return res.status(201).json({
+        ok: true,
+        message: 'Habilidad registrada correctamente.',
+        skill: {
+          id: created.id,
+          name: created.name,
+          category: created.category
+        }
+      });
+    } catch (error) {
+      const { SkillCatalogError } = getSkillCatalogServices();
+      if (error instanceof SkillCatalogError) {
+        return res.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+          code: error.code
+        });
+      }
+
+      console.error('[Careers] Failed to create skill', {
+        path: req.originalUrl,
+        method: req.method,
+        ip: getClientIp(req),
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo crear la habilidad.' });
+    }
+  });
+
+  app.delete('/admin/careers/skills/:skillId', requireAccessToken, async (req, res) => {
+    const rawSkillId = req.params?.skillId ?? null;
+    const normalizedSkillId =
+      typeof rawSkillId === 'string' && rawSkillId.trim().toLocaleLowerCase('es') === 'by-name'
+        ? null
+        : rawSkillId;
+    const rawSkillName =
+      req.body?.skill ?? req.body?.nombre ?? req.body?.name ?? req.body?.habilidad ?? null;
+
+    try {
+      const adminUserId = await resolveAdminUser(req, res);
+
+      if (!adminUserId) {
+        return;
+      }
+
+      const { deleteSkillCatalogEntry } = getSkillCatalogServices();
+      await deleteSkillCatalogEntry({ id: normalizedSkillId, name: rawSkillName });
+
+      return res.json({
+        ok: true,
+        message: 'Habilidad eliminada correctamente.'
+      });
+    } catch (error) {
+      const { SkillCatalogError } = getSkillCatalogServices();
+      if (error instanceof SkillCatalogError) {
+        return res.status(error.statusCode).json({
+          ok: false,
+          error: error.message,
+          code: error.code
+        });
+      }
+
+      console.error('[Careers] Failed to delete skill', {
+        path: req.originalUrl,
+        method: req.method,
+        ip: getClientIp(req),
+        error: error?.message || error
+      });
+
+      return res.status(500).json({ ok: false, error: 'No se pudo eliminar la habilidad.' });
     }
   });
 }

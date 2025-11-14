@@ -1,5 +1,332 @@
-const { executeQuery, withConnection, fetchCursorRows, normalizeCursorRow, oracledb } = require('../db/oracle');
+const {
+  executeQuery,
+  withConnection,
+  fetchCursorRows,
+  normalizeCursorRow,
+  oracledb
+} = require('../db/oracle');
 const { toNullableTrimmedString } = require('../utils/format');
+
+const MAX_SKILL_CATEGORY_LENGTH = 100;
+const MAX_SKILL_NAME_LENGTH = 150;
+
+class SkillCatalogError extends Error {
+  constructor(message, statusCode = 400, code = 'SKILL_CATALOG_ERROR') {
+    super(message);
+    this.name = 'SkillCatalogError';
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
+function sanitizeCatalogText(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  return String(value).trim();
+}
+
+function normalizeCatalogCategory(value, { required = false } = {}) {
+  const category = sanitizeCatalogText(value);
+
+  if (!category) {
+    if (required) {
+      throw new SkillCatalogError('La categoría es obligatoria.', 400, 'CATEGORY_REQUIRED');
+    }
+
+    return '';
+  }
+
+  if (category.length > MAX_SKILL_CATEGORY_LENGTH) {
+    throw new SkillCatalogError(
+      'La categoría es demasiado larga.',
+      400,
+      'CATEGORY_TOO_LONG'
+    );
+  }
+
+  return category;
+}
+
+function normalizeCatalogSkillName(value, { required = false } = {}) {
+  const name = sanitizeCatalogText(value);
+
+  if (!name) {
+    if (required) {
+      throw new SkillCatalogError('El nombre de la habilidad es obligatorio.', 400, 'SKILL_REQUIRED');
+    }
+
+    return '';
+  }
+
+  if (name.length > MAX_SKILL_NAME_LENGTH) {
+    throw new SkillCatalogError(
+      'El nombre de la habilidad es demasiado largo.',
+      400,
+      'SKILL_NAME_TOO_LONG'
+    );
+  }
+
+  return name;
+}
+
+function normalizeCatalogSkillId(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+
+  const parsed = Number.parseInt(String(value), 10);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new SkillCatalogError('El identificador de la habilidad no es válido.', 400, 'INVALID_SKILL_ID');
+  }
+
+  return parsed;
+}
+
+async function readOracleClob(value) {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'object' && typeof value.getData === 'function') {
+    return new Promise((resolve, reject) => {
+      value.setEncoding('utf8');
+
+      let data = '';
+
+      value.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      value.on('end', () => resolve(data));
+      value.on('close', () => resolve(data));
+      value.on('error', (error) => reject(error));
+    });
+  }
+
+  return String(value);
+}
+
+function extractSkillOracleErrorCode(error) {
+  if (!error) {
+    return null;
+  }
+
+  if (typeof error.errorNum === 'number' && Number.isFinite(error.errorNum)) {
+    return error.errorNum;
+  }
+
+  const message = typeof error.message === 'string' ? error.message : '';
+  const match = message.match(/ORA-(\d{5})/);
+
+  if (!match) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(match[1], 10);
+
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function mapSkillOracleError(error) {
+  const code = extractSkillOracleErrorCode(error);
+
+  switch (code) {
+    case 21001:
+      return new SkillCatalogError('El nombre de la habilidad es obligatorio.', 400, 'SKILL_REQUIRED');
+    case 21002:
+      return new SkillCatalogError('La habilidad ya existe.', 409, 'SKILL_ALREADY_EXISTS');
+    case 21010:
+      return new SkillCatalogError(
+        'Debes indicar el identificador o el nombre de la habilidad.',
+        400,
+        'SKILL_DELETE_INPUT_REQUIRED'
+      );
+    case 21011:
+      return new SkillCatalogError('No se encontró la habilidad solicitada.', 404, 'SKILL_NOT_FOUND');
+    default:
+      return null;
+  }
+}
+
+function mapCatalogSkillEntry(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+
+  const idValue = raw.id ?? raw.ID ?? raw.id_habilidad ?? raw.ID_HABILIDAD ?? null;
+  const parsedId = Number.parseInt(String(idValue), 10);
+  const id = Number.isInteger(parsedId) && parsedId > 0 ? parsedId : null;
+
+  if (!id) {
+    return null;
+  }
+
+  const name = normalizeCatalogSkillName(raw.nombre ?? raw.name ?? raw.NOMBRE ?? raw.NAME, {
+    required: true
+  });
+  const category = normalizeCatalogCategory(raw.categoria ?? raw.category ?? raw.CATEGORIA ?? raw.CATEGORY, {
+    required: false
+  });
+
+  const normalizedCategory = category || 'Sin categoría';
+
+  return {
+    id,
+    name,
+    category: normalizedCategory
+  };
+}
+
+async function listAdminSkillCatalog(category) {
+  const normalizedCategory = normalizeCatalogCategory(category, { required: false });
+
+  try {
+    const result = await executeQuery(
+      `BEGIN
+         :items := habilidades_pkg.fn_habilidad_listar_json(
+           p_categoria => :category
+         );
+       END;`,
+      {
+        category: normalizedCategory || null,
+        items: { dir: oracledb.BIND_OUT, type: oracledb.CLOB }
+      }
+    );
+
+    const rawJson = await readOracleClob(result.outBinds?.items ?? null);
+    const parsed = rawJson ? JSON.parse(rawJson) : [];
+    const entries = Array.isArray(parsed) ? parsed : [];
+
+    return entries
+      .map((entry) => {
+        try {
+          return mapCatalogSkillEntry(entry);
+        } catch (error) {
+          console.warn('[SkillsService] Ignoring invalid skill catalog entry', {
+            error: error?.message || error,
+            entry
+          });
+          return null;
+        }
+      })
+      .filter(Boolean);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      console.error('[SkillsService] Failed to parse skill catalog JSON', {
+        error: error?.message || error
+      });
+      throw new SkillCatalogError('No se pudo interpretar el catálogo de habilidades.', 500, 'SKILL_CATALOG_PARSE_ERROR');
+    }
+
+    const mapped = mapSkillOracleError(error);
+
+    if (mapped) {
+      throw mapped;
+    }
+
+    throw error;
+  }
+}
+
+async function createSkillCatalogEntry({ category, name }) {
+  const normalizedCategory = normalizeCatalogCategory(category, { required: true });
+  const normalizedName = normalizeCatalogSkillName(name, { required: true });
+
+  try {
+    const result = await executeQuery(
+      `BEGIN
+         habilidades_pkg.sp_habilidad_crear(
+           p_nombre    => :name,
+           p_categoria => :category,
+           o_id        => :skillId
+         );
+       END;`,
+      {
+        name: normalizedName,
+        category: normalizedCategory,
+        skillId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      { autoCommit: true }
+    );
+
+    const newId = Number(result.outBinds?.skillId ?? 0);
+
+    if (!Number.isInteger(newId) || newId <= 0) {
+      throw new SkillCatalogError(
+        'No se pudo determinar el identificador de la habilidad creada.',
+        500,
+        'SKILL_ID_MISSING'
+      );
+    }
+
+    return {
+      id: newId,
+      name: normalizedName,
+      category: normalizedCategory || 'Sin categoría'
+    };
+  } catch (error) {
+    const mapped = mapSkillOracleError(error);
+
+    if (mapped) {
+      throw mapped;
+    }
+
+    throw error;
+  }
+}
+
+async function deleteSkillCatalogEntry({ id, name } = {}) {
+  let normalizedId = null;
+
+  if (id !== null && id !== undefined && id !== '') {
+    normalizedId = normalizeCatalogSkillId(id);
+  }
+
+  const normalizedName = normalizeCatalogSkillName(name, { required: !normalizedId });
+
+  if (!normalizedId && !normalizedName) {
+    throw new SkillCatalogError(
+      'Debes indicar el identificador o el nombre de la habilidad.',
+      400,
+      'SKILL_DELETE_INPUT_REQUIRED'
+    );
+  }
+
+  try {
+    await executeQuery(
+      `BEGIN
+         habilidades_pkg.sp_habilidad_eliminar(
+           p_id     => :skillId,
+           p_nombre => :skillName
+         );
+       END;`,
+      {
+        skillId: normalizedId,
+        skillName: normalizedName || null
+      },
+      { autoCommit: true }
+    );
+  } catch (error) {
+    const mapped = mapSkillOracleError(error);
+
+    if (mapped) {
+      throw mapped;
+    }
+
+    throw error;
+  }
+}
 
 function normalizeSkillPayload(payload = {}, options = {}) {
   const { requireId = false, allowName = true, overrideSkillId = null } = options;
@@ -231,10 +558,12 @@ async function getSkillStatus(userId) {
   };
 }
 
-module.exports = {
-  normalizeSkillPayload,
-  listSkills,
-  listSkillCatalog,
-  getSkillEntry,
-  getSkillStatus
-};
+exports.SkillCatalogError = SkillCatalogError;
+exports.normalizeSkillPayload = normalizeSkillPayload;
+exports.listSkills = listSkills;
+exports.listSkillCatalog = listSkillCatalog;
+exports.getSkillEntry = getSkillEntry;
+exports.getSkillStatus = getSkillStatus;
+exports.listAdminSkillCatalog = listAdminSkillCatalog;
+exports.createSkillCatalogEntry = createSkillCatalogEntry;
+exports.deleteSkillCatalogEntry = deleteSkillCatalogEntry;
