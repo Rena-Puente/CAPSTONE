@@ -238,31 +238,42 @@ function parseCareerItems(rawItems) {
   const unique = new Map();
 
   for (const item of items) {
-    if (!item || typeof item !== 'object') {
+    if (!item) {
       continue;
     }
 
-    const rawName =
-      typeof item.carrera === 'string'
-        ? item.carrera
-        : typeof item.career === 'string'
-        ? item.career
-        : typeof item.name === 'string'
-        ? item.name
-        : typeof item.CARRERA === 'string'
-        ? item.CARRERA
-        : typeof item.CAREER === 'string'
-        ? item.CAREER
-        : typeof item.NAME === 'string'
-        ? item.NAME
-        : null;
-    const name = rawName ? rawName.trim() : '';
+    let name = '';
+    let rawId = null;
+
+    if (typeof item === 'string') {
+      name = sanitizeString(item);
+    } else if (typeof item === 'object') {
+      const rawName =
+        typeof item.carrera === 'string'
+          ? item.carrera
+          : typeof item.career === 'string'
+          ? item.career
+          : typeof item.name === 'string'
+          ? item.name
+          : typeof item.nombre === 'string'
+          ? item.nombre
+          : typeof item.CARRERA === 'string'
+          ? item.CARRERA
+          : typeof item.CAREER === 'string'
+          ? item.CAREER
+          : typeof item.NAME === 'string'
+          ? item.NAME
+          : typeof item.NOMBRE === 'string'
+          ? item.NOMBRE
+          : null;
+      name = sanitizeString(rawName);
+      rawId = item.id ?? item.ID ?? item.id_carrera ?? item.ID_CARRERA ?? null;
+    }
 
     if (!name) {
       continue;
     }
 
-    const rawId = item.id ?? item.ID ?? item.id_carrera ?? item.ID_CARRERA ?? null;
     let id = null;
 
     if (rawId !== null && rawId !== undefined && rawId !== '') {
