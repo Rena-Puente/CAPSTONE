@@ -202,7 +202,7 @@
   padding: clamp(1rem, 2vw, 1.5rem);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .admin-careers__category-header {
@@ -223,62 +223,6 @@
   color: #8b949e;
 }
 
-.admin-careers__items-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.admin-careers__items-header {
-  display: grid;
-  grid-template-columns: minmax(110px, 0.8fr) minmax(220px, 1fr) minmax(240px, 1.3fr) minmax(130px, 0.8fr);
-  gap: 1rem;
-  padding: 0.6rem 1.1rem;
-  border: 1px solid #30363d;
-  border-radius: 0.75rem;
-  background: rgba(48, 54, 61, 0.35);
-  color: #8b949e;
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.admin-careers__items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.admin-careers__item {
-  display: grid;
-  grid-template-columns: minmax(110px, 0.8fr) minmax(220px, 1fr) minmax(240px, 1.3fr) minmax(130px, 0.8fr);
-  align-items: center;
-  gap: 1rem;
-  padding: 0.85rem 1.1rem;
-  border: 1px solid #30363d;
-  border-radius: 0.75rem;
-  background-color: #0d1117;
-}
-
-.admin-careers__cell {
-  color: #c9d1d9;
-  font-size: 0.95rem;
-}
-
-.admin-careers__cell--head {
-  color: #8b949e;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.admin-careers__cell--id {
-  font-variant-numeric: tabular-nums;
-}
-
 .admin-careers__badge {
   display: inline-flex;
   align-items: center;
@@ -297,19 +241,64 @@
   color: #8b949e;
 }
 
-.admin-careers__cell--category {
-  color: #8b949e;
-  font-weight: 500;
+.admin-careers__select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
-.admin-careers__cell--name {
+.admin-careers__select-label {
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.admin-careers__select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  border: 1px solid #30363d;
+  border-radius: 0.85rem;
+  background: #0d1117;
+  padding: 0.35rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.admin-careers__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  background: rgba(13, 17, 23, 0.85);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.admin-careers__option:hover,
+.admin-careers__option:focus-within {
+  border-color: #2f81f7;
+  background: rgba(47, 129, 247, 0.12);
+}
+
+.admin-careers__option-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.admin-careers__option-name {
   font-weight: 500;
   color: #f0f6fc;
-}
-
-.admin-careers__cell--actions {
-  display: flex;
-  justify-content: flex-end;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-careers__delete {
@@ -323,6 +312,7 @@
   gap: 0.5rem;
   cursor: pointer;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .admin-careers__delete:hover,
@@ -336,37 +326,17 @@
   cursor: not-allowed;
 }
 
+.admin-careers__empty {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #8b949e;
+  border: 1px dashed rgba(48, 54, 61, 0.7);
+  border-radius: 0.75rem;
+  background: rgba(13, 17, 23, 0.6);
+}
+
 @media (max-width: 640px) {
-  .admin-careers__items-header {
-    display: none;
-  }
-
-  .admin-careers__item {
-    grid-template-columns: 1fr;
-    gap: 0.85rem;
-    align-items: flex-start;
-  }
-
-  .admin-careers__cell {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.95rem;
-  }
-
-  .admin-careers__cell::before {
-    content: attr(data-label);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: #8b949e;
-  }
-
-  .admin-careers__cell--actions {
-    justify-content: flex-start;
-  }
-
   .admin-careers__actions {
     flex-direction: column;
     align-items: stretch;
@@ -374,5 +344,15 @@
 
   .admin-careers__submit {
     width: 100%;
+  }
+
+  .admin-careers__option {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .admin-careers__option-info {
+    justify-content: space-between;
   }
 }
