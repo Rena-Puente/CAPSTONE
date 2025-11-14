@@ -16,6 +16,8 @@ CREATE OR REPLACE PACKAGE habilidades_pkg AS
   ) RETURN CLOB;
 
 END habilidades_pkg;
+/
+--  ▲ IMPORTANTE: este / cierra el PACKAGE (spec)
 
 CREATE OR REPLACE PACKAGE BODY habilidades_pkg AS
 
@@ -36,9 +38,9 @@ CREATE OR REPLACE PACKAGE BODY habilidades_pkg AS
     -- prevenir duplicados
     BEGIN
       SELECT 1 INTO v_dummy
-      FROM habilidades
-      WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(p_nombre))
-      FETCH FIRST 1 ROWS ONLY;
+        FROM habilidades
+       WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(p_nombre))
+       FETCH FIRST 1 ROWS ONLY;
 
       RAISE_APPLICATION_ERROR(-21002, 'La habilidad ya existe.');
     EXCEPTION
@@ -69,7 +71,7 @@ CREATE OR REPLACE PACKAGE BODY habilidades_pkg AS
       DELETE FROM habilidades WHERE id_habilidad = p_id;
     ELSE
       DELETE FROM habilidades
-      WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(p_nombre));
+       WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(p_nombre));
     END IF;
 
     v_count := SQL%ROWCOUNT;
@@ -125,3 +127,5 @@ CREATE OR REPLACE PACKAGE BODY habilidades_pkg AS
   END fn_habilidad_listar_json;
 
 END habilidades_pkg;
+/
+--  ▲ Y este / cierra el PACKAGE BODY
