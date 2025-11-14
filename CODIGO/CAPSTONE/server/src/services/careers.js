@@ -1,4 +1,17 @@
+const path = require('node:path');
 const { executeQuery, oracledb } = require('../db/oracle');
+
+let defaultCareerCatalogSeed = [];
+
+try {
+  // eslint-disable-next-line global-require, import/no-dynamic-require
+  defaultCareerCatalogSeed = require(path.resolve(__dirname, '../data/default-career-catalog.json'));
+} catch (error) {
+  console.error('[CareersService] Failed to load default career catalog seed', {
+    error: error?.message || error
+  });
+  defaultCareerCatalogSeed = [];
+}
 
 const MAX_CATEGORY_LENGTH = 100;
 const MAX_CAREER_LENGTH = 150;
@@ -492,7 +505,7 @@ async function fetchCareerCatalogFromTable(normalizedCategory) {
     }
   }
 
-  const categories = Array.from(categoriesMap.values())
+  let categories = Array.from(categoriesMap.values())
     .map((entry) => ({
       category: entry.category,
       items: Array.from(entry.items.values()).sort((a, b) =>
@@ -500,6 +513,21 @@ async function fetchCareerCatalogFromTable(normalizedCategory) {
       )
     }))
     .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+
+  if (categories.length === 0 && (!normalizedCategory || normalizedCategory.trim() === '')) {
+    const fallbackDataset = normalizeDefaultCareerSeedDataset(defaultCareerCatalogSeed);
+
+    if (fallbackDataset.length > 0) {
+      categories = fallbackDataset
+        .map((entry) => ({
+          category: entry.category,
+          items: entry.careers
+            .map((name) => ({ id: null, name }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }))
+        }))
+        .sort((a, b) => a.category.localeCompare(b.category, 'es', { sensitivity: 'base' }));
+    }
+  }
 
   if (categories.length > 0) {
     console.info('[CareersService] listCareerCatalog -> fallback SELECT categories', {

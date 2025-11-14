@@ -1,0 +1,25 @@
+[
+  {
+    "category": "Tecnología",
+    "items": [
+      "Desarrollo Backend",
+      "Desarrollo Frontend",
+      "Ciencia de Datos"
+    ]
+  },
+  {
+    "category": "Diseño",
+    "items": [
+      "Diseño UX/UI",
+      "Diseño Gráfico"
+    ]
+  },
+  {
+    "category": "Idiomas",
+    "items": [
+      "Inglés",
+      "Francés",
+      "Portugués"
+    ]
+  }
+]

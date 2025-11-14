@@ -161,4 +161,134 @@
       </div>
     </div>
   </section>
+
+  <div class="admin-careers__divider" role="presentation"></div>
+
+  <section class="admin-study-houses">
+    <header class="admin-study-houses__header">
+      <h3 class="admin-study-houses__title">Casas de estudios</h3>
+      <p class="admin-study-houses__subtitle">
+        Administra el catálogo de casas de estudios disponibles para los perfiles y las postulaciones.
+      </p>
+    </header>
+
+    <form
+      class="admin-careers__form admin-study-houses__form"
+      [formGroup]="houseForm"
+      (ngSubmit)="createStudyHouse()"
+      novalidate
+    >
+      <div class="admin-careers__form-grid">
+        <div class="admin-careers__field">
+          <label for="studyHouseName" class="admin-careers__label">Casa de estudios</label>
+          <input
+            type="text"
+            id="studyHouseName"
+            class="admin-careers__control"
+            placeholder="Ej. Universidad de La Serena"
+            formControlName="house"
+            [class.is-invalid]="shouldShowHouseError('house')"
+          />
+          <div class="admin-careers__error" *ngIf="getHouseControlError('house')">
+            {{ getHouseControlError('house') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-careers__actions">
+        <button type="submit" class="admin-careers__submit" [disabled]="houseIsSubmitting()">
+          <span class="admin-careers__spinner" *ngIf="houseIsSubmitting()" aria-hidden="true"></span>
+          Agregar casa de estudios
+        </button>
+        <span class="admin-careers__feedback admin-careers__feedback--success" *ngIf="houseSubmitSuccess()">
+          {{ houseSubmitSuccess() }}
+        </span>
+        <span class="admin-careers__feedback admin-careers__feedback--error" *ngIf="houseSubmitError()">
+          {{ houseSubmitError() }}
+        </span>
+      </div>
+    </form>
+
+    <section class="admin-careers__catalog admin-study-houses__catalog">
+      <div class="admin-careers__catalog-controls">
+        <button
+          type="button"
+          class="admin-careers__catalog-toggle"
+          (click)="toggleHouseCatalog()"
+          [attr.aria-expanded]="isHouseCatalogExpanded()"
+          aria-controls="adminStudyHousesCatalogPanel"
+        >
+          {{ isHouseCatalogExpanded() ? 'Ocultar catálogo' : 'Mostrar catálogo' }}
+        </button>
+
+        <span class="admin-careers__hint" *ngIf="!isHouseCatalogExpanded()">
+          Expande el catálogo cuando necesites revisar las casas de estudios registradas.
+        </span>
+      </div>
+
+      <div
+        *ngIf="isHouseCatalogExpanded()"
+        id="adminStudyHousesCatalogPanel"
+        class="admin-careers__catalog-panel"
+        aria-live="polite"
+      >
+        <div class="admin-careers__hint" *ngIf="housesLoading()">Cargando catálogo...</div>
+
+        <div class="admin-careers__alert admin-careers__alert--error" *ngIf="housesError()">
+          {{ housesError() }}
+          <button type="button" class="admin-careers__retry" (click)="refreshStudyHouses()">Reintentar</button>
+        </div>
+
+        <ng-container *ngIf="!housesLoading() && !housesError()">
+          <div class="admin-careers__hint" *ngIf="houses().length === 0">
+            Aún no hay casas de estudios registradas.
+          </div>
+
+          <div *ngIf="houses().length > 0" class="admin-careers__catalog-header">
+            <div class="admin-careers__catalog-header-text">
+              <h3 class="admin-careers__catalog-title">Listado de casas de estudios</h3>
+              <p class="admin-careers__catalog-subtitle">
+                Consulta y gestiona los establecimientos académicos registrados.
+              </p>
+            </div>
+            <span class="admin-careers__catalog-total">
+              {{ totalStudyHouses() }}
+              {{ totalStudyHouses() === 1 ? 'casa de estudios' : 'casas de estudios' }}
+            </span>
+          </div>
+
+          <div class="admin-careers__list-wrapper" *ngIf="houses().length > 0">
+            <ul class="admin-study-houses__list" aria-label="Casas de estudios registradas">
+              <li class="admin-study-houses__item" *ngFor="let house of houses()">
+                <div class="admin-careers__option" [attr.data-house-id]="house.id ?? 'sin-id'">
+                  <div class="admin-careers__option-info">
+                    <span
+                      class="admin-careers__badge"
+                      [class.admin-careers__badge--empty]="!house.id"
+                      >{{ house.id ?? 'Sin ID' }}</span
+                    >
+                    <span class="admin-careers__option-name">{{ house.name }}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="admin-careers__delete"
+                    (click)="deleteStudyHouse(house)"
+                    [disabled]="isHouseDeleting(house)"
+                  >
+                    <span class="admin-careers__spinner" *ngIf="isHouseDeleting(house)" aria-hidden="true"></span>
+                    <span>{{ isHouseDeleting(house) ? 'Eliminando…' : 'Eliminar' }}</span>
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </ng-container>
+
+        <div class="admin-careers__alert admin-careers__alert--error" *ngIf="houseDeleteError()">
+          {{ houseDeleteError() }}
+        </div>
+      </div>
+    </section>
+  </section>
 </section>

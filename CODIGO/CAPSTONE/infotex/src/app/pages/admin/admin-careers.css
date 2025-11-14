@@ -166,6 +166,57 @@
   gap: 1.25rem;
 }
 
+.admin-careers__divider {
+  width: 100%;
+  height: 1px;
+  background-color: #21262d;
+  border: none;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.admin-study-houses {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-study-houses__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-study-houses__title {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+  font-weight: 600;
+  color: #f0f6fc;
+}
+
+.admin-study-houses__subtitle {
+  margin: 0;
+  color: #8b949e;
+  font-size: 0.92rem;
+  max-width: 640px;
+}
+
+.admin-study-houses__catalog {
+  margin-top: -0.5rem;
+}
+
+.admin-study-houses__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.admin-study-houses__item {
+  list-style: none;
+}
+
 .admin-careers__catalog-controls {
   display: flex;
   flex-wrap: wrap;
