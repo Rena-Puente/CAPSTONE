@@ -93,6 +93,13 @@ export interface CompanyApplicant {
 interface ApplicantsResponse {
   ok: boolean;
   applicants?: CompanyApplicant[] | null;
+  summary?: unknown;
+  error?: string;
+}
+
+interface CompanyOffersResponse {
+  ok: boolean;
+  offers?: CompanyOfferSummary[] | null;
   error?: string;
 }
 
@@ -229,6 +236,89 @@ export class CompanyService {
         return throwError(() => new Error(message));
       })
     );
+  }
+
+  listMyOffers(): Observable<CompanyOfferSummary[]> {
+    let options: { headers: HttpHeaders };
+
+    try {
+      options = this.buildAuthOptions();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Debes iniciar sesión para continuar.';
+      return throwError(() => new Error(message));
+    }
+
+    return this.http.get<CompanyOffersResponse>(`${this.apiUrl}/companies/me/offers`, options).pipe(
+      map((response) => {
+        if (!response.ok) {
+          const message = response.error || 'No se pudieron obtener las ofertas de la empresa.';
+          throw new Error(message);
+        }
+
+        return (response.offers ?? []).map((offer) => ({
+          id: offer.id,
+          companyId: offer.companyId,
+          title: offer.title,
+          description: offer.description,
+          locationType: offer.locationType,
+          city: offer.city,
+          country: offer.country,
+          seniority: offer.seniority,
+          contractType: offer.contractType
+        }));
+      }),
+      catchError((error) => {
+        const message =
+          error?.error?.error ||
+          error?.error?.message ||
+          error?.message ||
+          'No se pudieron obtener las ofertas de la empresa.';
+
+        console.error('[CompanyService] List company offers failed', { error: message });
+        return throwError(() => new Error(message));
+      })
+    );
+  }
+
+  listApplicantsForOffer(offerId: number): Observable<CompanyApplicant[]> {
+    let options: { headers: HttpHeaders };
+
+    try {
+      options = this.buildAuthOptions();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Debes iniciar sesión para continuar.';
+      return throwError(() => new Error(message));
+    }
+
+    return this.http
+      .get<ApplicantsResponse>(`${this.apiUrl}/companies/me/offers/${offerId}/applicants`, options)
+      .pipe(
+        map((response) => {
+          if (!response.ok) {
+            const message = response.error || 'No se pudo obtener la lista de postulantes.';
+            throw new Error(message);
+          }
+
+          return (response.applicants ?? []).map((applicant) => ({
+            applicationId: applicant.applicationId,
+            offerId: applicant.offerId ?? null,
+            offerTitle: applicant.offerTitle ?? null,
+            applicantId: applicant.applicantId ?? null,
+            applicantName: applicant.applicantName ?? null,
+            applicantEmail: applicant.applicantEmail ?? null,
+            applicantProfileSlug: applicant.applicantProfileSlug ?? null,
+            status: applicant.status ?? null,
+            submittedAt: applicant.submittedAt ?? null
+          }));
+        }),
+        catchError((error) => {
+          const message =
+            error?.error?.error || error?.error?.message || error?.message || 'No se pudo obtener la lista de postulantes.';
+
+          console.error('[CompanyService] List applicants for offer failed', { error: message, offerId });
+          return throwError(() => new Error(message));
+        })
+      );
   }
 
   private buildAuthOptions(): { headers: HttpHeaders } {
