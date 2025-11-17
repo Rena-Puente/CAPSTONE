@@ -4,9 +4,11 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { AuthService } from './auth.service';
+import type { ApplicantAnswer } from './company.service';
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
+const MAX_ALLOWED_OFFER_QUESTIONS = 3;
 
 export interface OfferCompanySummary {
   id: number | null;
@@ -93,7 +95,11 @@ export class OffersService {
     );
   }
 
-  applyToOffer(offerId: number, coverLetter: string | null): Observable<OfferApplicationResult> {
+  applyToOffer(
+    offerId: number,
+    coverLetter: string | null,
+    answers?: ApplicantAnswer[]
+  ): Observable<OfferApplicationResult> {
     let options: { headers: HttpHeaders };
 
     try {
@@ -103,7 +109,19 @@ export class OffersService {
       return throwError(() => new Error(message));
     }
 
-    const payload = { coverLetter };
+    let normalizedAnswers: ApplicantAnswer[] | undefined;
+
+    try {
+      normalizedAnswers = normalizeApplicantAnswersForRequest(answers);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Las respuestas ingresadas para la oferta no son válidas.';
+      return throwError(() => new Error(message));
+    }
+
+    const payload = normalizedAnswers === undefined ? { coverLetter } : { coverLetter, answers: normalizedAnswers };
 
     return this.http
       .post<ApplyResponse>(`${this.apiUrl}/offers/${offerId}/apply`, payload, options)
@@ -266,4 +284,49 @@ export class OffersService {
       headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
     };
   }
+}
+
+function normalizeApplicantAnswersForRequest(
+  input?: ApplicantAnswer[] | null
+): ApplicantAnswer[] | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  const list = Array.isArray(input) ? input : [];
+
+  if (list.length > MAX_ALLOWED_OFFER_QUESTIONS) {
+    throw new Error(`Solo se permiten hasta ${MAX_ALLOWED_OFFER_QUESTIONS} respuestas por oferta.`);
+  }
+
+  return list.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`La respuesta #${index + 1} no es válida.`);
+    }
+
+    const question = normalizeAnswerField(item.question);
+    const answer = normalizeAnswerField(item.answer);
+
+    if (!question) {
+      throw new Error(`La respuesta #${index + 1} debe indicar la pregunta que responde.`);
+    }
+
+    if (!answer) {
+      throw new Error(`La respuesta para "${question}" no puede estar vacía.`);
+    }
+
+    return { question, answer } satisfies ApplicantAnswer;
+  });
+}
+
+function normalizeAnswerField(value: unknown): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  return String(value).trim();
 }
