@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { AuthService } from './auth.service';
-import type { ApplicantAnswer } from './company.service';
+import type { ApplicantAnswer, OfferQuestion } from './company.service';
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
@@ -37,6 +37,7 @@ export interface PublicOffer {
   region: string | null;
   modality: string | null;
   company: OfferCompanySummary;
+  questions?: OfferQuestion[];
 }
 
 export interface OfferApplicationResult {
@@ -206,6 +207,10 @@ export class OffersService {
       ? Number(offer?.id)
       : Number.parseInt(String(offer?.id ?? 0), 10);
 
+    const questions = normalizeOfferQuestionsFromResponse(
+      (offer as { questions?: unknown })?.questions
+    );
+
     return {
       id: Number.isNaN(numericId) ? 0 : numericId,
       companyId: offer?.companyId ?? normalizedCompany.id,
@@ -222,7 +227,8 @@ export class OffersService {
       procedure: extraProcedure ?? null,
       region: extraRegion ?? null,
       modality: extraModality ?? null,
-      company: normalizedCompany
+      company: normalizedCompany,
+      questions
     };
   }
 
@@ -329,4 +335,34 @@ function normalizeAnswerField(value: unknown): string {
   }
 
   return String(value).trim();
+}
+
+function normalizeOfferQuestionsFromResponse(input: unknown): OfferQuestion[] {
+  if (input === undefined || input === null) {
+    return [];
+  }
+
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .slice(0, MAX_ALLOWED_OFFER_QUESTIONS)
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const questionText = normalizeAnswerField((item as { text?: unknown }).text).trim();
+
+      if (!questionText) {
+        return null;
+      }
+
+      return {
+        text: questionText,
+        required: Boolean((item as { required?: unknown }).required)
+      } satisfies OfferQuestion;
+    })
+    .filter((entry): entry is OfferQuestion => Boolean(entry));
 }

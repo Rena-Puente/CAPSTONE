@@ -7,6 +7,7 @@ import { OffersService, PublicOffer } from '../../services/offers.service';
 import { ProfileData, ProfileService } from '../../services/profile.service';
 import { ProfileFieldsService } from '../../services/profilefields.service';
 import chileRegionsData from '../../../assets/data/ciudades.json';
+import type { ApplicantAnswer } from '../../services/company.service';
 
 type FilterKey = 'career' | 'modality' | 'region';
 type OfferModality = 'remote' | 'hybrid' | 'onsite' | 'other';
@@ -198,6 +199,8 @@ export class Home {
   protected readonly applyingOffers = signal<Set<number>>(new Set());
   protected readonly appliedOffers = signal<Set<number>>(new Set());
   protected readonly applicationErrors = signal<Map<number, string>>(new Map());
+  protected readonly formAnswers = signal<Map<number, string[]>>(new Map());
+  protected readonly formAnswerErrors = signal<Map<number, Set<number>>>(new Map());
   protected readonly filteredOffers = computed(() => this.applyOfferFilters());
   protected readonly selectedCareerCategories = signal<Set<string>>(new Set());
   protected readonly selectedModalities = signal<Set<OfferModality>>(new Set());
@@ -239,6 +242,10 @@ export class Home {
     return offer?.id ?? _;
   }
 
+  protected trackByQuestionIndex(index: number): number {
+    return index;
+  }
+
   protected trackByModality(_: number, option: { id: OfferModality }): string {
     return option?.id ?? String(_);
   }
@@ -253,6 +260,46 @@ export class Home {
 
   protected getApplicationError(offerId: number): string | null {
     return this.applicationErrors().get(offerId) ?? null;
+  }
+
+  protected getAnswerValue(offerId: number, questionIndex: number): string {
+    return this.formAnswers().get(offerId)?.[questionIndex] ?? '';
+  }
+
+  protected handleAnswerInput(offer: PublicOffer, questionIndex: number, value: string): void {
+    if (!offer?.id) {
+      return;
+    }
+
+    this.formAnswers.update((answers) => {
+      const next = new Map(answers);
+      const current = [...(next.get(offer.id) ?? [])];
+      current[questionIndex] = value;
+      next.set(offer.id, current);
+      return next;
+    });
+
+    const question = offer.questions?.[questionIndex];
+
+    if (question?.required && value.trim()) {
+      this.formAnswerErrors.update((errors) => {
+        const next = new Map(errors);
+        const current = new Set(next.get(offer.id) ?? []);
+        current.delete(questionIndex);
+
+        if (current.size === 0) {
+          next.delete(offer.id);
+        } else {
+          next.set(offer.id, current);
+        }
+
+        return next;
+      });
+    }
+  }
+
+  protected hasAnswerError(offerId: number, questionIndex: number): boolean {
+    return this.formAnswerErrors().get(offerId)?.has(questionIndex) ?? false;
   }
 
   protected getCompanyDisplayName(offer: PublicOffer): string {
@@ -635,6 +682,21 @@ export class Home {
       return;
     }
 
+    const { answers, missingIndexes } = this.buildApplicationAnswers(offer);
+
+    if (missingIndexes.length > 0) {
+      this.setAnswerErrors(offer.id, missingIndexes);
+      this.globalMessage.set(null);
+      this.applicationErrors.update((errors) => {
+        const next = new Map(errors);
+        next.set(offer.id, 'Responde todas las preguntas obligatorias antes de postular.');
+        return next;
+      });
+      return;
+    }
+
+    this.setAnswerErrors(offer.id, []);
+
     const coverLetter = this.biography()?.trim() ?? '';
 
     this.applicationErrors.update((errors) => {
@@ -652,13 +714,15 @@ export class Home {
     this.globalMessage.set(null);
 
     try {
-      await firstValueFrom(this.offersService.applyToOffer(offer.id, coverLetter));
+      await firstValueFrom(this.offersService.applyToOffer(offer.id, coverLetter, answers));
 
       this.appliedOffers.update((set) => {
         const next = new Set(set);
         next.add(offer.id);
         return next;
       });
+
+      this.clearOfferFormState(offer.id);
 
       this.globalMessage.set(
         `Tu postulación a "${offer.title ?? 'esta oferta'}" fue enviada correctamente.`
@@ -678,6 +742,70 @@ export class Home {
         return next;
       });
     }
+  }
+
+  private buildApplicationAnswers(
+    offer: PublicOffer
+  ): { answers: ApplicantAnswer[] | undefined; missingIndexes: number[] } {
+    const questions = Array.isArray(offer?.questions) ? offer.questions : [];
+
+    if (!offer?.id || questions.length === 0) {
+      return { answers: undefined, missingIndexes: [] };
+    }
+
+    const storedAnswers = this.formAnswers().get(offer.id) ?? [];
+    const normalized: ApplicantAnswer[] = [];
+    const missing: number[] = [];
+
+    questions.forEach((question, index) => {
+      const response = (storedAnswers[index] ?? '').trim();
+
+      if (question.required && !response) {
+        missing.push(index);
+        return;
+      }
+
+      if (response) {
+        normalized.push({ question: question.text, answer: response });
+      }
+    });
+
+    return {
+      answers: normalized.length > 0 ? normalized : undefined,
+      missingIndexes: missing
+    };
+  }
+
+  private setAnswerErrors(offerId: number, indexes: number[]): void {
+    if (!offerId) {
+      return;
+    }
+
+    this.formAnswerErrors.update((errors) => {
+      const next = new Map(errors);
+
+      if (indexes.length === 0) {
+        next.delete(offerId);
+        return next;
+      }
+
+      next.set(offerId, new Set(indexes));
+      return next;
+    });
+  }
+
+  private clearOfferFormState(offerId: number): void {
+    if (!offerId) {
+      return;
+    }
+
+    this.formAnswers.update((answers) => {
+      const next = new Map(answers);
+      next.delete(offerId);
+      return next;
+    });
+
+    this.setAnswerErrors(offerId, []);
   }
 
   private async loadOffers(): Promise<void> {
