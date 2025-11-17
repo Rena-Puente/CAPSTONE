@@ -1,5 +1,10 @@
 const { executeQuery, withConnection, fetchCursorRows, oracledb } = require('../db/oracle');
 const { toNullableTrimmedString, toIsoString } = require('../utils/format');
+const {
+  serializeOfferQuestions,
+  parseOfferQuestionsFromJson,
+  parseOfferAnswersFromJson
+} = require('../utils/questions');
 
 const MAX_NAME_LENGTH = 150;
 const MAX_COUNTRY_LENGTH = 80;
@@ -349,6 +354,20 @@ function normalizeOfferPayload(payload = {}) {
     throw new Error('El tipo de contrato es demasiado largo.');
   }
 
+  let questionsJson = '[]';
+
+  if (typeof payload.questionsJson === 'string') {
+    const trimmed = payload.questionsJson.trim();
+
+    if (trimmed) {
+      questionsJson = trimmed;
+    }
+  } else if (payload.questions !== undefined) {
+    questionsJson = serializeOfferQuestions(payload.questions);
+  } else {
+    questionsJson = serializeOfferQuestions();
+  }
+
   return {
     title,
     description,
@@ -356,7 +375,8 @@ function normalizeOfferPayload(payload = {}) {
     city,
     country,
     seniority,
-    contractType
+    contractType,
+    questionsJson
   };
 }
 
@@ -474,6 +494,7 @@ async function createOffer(companyId, payload) {
        p_pais           => :country,
        p_seniority      => :seniority,
        p_tipo_contrato  => :contractType,
+       p_preguntas_json => :questionsJson,
        o_id_oferta      => :offerId
      ); END;`,
     {
@@ -485,6 +506,7 @@ async function createOffer(companyId, payload) {
       country: normalized.country,
       seniority: normalized.seniority,
       contractType: normalized.contractType,
+      questionsJson: normalized.questionsJson,
       offerId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
     },
     { autoCommit: true }
@@ -505,7 +527,8 @@ async function createOffer(companyId, payload) {
     city: normalized.city,
     country: normalized.country,
     seniority: normalized.seniority,
-    contractType: normalized.contractType
+    contractType: normalized.contractType,
+    questions: parseOfferQuestionsFromJson(normalized.questionsJson)
   };
 }
 
@@ -533,7 +556,13 @@ function mapApplicantRow(row) {
     ),
     applicantProfileSlug: toNullableTrimmedString(row.SLUG_PERFIL ?? row.slug_perfil ?? row.SLUG ?? row.slug),
     status: toNullableTrimmedString(row.ESTADO ?? row.estado),
-    submittedAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null)
+    submittedAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null),
+    questions: parseOfferQuestionsFromJson(
+      row.PREGUNTAS_JSON ?? row.preguntas_json ?? row.PREGUNTAS ?? row.preguntas
+    ),
+    answers: parseOfferAnswersFromJson(
+      row.RESPUESTAS_JSON ?? row.respuestas_json ?? row.RESPUESTAS ?? row.respuestas
+    )
   };
 }
 
@@ -543,6 +572,9 @@ function mapOfferRow(row) {
   }
 
   const activeFlag = toNonNegativeInteger(row.ACTIVA ?? row.activa ?? 1);
+  const questions = parseOfferQuestionsFromJson(
+    row.PREGUNTAS_JSON ?? row.preguntas_json ?? row.PREGUNTAS ?? row.preguntas
+  );
 
   return {
     id: Number(row.ID_OFERTA ?? row.id_oferta ?? null) || null,
@@ -555,7 +587,8 @@ function mapOfferRow(row) {
     contractType: toNullableTrimmedString(row.TIPO_CONTRATO ?? row.tipo_contrato),
     createdAt: toIsoString(row.FECHA_CREACION ?? row.fecha_creacion ?? null),
     active: activeFlag === 1,
-    totalApplicants: toNonNegativeInteger(row.TOTAL_POSTULANTES ?? row.total_postulantes)
+    totalApplicants: toNonNegativeInteger(row.TOTAL_POSTULANTES ?? row.total_postulantes),
+    questions
   };
 }
 

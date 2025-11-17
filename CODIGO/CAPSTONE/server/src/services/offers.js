@@ -1,5 +1,6 @@
 const { executeQuery, withConnection, fetchCursorRows, oracledb } = require('../db/oracle');
 const { toIsoString, toNullableTrimmedString } = require('../utils/format');
+const { parseOfferQuestionsFromJson, parseOfferAnswersFromJson } = require('../utils/questions');
 
 const normalizedRowCache = new WeakMap();
 
@@ -287,6 +288,17 @@ function mapOfferRow(row) {
       'companyAvatarUrl'
     )
   );
+  const questions = parseOfferQuestionsFromJson(
+    getRowValue(
+      row,
+      'PREGUNTAS_JSON',
+      'preguntas_json',
+      'PREGUNTAS',
+      'preguntas',
+      'QUESTIONS_JSON',
+      'questionsJson'
+    )
+  );
 
   return {
     id,
@@ -307,7 +319,8 @@ function mapOfferRow(row) {
       website: companyWebsite,
       logoUrl: companyLogo,
       avatarUrl: companyAvatar
-    }
+    },
+    questions
   };
 }
 
@@ -363,7 +376,7 @@ async function listPublicOffers() {
   });
 }
 
-async function applyToOffer(offerId, userId, coverLetter) {
+async function applyToOffer(offerId, userId, coverLetter, answersJson = '[]') {
   if (!Number.isInteger(offerId) || offerId <= 0) {
     throw new OfferApplicationError('El identificador de la oferta no es válido.', 400, 'INVALID_OFFER_ID');
   }
@@ -373,6 +386,8 @@ async function applyToOffer(offerId, userId, coverLetter) {
   }
 
   const normalizedCoverLetter = typeof coverLetter === 'string' ? coverLetter : null;
+  const normalizedAnswersJson =
+    typeof answersJson === 'string' && answersJson.trim() ? answersJson.trim() : '[]';
 
   try {
     const result = await executeQuery(
@@ -380,12 +395,14 @@ async function applyToOffer(offerId, userId, coverLetter) {
          p_id_oferta => :offerId,
          p_id_usuario => :userId,
          p_carta_presentacion => :coverLetter,
+         p_respuestas_json => :answersJson,
          o_id_postulacion => :applicationId
        ); END;`,
       {
         offerId,
         userId,
         coverLetter: normalizedCoverLetter,
+        answersJson: normalizedAnswersJson,
         applicationId: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
       },
       { autoCommit: true }
@@ -407,7 +424,8 @@ async function applyToOffer(offerId, userId, coverLetter) {
       userId,
       status: 'enviada',
       coverLetter: normalizedCoverLetter ?? null,
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      answers: parseOfferAnswersFromJson(normalizedAnswersJson)
     };
   } catch (error) {
     if (typeof error?.errorNum === 'number') {
