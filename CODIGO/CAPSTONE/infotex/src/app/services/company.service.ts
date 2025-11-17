@@ -68,7 +68,7 @@ export interface CompanyOfferPayload {
   country: string;
   seniority: string;
   contractType: string;
-  questions?: OfferQuestionPayload[] | null;
+  questions?: OfferQuestionPayload[];
 }
 
 export interface CompanyOfferSummary {

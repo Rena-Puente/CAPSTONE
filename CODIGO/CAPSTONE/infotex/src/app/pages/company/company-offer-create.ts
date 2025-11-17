@@ -1,6 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  Validators
+} from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 
 import { CompanyService, CompanyOfferPayload } from '../../services/company.service';
@@ -14,6 +21,11 @@ type OfferControlName =
   | 'country'
   | 'seniority'
   | 'contractType';
+
+type OfferQuestionFormGroup = FormGroup<{
+  text: FormControl<string>;
+  required: FormControl<boolean>;
+}>;
 
 type CareerOptionGroup = { name: string; options: readonly string[] };
 
@@ -38,6 +50,7 @@ export class CompanyOfferCreate implements OnInit {
   protected readonly locationTypeOptions = ['Remoto', 'Híbrido', 'Presencial'];
   protected readonly contractTypeOptions = ['Indefinido', 'Plazo fijo', '3 meses', '6 meses'];
   protected readonly countryOptions = ['Chile'];
+  protected readonly maxAllowedQuestions = 3;
 
   protected readonly locationTypeSelection = signal('');
   protected readonly customLocationTypeValue = signal('');
@@ -70,13 +83,62 @@ export class CompanyOfferCreate implements OnInit {
     city: ['', [Validators.required, Validators.maxLength(80)]],
     country: ['', [Validators.required, Validators.maxLength(80)]],
     seniority: ['', [Validators.required, Validators.maxLength(80)]],
-    contractType: ['', [Validators.required, Validators.maxLength(30)]]
+    contractType: ['', [Validators.required, Validators.maxLength(30)]],
+    questions: this.fb.array<OfferQuestionFormGroup>([])
   });
+
+  protected get questionControls(): OfferQuestionFormGroup[] {
+    return this.questionsArray.controls as OfferQuestionFormGroup[];
+  }
+
+  protected canAddQuestion(): boolean {
+    return this.questionsArray.length < this.maxAllowedQuestions;
+  }
 
   async ngOnInit(): Promise<void> {
     this.form.controls.country.setValue(this.countryOptions[0] ?? '', { emitEvent: false });
 
     await Promise.all([this.loadCityOptions(), this.loadSeniorityOptions()]);
+  }
+
+  protected addQuestion(): void {
+    if (!this.canAddQuestion()) {
+      return;
+    }
+
+    this.questionsArray.push(this.createQuestionGroup());
+  }
+
+  protected removeQuestion(index: number): void {
+    const questions = this.questionsArray;
+
+    if (index < 0 || index >= questions.length) {
+      return;
+    }
+
+    questions.removeAt(index);
+  }
+
+  protected trackQuestion(index: number): number {
+    return index;
+  }
+
+  protected getQuestionError(group: OfferQuestionFormGroup): string | null {
+    const control = group.controls.text;
+
+    if (!(control.invalid && (control.dirty || control.touched || this.submitAttempted()))) {
+      return null;
+    }
+
+    if (control.hasError('required')) {
+      return 'La pregunta no puede estar vacía.';
+    }
+
+    if (control.hasError('maxlength')) {
+      return 'La pregunta puede tener como máximo 250 caracteres.';
+    }
+
+    return null;
   }
 
   protected async submit(): Promise<void> {
@@ -92,6 +154,13 @@ export class CompanyOfferCreate implements OnInit {
     this.isSubmitting.set(true);
 
     const raw = this.form.getRawValue();
+    const questions = this.questionsArray.controls
+      .map((group) => ({
+        text: group.controls.text.value.trim(),
+        required: group.controls.required.value
+      }))
+      .filter((question) => Boolean(question.text));
+
     const payload: CompanyOfferPayload = {
       title: raw.title.trim(),
       description: raw.description.trim(),
@@ -99,7 +168,8 @@ export class CompanyOfferCreate implements OnInit {
       city: raw.city.trim(),
       country: raw.country.trim(),
       seniority: raw.seniority.trim(),
-      contractType: raw.contractType.trim()
+      contractType: raw.contractType.trim(),
+      ...(questions.length ? { questions } : {})
     };
 
     try {
@@ -310,5 +380,18 @@ export class CompanyOfferCreate implements OnInit {
 
     this.locationTypeSelection.set('');
     this.customLocationTypeValue.set('');
+    this.questionsArray.clear();
+  }
+
+  private createQuestionGroup(): OfferQuestionFormGroup {
+    return this.fb
+      .nonNullable.group({
+        text: ['', [Validators.required, Validators.maxLength(250)]],
+        required: [false]
+      }) as OfferQuestionFormGroup;
+  }
+
+  private get questionsArray(): FormArray<OfferQuestionFormGroup> {
+    return this.form.controls.questions as FormArray<OfferQuestionFormGroup>;
   }
 }
