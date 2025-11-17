@@ -40,6 +40,121 @@
   gap: 1.5rem clamp(1.25rem, 3vw, 2rem);
 }
 
+.company-offer-create__questions {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid #30363d;
+  border-radius: 1rem;
+  background-color: #161b22;
+}
+
+.company-offer-create__questions-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.company-offer-create__questions-title {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #f0f6fc;
+}
+
+.company-offer-create__questions-subtitle {
+  margin: 0.2rem 0 0;
+  color: #8b949e;
+  font-size: 0.9rem;
+}
+
+.company-offer-create__add-question {
+  border: 1px dashed #2f81f7;
+  border-radius: 999px;
+  padding: 0.5rem 1.5rem;
+  background: transparent;
+  color: #2f81f7;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.company-offer-create__add-question:hover:not(:disabled),
+.company-offer-create__add-question:focus-visible:not(:disabled) {
+  border-color: #539bf5;
+  color: #539bf5;
+  outline: none;
+}
+
+.company-offer-create__add-question:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.company-offer-create__question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.company-offer-create__question-item {
+  padding: 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid #21262d;
+  background-color: #0d1117;
+}
+
+.company-offer-create__question-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.company-offer-create__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+  color: #c9d1d9;
+}
+
+.company-offer-create__checkbox input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #2ea043;
+}
+
+.company-offer-create__question-remove {
+  background: transparent;
+  border: none;
+  color: #f85149;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.company-offer-create__question-remove:hover:not(:disabled),
+.company-offer-create__question-remove:focus-visible:not(:disabled) {
+  color: #ff7b72;
+  outline: none;
+}
+
+.company-offer-create__question-remove:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.company-offer-create__questions-empty {
+  margin: 0;
+  color: #8b949e;
+  font-size: 0.9rem;
+}
+
 .company-offer-create__field {
   display: flex;
   flex-direction: column;
@@ -172,6 +287,11 @@
 @media (max-width: 600px) {
   .company-offer-create__grid {
     grid-template-columns: 1fr;
+  }
+
+  .company-offer-create__questions-header {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .company-offer-create__actions {

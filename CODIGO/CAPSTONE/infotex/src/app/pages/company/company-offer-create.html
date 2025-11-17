@@ -165,6 +165,72 @@
       </div>
     </div>
 
+    <div class="company-offer-create__questions" formArrayName="questions">
+      <div class="company-offer-create__questions-header">
+        <div>
+          <h3 class="company-offer-create__questions-title">Preguntas para postulantes</h3>
+          <p class="company-offer-create__questions-subtitle">
+            Puedes agregar hasta tres preguntas para conocer mejor a cada candidato.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="company-offer-create__add-question"
+          (click)="addQuestion()"
+          [disabled]="!canAddQuestion() || isSubmitting()"
+        >
+          Agregar pregunta
+        </button>
+      </div>
+
+      <div class="company-offer-create__question-list" *ngIf="questionControls.length > 0; else emptyQuestions">
+        <div
+          class="company-offer-create__question-item"
+          *ngFor="let question of questionControls; let i = index; trackBy: trackQuestion"
+          [formGroupName]="i"
+        >
+          <div class="company-offer-create__field">
+            <label class="company-offer-create__label" [for]="'offerQuestion' + i">
+              Pregunta {{ i + 1 }}
+            </label>
+            <input
+              type="text"
+              class="company-offer-create__control"
+              [id]="'offerQuestion' + i"
+              formControlName="text"
+              placeholder="Ej. ¿Cuál ha sido tu mayor desafío profesional?"
+              [class.is-invalid]="question.controls.text.invalid && (question.controls.text.dirty || question.controls.text.touched || submitAttempted())"
+              [disabled]="isSubmitting()"
+            />
+            <div class="company-offer-create__error" *ngIf="getQuestionError(question)">
+              {{ getQuestionError(question) }}
+            </div>
+          </div>
+
+          <div class="company-offer-create__question-actions">
+            <label class="company-offer-create__checkbox">
+              <input type="checkbox" formControlName="required" [disabled]="isSubmitting()" />
+              Pregunta obligatoria
+            </label>
+            <button
+              type="button"
+              class="company-offer-create__question-remove"
+              (click)="removeQuestion(i)"
+              [disabled]="isSubmitting()"
+            >
+              Quitar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #emptyQuestions>
+        <p class="company-offer-create__questions-empty">
+          Agrega preguntas opcionales para conocer mejor a las personas postulantes.
+        </p>
+      </ng-template>
+    </div>
+
     <div class="company-offer-create__actions">
       <button type="submit" class="company-offer-create__submit" [disabled]="isSubmitting()">
         <span class="company-offer-create__spinner" *ngIf="isSubmitting()" role="status" aria-hidden="true"></span>
