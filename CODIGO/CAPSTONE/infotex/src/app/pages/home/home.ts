@@ -201,6 +201,7 @@ export class Home {
   protected readonly applicationErrors = signal<Map<number, string>>(new Map());
   protected readonly formAnswers = signal<Map<number, string[]>>(new Map());
   protected readonly formAnswerErrors = signal<Map<number, Set<number>>>(new Map());
+  protected readonly activeApplicationOffer = signal<PublicOffer | null>(null);
   protected readonly filteredOffers = computed(() => this.applyOfferFilters());
   protected readonly selectedCareerCategories = signal<Set<string>>(new Set());
   protected readonly selectedModalities = signal<Set<OfferModality>>(new Set());
@@ -260,6 +261,34 @@ export class Home {
 
   protected getApplicationError(offerId: number): string | null {
     return this.applicationErrors().get(offerId) ?? null;
+  }
+
+  protected handleApplyClick(offer: PublicOffer): void {
+    if (!offer?.id || this.isApplying(offer.id) || this.isApplied(offer.id) || this.missingBiography()) {
+      return;
+    }
+
+    this.openApplicationOverlay(offer);
+  }
+
+  protected openApplicationOverlay(offer: PublicOffer): void {
+    if (!offer) {
+      return;
+    }
+
+    this.activeApplicationOffer.set(offer);
+  }
+
+  protected closeApplicationOverlay(): void {
+    this.activeApplicationOffer.set(null);
+  }
+
+  protected submitOverlayApplication(event: Event, offer: PublicOffer | null): void {
+    event?.preventDefault();
+
+    if (offer) {
+      void this.applyToOffer(offer);
+    }
   }
 
   protected getAnswerValue(offerId: number, questionIndex: number): string {
@@ -440,6 +469,11 @@ export class Home {
 
   @HostListener('document:keydown.escape')
   protected closeFiltersOnEscape(): void {
+    if (this.activeApplicationOffer()) {
+      this.closeApplicationOverlay();
+      return;
+    }
+
     this.expandedFilter.set(null);
   }
 
@@ -723,6 +757,9 @@ export class Home {
       });
 
       this.clearOfferFormState(offer.id);
+      if (this.activeApplicationOffer()?.id === offer.id) {
+        this.closeApplicationOverlay();
+      }
 
       this.globalMessage.set(
         `Tu postulación a "${offer.title ?? 'esta oferta'}" fue enviada correctamente.`

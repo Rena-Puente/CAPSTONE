@@ -200,46 +200,21 @@
               {{ offer.description || 'La empresa no proporcionó una descripción detallada para esta oferta.' }}
             </p>
 
-            <form
-              class="offer-application-form"
-              (submit)="$event.preventDefault(); applyToOffer(offer)"
-              novalidate
-            >
-              <div class="offer-questions" *ngIf="offer.questions?.length">
-                <p class="offer-questions__title mb-2">Preguntas de la empresa</p>
-                <p class="offer-questions__hint text-muted small">
-                  Responde estas preguntas para complementar tu postulación.
+            <div class="offer-application-form">
+              <div class="offer-questions-preview" *ngIf="offer.questions?.length">
+                <p class="offer-questions-preview__title mb-1">Preguntas rápidas</p>
+                <p class="offer-questions-preview__hint">
+                  Esta oferta incluye {{ offer.questions.length }} preguntas cortas que responderás al
+                  momento de postular.
                 </p>
-                <div
-                  class="offer-question"
-                  *ngFor="let question of offer.questions; let i = index; trackBy: trackByQuestionIndex"
-                >
-                  <label class="form-label" [attr.for]="'offer-question-' + offer.id + '-' + i">
-                    {{ question.text }}
-                    <span *ngIf="question.required" class="text-danger" aria-hidden="true">*</span>
-                  </label>
-                  <textarea
-                    class="form-control"
-                    rows="3"
-                    [attr.id]="'offer-question-' + offer.id + '-' + i"
-                    [value]="getAnswerValue(offer.id, i)"
-                    (input)="handleAnswerInput(offer, i, $any($event.target).value)"
-                    [attr.aria-required]="question.required"
-                  ></textarea>
-                  <div
-                    class="text-danger small mt-1"
-                    *ngIf="question.required && hasAnswerError(offer.id, i)"
-                  >
-                    Esta pregunta es obligatoria.
-                  </div>
-                </div>
               </div>
 
               <div class="offer-actions">
                 <button
-                  type="submit"
+                  type="button"
                   class="btn btn-apply"
                   [disabled]="isApplying(offer.id) || isApplied(offer.id) || missingBiography()"
+                  (click)="handleApplyClick(offer)"
                 >
                   <span
                     *ngIf="isApplying(offer.id)"
@@ -257,10 +232,102 @@
                   {{ getApplicationError(offer.id) }}
                 </span>
               </div>
-            </form>
+            </div>
           </div>
         </article>
       </div>
     </ng-container>
+  </div>
+
+  <div class="application-overlay" *ngIf="activeApplicationOffer() as currentOffer">
+    <div class="application-overlay__backdrop" (click)="closeApplicationOverlay()"></div>
+    <div
+      class="application-overlay__dialog"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'application-overlay-title-' + currentOffer.id"
+    >
+      <form (submit)="submitOverlayApplication($event, currentOffer)" novalidate>
+        <header class="application-overlay__header">
+          <div>
+            <p class="application-overlay__eyebrow mb-1">Postular a</p>
+            <h2 class="application-overlay__title" [attr.id]="'application-overlay-title-' + currentOffer.id">
+              {{ currentOffer.title || 'Oferta sin título' }}
+            </h2>
+            <p class="application-overlay__subtitle mb-0">
+              {{ getCompanyDisplayName(currentOffer) }}
+            </p>
+          </div>
+          <button type="button" class="application-overlay__close" (click)="closeApplicationOverlay()">
+            <span aria-hidden="true">&times;</span>
+            <span class="visually-hidden">Cerrar</span>
+          </button>
+        </header>
+
+        <div class="application-overlay__body">
+          <p class="application-overlay__hint">
+            Responde las preguntas para completar tu postulación. Puedes usar tu biografía como carta de
+            presentación.
+          </p>
+
+          <div class="offer-questions" *ngIf="currentOffer.questions?.length; else noQuestions">
+            <div
+              class="offer-question"
+              *ngFor="let question of currentOffer.questions; let i = index; trackBy: trackByQuestionIndex"
+            >
+              <label class="form-label" [attr.for]="'overlay-question-' + currentOffer.id + '-' + i">
+                {{ question.text }}
+                <span *ngIf="question.required" class="text-danger" aria-hidden="true">*</span>
+              </label>
+              <textarea
+                class="form-control"
+                rows="3"
+                [attr.id]="'overlay-question-' + currentOffer.id + '-' + i"
+                [value]="getAnswerValue(currentOffer.id, i)"
+                (input)="handleAnswerInput(currentOffer, i, $any($event.target).value)"
+                [attr.aria-required]="question.required"
+              ></textarea>
+              <div class="text-danger small mt-1" *ngIf="question.required && hasAnswerError(currentOffer.id, i)">
+                Esta pregunta es obligatoria.
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noQuestions>
+            <p class="application-overlay__hint mb-0">
+              Esta oferta no requiere preguntas adicionales. Haz clic en "Enviar postulación" para
+              confirmar.
+            </p>
+          </ng-template>
+        </div>
+
+        <div class="application-overlay__footer">
+          <span *ngIf="getApplicationError(currentOffer.id)" class="text-danger small">
+            {{ getApplicationError(currentOffer.id) }}
+          </span>
+          <div class="application-overlay__actions">
+            <button type="button" class="btn btn-outline-light" (click)="closeApplicationOverlay()">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn btn-apply"
+              [disabled]="isApplying(currentOffer.id) || isApplied(currentOffer.id)"
+            >
+              <span
+                *ngIf="isApplying(currentOffer.id)"
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+              ></span>
+              <ng-container *ngIf="isApplied(currentOffer.id); else submitLabel">
+                <span class="me-2">✅</span>
+                Ya postulaste
+              </ng-container>
+              <ng-template #submitLabel>Enviar postulación</ng-template>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
