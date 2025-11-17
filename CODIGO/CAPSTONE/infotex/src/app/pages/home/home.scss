@@ -14,6 +14,194 @@
     backdrop-filter: blur(6px);
   }
 
+  .filter-toolbar {
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 12px 28px rgba(1, 4, 9, 0.4);
+    position: relative;
+    overflow: visible;
+  }
+
+  .filter-toolbar__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .filter-toolbar__count {
+    color: #f0f6fc;
+    font-size: 0.95rem;
+  }
+
+  .filter-toolbar__hint {
+    color: #8b949e;
+    font-size: 0.85rem;
+  }
+
+  .filter-toolbar__clear {
+    background: transparent;
+    border: 1px solid rgba(110, 118, 129, 0.4);
+    color: #f0f6fc;
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+
+  .filter-toolbar__clear:hover,
+  .filter-toolbar__clear:focus-visible {
+    color: #58a6ff;
+    border-color: #58a6ff;
+    transform: translateY(-1px);
+  }
+
+  .filter-toolbar .btn-link {
+    color: #58a6ff;
+    font-weight: 600;
+    padding-left: 0.25rem;
+  }
+
+  .filter-toolbar .btn-link:hover,
+  .filter-toolbar .btn-link:focus-visible {
+    color: #79c0ff;
+  }
+
+  .filter-toolbar__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .filter-dropdown {
+    position: relative;
+  }
+
+  .filter-dropdown__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #0d1117;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    border-radius: 0.6rem;
+    padding: 0.45rem 0.95rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .filter-dropdown__trigger:hover,
+  .filter-dropdown__trigger:focus-visible {
+    color: #58a6ff;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 1px rgba(88, 166, 255, 0.35);
+  }
+
+  .filter-dropdown--open .filter-dropdown__trigger {
+    border-color: #58a6ff;
+    box-shadow: 0 10px 24px rgba(88, 166, 255, 0.12);
+  }
+
+  .filter-dropdown__caret {
+    border-style: solid;
+    border-width: 0.35rem 0.35rem 0 0.35rem;
+    border-color: #8b949e transparent transparent transparent;
+    transition: transform 0.2s ease;
+  }
+
+  .filter-dropdown--open .filter-dropdown__caret {
+    transform: rotate(180deg);
+  }
+
+  .filter-dropdown__counter {
+    background-color: #238636;
+    color: #ffffff;
+    font-size: 0.75rem;
+    line-height: 1;
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+  }
+
+  .filter-dropdown__menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    min-width: 260px;
+    background-color: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 0.75rem;
+    box-shadow: 0 24px 48px rgba(1, 4, 9, 0.5);
+    z-index: 40;
+  }
+
+  .filter-dropdown__description {
+    color: #8b949e;
+    font-size: 0.85rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .filter-dropdown__description code {
+    color: #58a6ff;
+    font-size: 0.85em;
+  }
+
+  .filter-dropdown__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 0.35rem;
+  }
+
+  .filter-dropdown__empty {
+    color: #8b949e;
+    font-size: 0.85rem;
+    padding: 0.4rem 0;
+  }
+
+  .filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.35rem 0.4rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s ease;
+    color: #c9d1d9;
+  }
+
+  .filter-checkbox:hover {
+    background-color: rgba(88, 166, 255, 0.08);
+  }
+
+  .filter-checkbox input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #58a6ff;
+  }
+
+  .filter-checkbox--stacked {
+    align-items: flex-start;
+  }
+
+  .filter-checkbox--stacked strong {
+    display: block;
+    color: #f0f6fc;
+    font-size: 0.9rem;
+  }
+
+  .filter-checkbox--stacked small {
+    display: block;
+    font-size: 0.78rem;
+    color: #8b949e;
+  }
+
   .offer-list {
     display: flex;
     flex-direction: column;
@@ -174,6 +362,21 @@
   }
 
   @media (max-width: 768px) {
+    .filter-toolbar__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .filter-toolbar__controls {
+      flex-direction: column;
+    }
+
+    .filter-dropdown__menu {
+      position: static;
+      margin-top: 0.5rem;
+      width: 100%;
+    }
+
     .offer-card {
       flex-direction: column;
       align-items: flex-start;
