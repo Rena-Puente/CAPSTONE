@@ -34,12 +34,139 @@
         {{ error() }}
       </div>
 
+      <section *ngIf="!error() && offers().length > 0" class="filter-toolbar card shadow-sm border-0 mb-4">
+        <div class="filter-toolbar__header">
+          <div>
+            <p class="filter-toolbar__count mb-1">
+              Mostrando
+              <strong>{{ filteredOffers().length }}</strong>
+              de
+              <strong>{{ offers().length }}</strong>
+              ofertas disponibles.
+            </p>
+            <p class="filter-toolbar__hint mb-0">
+              Combina los filtros para centrarte en la categoría, modalidad y región que prefieras.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="filter-toolbar__clear"
+            *ngIf="activeFiltersCount() > 0"
+            (click)="clearFilters()"
+          >
+            Limpiar filtros ({{ activeFiltersCount() }})
+          </button>
+        </div>
+
+        <div class="filter-toolbar__controls">
+          <div class="filter-dropdown" [class.filter-dropdown--open]="isFilterOpen('career')">
+            <button
+              type="button"
+              class="filter-dropdown__trigger"
+              (click)="toggleFilterDropdown('career')"
+              [attr.aria-expanded]="isFilterOpen('career')"
+              [attr.aria-controls]="filterMenuIds.career"
+            >
+              Categoría de carrera
+              <span *ngIf="selectedCareerCategories().size > 0" class="filter-dropdown__counter">
+                {{ selectedCareerCategories().size }}
+              </span>
+              <span class="filter-dropdown__caret" aria-hidden="true"></span>
+            </button>
+            <div class="filter-dropdown__menu" *ngIf="isFilterOpen('career')" [attr.id]="filterMenuIds.career">
+              <p class="filter-dropdown__description">
+                Selecciona una o más categorías para priorizar las áreas que más te interesan.
+              </p>
+              <div class="filter-dropdown__options">
+                <label class="filter-checkbox" *ngFor="let category of careerCategoryOptions(); trackBy: trackByLabel">
+                  <input type="checkbox" [checked]="isCategorySelected(category)" (change)="toggleCategory(category)" />
+                  <span>{{ category }}</span>
+                </label>
+                <div class="filter-dropdown__empty" *ngIf="careerCategoryOptions().length === 0">
+                  Aún no hay categorías asociadas a las ofertas publicadas.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-dropdown" [class.filter-dropdown--open]="isFilterOpen('modality')">
+            <button
+              type="button"
+              class="filter-dropdown__trigger"
+              (click)="toggleFilterDropdown('modality')"
+              [attr.aria-expanded]="isFilterOpen('modality')"
+              [attr.aria-controls]="filterMenuIds.modality"
+            >
+              Modalidad
+              <span *ngIf="selectedModalities().size > 0" class="filter-dropdown__counter">
+                {{ selectedModalities().size }}
+              </span>
+              <span class="filter-dropdown__caret" aria-hidden="true"></span>
+            </button>
+            <div class="filter-dropdown__menu" *ngIf="isFilterOpen('modality')" [attr.id]="filterMenuIds.modality">
+              <p class="filter-dropdown__description">
+                Define cómo quieres trabajar: remoto, híbrido, presencial u otras variantes.
+              </p>
+              <div class="filter-dropdown__options">
+                <label
+                  class="filter-checkbox filter-checkbox--stacked"
+                  *ngFor="let option of modalityOptions; trackBy: trackByModality"
+                >
+                  <input type="checkbox" [checked]="isModalitySelected(option.id)" (change)="toggleModality(option.id)" />
+                  <span>
+                    <strong>{{ option.label }}</strong>
+                    <small>{{ option.description }}</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-dropdown" [class.filter-dropdown--open]="isFilterOpen('region')">
+            <button
+              type="button"
+              class="filter-dropdown__trigger"
+              (click)="toggleFilterDropdown('region')"
+              [attr.aria-expanded]="isFilterOpen('region')"
+              [attr.aria-controls]="filterMenuIds.region"
+            >
+              Región
+              <span *ngIf="selectedRegions().size > 0" class="filter-dropdown__counter">
+                {{ selectedRegions().size }}
+              </span>
+              <span class="filter-dropdown__caret" aria-hidden="true"></span>
+            </button>
+            <div class="filter-dropdown__menu" *ngIf="isFilterOpen('region')" [attr.id]="filterMenuIds.region">
+              <p class="filter-dropdown__description">
+                Las regiones se muestran en el mismo orden del archivo <code>ciudades.json</code>.
+              </p>
+              <div class="filter-dropdown__options">
+                <label class="filter-checkbox" *ngFor="let region of regionOptions; trackBy: trackByLabel">
+                  <input type="checkbox" [checked]="isRegionSelected(region)" (change)="toggleRegion(region)" />
+                  <span>{{ region }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div *ngIf="!error() && offers().length === 0" class="alert alert-secondary border-0 shadow-sm">
         Aún no hay ofertas disponibles. Vuelve más tarde para descubrir nuevas oportunidades.
       </div>
 
-      <div *ngIf="offers().length > 0" class="offer-list">
-        <article class="offer-card" *ngFor="let offer of offers(); trackBy: trackByOfferId">
+      <div
+        *ngIf="!error() && offers().length > 0 && filteredOffers().length === 0"
+        class="alert alert-secondary border-0 shadow-sm"
+      >
+        No encontramos ofertas que coincidan con los filtros seleccionados.
+        <button type="button" class="btn btn-link text-decoration-none ps-1" (click)="clearFilters()">
+          Limpiar filtros
+        </button>
+      </div>
+
+      <div *ngIf="!error() && filteredOffers().length > 0" class="offer-list">
+        <article class="offer-card" *ngFor="let offer of filteredOffers(); trackBy: trackByOfferId">
           <div class="offer-logo" [ngClass]="{ 'with-image': !!getCompanyLogoUrl(offer) }">
             <ng-container *ngIf="getCompanyLogoUrl(offer) as logo; else initials">
               <img [src]="logo" [alt]="getCompanyDisplayName(offer)" loading="lazy" />
