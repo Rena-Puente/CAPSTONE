@@ -113,13 +113,13 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
     o_array                OUT json_array_t
   ) IS
     v_size  PLS_INTEGER;
-    v_obj   json_object_t;
-    v_texto VARCHAR2(4000 CHAR);
   BEGIN
+    -- 1) Obligatorio
     IF p_json IS NULL OR dbms_lob.getlength(p_json) = 0 THEN
       RAISE_APPLICATION_ERROR(-20100, 'El JSON de ' || p_contexto || ' es obligatorio.');
     END IF;
 
+    -- 2) Debe ser un JSON de tipo array válido
     BEGIN
       o_array := json_array_t.parse(p_json);
     EXCEPTION
@@ -127,45 +127,20 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
         RAISE_APPLICATION_ERROR(-20101, 'El JSON de ' || p_contexto || ' es inválido: ' || SQLERRM);
     END;
 
+    -- 3) Máximo N elementos
     v_size := o_array.get_size;
+
     IF v_size > c_max_preguntas THEN
-      RAISE_APPLICATION_ERROR(-20102, 'Solo se permiten ' || c_max_preguntas || ' elementos por ' || p_contexto || '.');
+      RAISE_APPLICATION_ERROR(
+        -20102,
+        'Solo se permiten ' || c_max_preguntas || ' elementos por ' || p_contexto || '.'
+      );
     END IF;
 
-    IF v_size = 0 THEN
-      RETURN;
-    END IF;
-
-    FOR idx IN 0 .. v_size - 1 LOOP
-      v_obj := o_array.get_object(idx);
-
-      IF v_obj IS NULL THEN
-        RAISE_APPLICATION_ERROR(-20103, 'Cada elemento de ' || p_contexto || ' debe ser un objeto JSON.');
-      END IF;
-
-      IF NOT v_obj.has('texto') THEN
-        RAISE_APPLICATION_ERROR(-20104, 'Cada elemento de ' || p_contexto || ' debe incluir la propiedad "texto".');
-      END IF;
-
-      v_texto := v_obj.get_string('texto');
-      IF v_texto IS NULL OR TRIM(v_texto) = '' THEN
-        RAISE_APPLICATION_ERROR(-20105, 'El campo "texto" de ' || p_contexto || ' no puede estar vacío.');
-      END IF;
-
-      IF p_requerir_obligatorio AND NOT v_obj.has('obligatorio') THEN
-        RAISE_APPLICATION_ERROR(-20106, 'Cada pregunta de ' || p_contexto || ' debe indicar si es obligatoria.');
-      END IF;
-
-      IF v_obj.has('obligatorio') THEN
-        BEGIN
-          v_obj.get_boolean('obligatorio');
-        EXCEPTION
-          WHEN OTHERS THEN
-            RAISE_APPLICATION_ERROR(-20107, 'La bandera "obligatorio" de ' || p_contexto || ' debe ser booleana.');
-        END;
-      END IF;
-    END LOOP;
+    -- Por ahora NO validamos cada objeto interno ni la bandera "obligatorio"
+    -- Esa validación fina la maneja el frontend / backend (Angular / Node).
   END validar_json_array;
+
 
   PROCEDURE ensure_tipo_usuario_empresa IS
     v_exists NUMBER := 0;
