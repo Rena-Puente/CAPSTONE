@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
+const MAX_ALLOWED_OFFER_QUESTIONS = 3;
 
 export interface CompanyRegistrationPayload {
   name: string;
@@ -17,6 +18,16 @@ export interface CompanyRegistrationPayload {
   rut: string;
   phone?: string;
   description?: string;
+}
+
+export interface OfferQuestionPayload {
+  text: string;
+  required: boolean;
+}
+
+export interface ApplicantAnswer {
+  question: string | null;
+  answer: string | null;
 }
 
 interface CompanyResponseItem {
@@ -57,6 +68,7 @@ export interface CompanyOfferPayload {
   country: string;
   seniority: string;
   contractType: string;
+  questions?: OfferQuestionPayload[] | null;
 }
 
 export interface CompanyOfferSummary {
@@ -72,6 +84,7 @@ export interface CompanyOfferSummary {
   createdAt: string | null;
   active: boolean;
   totalApplicants: number;
+  questions: OfferQuestionPayload[];
 }
 
 interface UpdateOfferStateResponse {
@@ -138,6 +151,8 @@ export interface CompanyApplicant {
   applicantProfileSlug: string | null;
   status: string | null;
   submittedAt: string | null;
+  questions: OfferQuestionPayload[];
+  answers: ApplicantAnswer[];
 }
 
 interface ApplicantsResponse {
@@ -230,7 +245,24 @@ export class CompanyService {
       return throwError(() => new Error(message));
     }
 
-    return this.http.post<CreateOfferResponse>(`${this.apiUrl}/companies/offers`, payload, options).pipe(
+    let normalizedQuestions: OfferQuestionPayload[] | undefined;
+
+    try {
+      normalizedQuestions = normalizeOfferQuestionsForRequest(payload.questions);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Las preguntas ingresadas para la oferta no son válidas.';
+      return throwError(() => new Error(message));
+    }
+
+    const requestPayload =
+      normalizedQuestions === undefined ? payload : { ...payload, questions: normalizedQuestions };
+
+    return this.http
+      .post<CreateOfferResponse>(`${this.apiUrl}/companies/offers`, requestPayload, options)
+      .pipe(
       map((response) => {
         if (!response.ok || !response.offer) {
           const message = response.error || response.message || 'No se pudo crear la oferta.';
@@ -251,7 +283,8 @@ export class CompanyService {
           contractType: offer.contractType ?? null,
           createdAt: (offer as { createdAt?: string | null })?.createdAt ?? null,
           active: normalizeBooleanFlag((offer as { active?: boolean | number | null })?.active, true),
-          totalApplicants: Number((offer as { totalApplicants?: number | null })?.totalApplicants ?? 0)
+          totalApplicants: Number((offer as { totalApplicants?: number | null })?.totalApplicants ?? 0),
+          questions: normalizeOfferQuestionsFromResponse((offer as { questions?: unknown })?.questions)
         } satisfies CompanyOfferSummary;
       }),
       catchError((error) => {
@@ -291,7 +324,9 @@ export class CompanyService {
           applicantPhone: applicant.applicantPhone ?? null,
           applicantProfileSlug: applicant.applicantProfileSlug ?? null,
           status: applicant.status ?? null,
-          submittedAt: applicant.submittedAt ?? null
+          submittedAt: applicant.submittedAt ?? null,
+          questions: normalizeOfferQuestionsFromResponse((applicant as { questions?: unknown })?.questions),
+          answers: normalizeApplicantAnswersFromResponse((applicant as { answers?: unknown })?.answers)
         }));
       }),
       catchError((error) => {
@@ -333,7 +368,8 @@ export class CompanyService {
           contractType: offer.contractType ?? null,
           createdAt: (offer as { createdAt?: string | null })?.createdAt ?? null,
           active: normalizeBooleanFlag((offer as { active?: boolean | number | null })?.active, true),
-          totalApplicants: Number((offer as { totalApplicants?: number | null })?.totalApplicants ?? 0)
+          totalApplicants: Number((offer as { totalApplicants?: number | null })?.totalApplicants ?? 0),
+          questions: normalizeOfferQuestionsFromResponse((offer as { questions?: unknown })?.questions)
         } satisfies CompanyOfferSummary));
       }),
       catchError((error) => {
@@ -378,7 +414,9 @@ export class CompanyService {
             applicantPhone: applicant.applicantPhone ?? null,
             applicantProfileSlug: applicant.applicantProfileSlug ?? null,
             status: applicant.status ?? null,
-            submittedAt: applicant.submittedAt ?? null
+            submittedAt: applicant.submittedAt ?? null,
+            questions: normalizeOfferQuestionsFromResponse((applicant as { questions?: unknown })?.questions),
+            answers: normalizeApplicantAnswersFromResponse((applicant as { answers?: unknown })?.answers)
           }));
         }),
         catchError((error) => {
@@ -389,6 +427,10 @@ export class CompanyService {
           return throwError(() => new Error(message));
         })
       );
+  }
+
+  listApplicantsByOffer(offerId: number): Observable<CompanyApplicant[]> {
+    return this.listApplicantsForOffer(offerId);
   }
 
   updateOfferActiveState(
@@ -491,4 +533,112 @@ export class CompanyService {
       headers: new HttpHeaders({ Authorization: `Bearer ${token}` })
     };
   }
+}
+
+function toNormalizedString(value: unknown): string {
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  return String(value).trim();
+}
+
+function toNullableString(value: unknown): string | null {
+  const normalized = toNormalizedString(value);
+  return normalized || null;
+}
+
+function normalizeOfferQuestionsFromResponse(input: unknown): OfferQuestionPayload[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const text =
+        toNormalizedString((item as { text?: unknown }).text) ||
+        toNormalizedString((item as { question?: unknown }).question) ||
+        toNormalizedString((item as { pregunta?: unknown }).pregunta);
+
+      if (!text) {
+        return null;
+      }
+
+      const required = Boolean(
+        (item as { required?: unknown }).required ??
+          (item as { mandatory?: unknown }).mandatory ??
+          (item as { obligatoria?: unknown }).obligatoria ??
+          (item as { isRequired?: unknown }).isRequired
+      );
+
+      return { text, required } satisfies OfferQuestionPayload;
+    })
+    .filter((entry): entry is OfferQuestionPayload => Boolean(entry))
+    .slice(0, MAX_ALLOWED_OFFER_QUESTIONS);
+}
+
+function normalizeApplicantAnswersFromResponse(input: unknown): ApplicantAnswer[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const question =
+        toNullableString((item as { question?: unknown }).question) ??
+        toNullableString((item as { pregunta?: unknown }).pregunta) ??
+        toNullableString((item as { text?: unknown }).text);
+      const answer =
+        toNullableString((item as { answer?: unknown }).answer) ??
+        toNullableString((item as { respuesta?: unknown }).respuesta) ??
+        toNullableString((item as { value?: unknown }).value);
+
+      if (!question && !answer) {
+        return null;
+      }
+
+      return { question, answer } satisfies ApplicantAnswer;
+    })
+    .filter((entry): entry is ApplicantAnswer => Boolean(entry))
+    .slice(0, MAX_ALLOWED_OFFER_QUESTIONS);
+}
+
+function normalizeOfferQuestionsForRequest(
+  input: OfferQuestionPayload[] | null | undefined
+): OfferQuestionPayload[] | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  const list = Array.isArray(input) ? input : [];
+
+  if (list.length > MAX_ALLOWED_OFFER_QUESTIONS) {
+    throw new Error(`Solo se permiten hasta ${MAX_ALLOWED_OFFER_QUESTIONS} preguntas por oferta.`);
+  }
+
+  return list.map((item, index) => {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`La pregunta #${index + 1} no es válida.`);
+    }
+
+    const text = toNormalizedString(item.text);
+
+    if (!text) {
+      throw new Error(`La pregunta #${index + 1} debe incluir un texto.`);
+    }
+
+    return { text, required: Boolean(item.required) } satisfies OfferQuestionPayload;
+  });
 }
