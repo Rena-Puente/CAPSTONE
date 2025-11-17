@@ -20,10 +20,12 @@ export interface CompanyRegistrationPayload {
   description?: string;
 }
 
-export interface OfferQuestionPayload {
+export interface OfferQuestion {
   text: string;
   required: boolean;
 }
+
+export type OfferQuestionPayload = OfferQuestion;
 
 export interface ApplicantAnswer {
   question: string | null;
@@ -84,7 +86,7 @@ export interface CompanyOfferSummary {
   createdAt: string | null;
   active: boolean;
   totalApplicants: number;
-  questions: OfferQuestionPayload[];
+  questions: OfferQuestion[];
 }
 
 interface UpdateOfferStateResponse {
@@ -151,7 +153,7 @@ export interface CompanyApplicant {
   applicantProfileSlug: string | null;
   status: string | null;
   submittedAt: string | null;
-  questions: OfferQuestionPayload[];
+  questions: OfferQuestion[];
   answers: ApplicantAnswer[];
 }
 
@@ -552,7 +554,7 @@ function toNullableString(value: unknown): string | null {
   return normalized || null;
 }
 
-function normalizeOfferQuestionsFromResponse(input: unknown): OfferQuestionPayload[] {
+function normalizeOfferQuestionsFromResponse(input: unknown): OfferQuestion[] {
   if (!Array.isArray(input)) {
     return [];
   }
@@ -579,9 +581,9 @@ function normalizeOfferQuestionsFromResponse(input: unknown): OfferQuestionPaylo
           (item as { isRequired?: unknown }).isRequired
       );
 
-      return { text, required } satisfies OfferQuestionPayload;
+      return { text, required } satisfies OfferQuestion;
     })
-    .filter((entry): entry is OfferQuestionPayload => Boolean(entry))
+    .filter((entry): entry is OfferQuestion => Boolean(entry))
     .slice(0, MAX_ALLOWED_OFFER_QUESTIONS);
 }
 

@@ -157,6 +157,7 @@
                 <th scope="col">Perfil</th>
                 <th scope="col">Estado</th>
                 <th scope="col">Fecha</th>
+                <th scope="col">Formulario</th>
               </tr>
             </thead>
             <tbody>
@@ -180,6 +181,15 @@
                 </td>
                 <td data-title="Estado">{{ applicant.status || 'En revisión' }}</td>
                 <td data-title="Fecha">{{ applicant.submittedAt ? (applicant.submittedAt | date: 'short') : '—' }}</td>
+                <td data-title="Formulario">
+                  <button
+                    type="button"
+                    class="company-applicants__form-button"
+                    (click)="openFormModal(applicant)"
+                  >
+                    Ver respuestas
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -187,4 +197,60 @@
       </ng-container>
     </ng-container>
   </ng-container>
+
+  <div
+    class="company-applicants__overlay"
+    *ngIf="isFormModalOpen() && selectedApplicant() as applicant"
+    role="presentation"
+  >
+    <div
+      class="company-applicants__modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="applicant-form-title"
+    >
+      <button
+        type="button"
+        class="company-applicants__modal-close"
+        (click)="closeFormModal()"
+        aria-label="Cerrar"
+      >
+        ×
+      </button>
+
+      <div class="company-applicants__modal-header">
+        <h3 id="applicant-form-title" class="company-applicants__modal-title">
+          Formulario de {{ applicant.applicantName || 'Postulante sin nombre' }}
+        </h3>
+        <p class="company-applicants__modal-subtitle">
+          Oferta: {{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }} · Enviado el
+          {{ applicant.submittedAt ? (applicant.submittedAt | date: 'medium') : '—' }}
+        </p>
+      </div>
+
+      <div *ngIf="selectedApplicantResponses().length === 0" class="company-applicants__empty-responses">
+        Este postulante no respondió preguntas adicionales para la oferta.
+      </div>
+
+      <div *ngIf="selectedApplicantResponses().length > 0" class="company-applicants__responses">
+        <table class="company-applicants__responses-table">
+          <thead>
+            <tr>
+              <th scope="col">Pregunta</th>
+              <th scope="col">Respuesta</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let pair of selectedApplicantResponses()">
+              <td data-title="Pregunta">
+                <span class="company-applicants__question-text">{{ pair.question }}</span>
+                <span *ngIf="pair.required" class="company-applicants__question-required">Obligatoria</span>
+              </td>
+              <td data-title="Respuesta">{{ pair.answer || 'Sin respuesta' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </section>

@@ -8,6 +8,13 @@ import {
   CompanyOfferSummary
 } from '../../services/company.service';
 
+interface ApplicantResponseRow {
+  id: string;
+  question: string;
+  required: boolean;
+  answer: string | null;
+}
+
 @Component({
   selector: 'app-company-applicants',
   standalone: true,
@@ -40,6 +47,37 @@ export class CompanyApplicants {
   protected readonly deletingOffer = signal(false);
   protected readonly offerActionError = signal<string | null>(null);
   protected readonly offerActionMessage = signal<string | null>(null);
+  protected readonly selectedApplicant = signal<CompanyApplicant | null>(null);
+  protected readonly isFormModalOpen = signal(false);
+  protected readonly selectedApplicantResponses = computed<ApplicantResponseRow[]>(() => {
+    const applicant = this.selectedApplicant();
+
+    if (!applicant) {
+      return [];
+    }
+
+    const questions = applicant.questions ?? [];
+    const answers = applicant.answers ?? [];
+    const totalRows = Math.max(questions.length, answers.length);
+
+    if (totalRows === 0) {
+      return [];
+    }
+
+    return Array.from({ length: totalRows }, (_, index) => {
+      const questionText =
+        questions[index]?.text || answers[index]?.question || `Pregunta ${index + 1}`;
+      const required = Boolean(questions[index]?.required);
+      const answer = answers[index]?.answer ?? null;
+
+      return {
+        id: `${applicant.applicationId}-${index}`,
+        question: questionText,
+        required,
+        answer
+      } satisfies ApplicantResponseRow;
+    });
+  });
 
     protected formatOfferOption(offer: CompanyOfferSummary | null): string {
     if (!offer) {
@@ -272,5 +310,15 @@ export class CompanyApplicants {
       const normalizedOrigin = origin.replace(/\/$/, '');
       return `${normalizedOrigin}/user/${slug}`;
     }
+  }
+
+  protected openFormModal(applicant: CompanyApplicant): void {
+    this.selectedApplicant.set(applicant);
+    this.isFormModalOpen.set(true);
+  }
+
+  protected closeFormModal(): void {
+    this.isFormModalOpen.set(false);
+    this.selectedApplicant.set(null);
   }
 }

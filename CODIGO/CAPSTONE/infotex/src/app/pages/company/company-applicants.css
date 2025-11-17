@@ -347,6 +347,162 @@
   text-shadow: 0 0 12px rgba(88, 166, 255, 0.6);
 }
 
+.company-applicants__form-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid rgba(88, 166, 255, 0.9);
+  background: transparent;
+  color: #58a6ff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.company-applicants__form-button:hover,
+.company-applicants__form-button:focus-visible {
+  background: rgba(88, 166, 255, 0.15);
+  color: #e6f1ff;
+  box-shadow: 0 0 18px rgba(88, 166, 255, 0.35);
+}
+
+.company-applicants__form-button:focus-visible {
+  outline: 2px solid rgba(88, 166, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.company-applicants__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 4, 9, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1100;
+}
+
+.company-applicants__modal {
+  position: relative;
+  width: min(52rem, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, rgba(5, 10, 25, 0.95), rgba(15, 23, 42, 0.95));
+  padding: 2.25rem;
+  box-shadow: 0 45px 80px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+}
+
+.company-applicants__modal-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  border: none;
+  background: rgba(15, 23, 42, 0.65);
+  color: #94a3b8;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 999px;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.company-applicants__modal-close:hover,
+.company-applicants__modal-close:focus-visible {
+  background: rgba(88, 166, 255, 0.25);
+  color: #f8fafc;
+  transform: scale(1.05);
+}
+
+.company-applicants__modal-header {
+  margin-bottom: 1.5rem;
+}
+
+.company-applicants__modal-title {
+  margin: 0;
+  font-size: 1.65rem;
+  color: #e6edf3;
+}
+
+.company-applicants__modal-subtitle {
+  margin-top: 0.35rem;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.company-applicants__empty-responses {
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5f5;
+  text-align: center;
+  font-weight: 500;
+}
+
+.company-applicants__responses-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.company-applicants__responses-table thead {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.company-applicants__responses-table th,
+.company-applicants__responses-table td {
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.company-applicants__responses-table th {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.company-applicants__responses-table td {
+  color: #e6edf3;
+  background: rgba(3, 7, 18, 0.35);
+}
+
+.company-applicants__responses-table tr:last-child td {
+  border-bottom: none;
+}
+
+.company-applicants__question-text {
+  display: block;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.company-applicants__question-required {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 @media (max-width: 768px) {
   .company-applicants__controls {
     padding: 0.9rem 1rem;
@@ -393,5 +549,42 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #8b949e;
+  }
+
+  .company-applicants__modal {
+    width: 100%;
+    padding: 1.5rem;
+  }
+
+  .company-applicants__responses-table {
+    border-radius: 0.75rem;
+  }
+
+  .company-applicants__responses-table thead {
+    display: none;
+  }
+
+  .company-applicants__responses-table tr {
+    display: block;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    padding: 0.85rem 0;
+  }
+
+  .company-applicants__responses-table td {
+    display: block;
+    width: 100%;
+    border-bottom: none;
+    padding: 0.35rem 0;
+  }
+
+  .company-applicants__responses-table td::before {
+    content: attr(data-title);
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-bottom: 0.15rem;
   }
 }
