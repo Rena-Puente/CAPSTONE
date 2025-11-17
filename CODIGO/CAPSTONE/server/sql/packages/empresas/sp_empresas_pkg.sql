@@ -33,6 +33,7 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     p_pais           IN OFERTAS.PAIS%TYPE,
     p_seniority      IN OFERTAS.SENIORITY%TYPE,
     p_tipo_contrato  IN OFERTAS.TIPO_CONTRATO%TYPE,
+    p_preguntas_json IN CLOB,
     o_id_oferta      OUT OFERTAS.ID_OFERTA%TYPE
   );
 
@@ -54,6 +55,7 @@ CREATE OR REPLACE PACKAGE sp_empresas_pkg AS
     p_id_oferta           IN OFERTAS.ID_OFERTA%TYPE,
     p_id_usuario          IN USUARIOS.ID_USUARIO%TYPE,
     p_carta_presentacion  IN POSTULACIONES.CARTA_PRESENTACION%TYPE,
+    p_respuestas_json     IN CLOB,
     o_id_postulacion      OUT POSTULACIONES.ID_POSTULACION%TYPE
   );
 
@@ -102,6 +104,68 @@ END sp_empresas_pkg;
 --------------------------------------------------------------------------------
 CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
   c_tipo_usuario_empresa CONSTANT NUMBER := 3;
+  c_max_preguntas        CONSTANT PLS_INTEGER := 3;
+
+  PROCEDURE validar_json_array(
+    p_json                 IN CLOB,
+    p_contexto             IN VARCHAR2,
+    p_requerir_obligatorio IN BOOLEAN,
+    o_array                OUT json_array_t
+  ) IS
+    v_size  PLS_INTEGER;
+    v_obj   json_object_t;
+    v_texto VARCHAR2(4000 CHAR);
+  BEGIN
+    IF p_json IS NULL OR dbms_lob.getlength(p_json) = 0 THEN
+      RAISE_APPLICATION_ERROR(-20100, 'El JSON de ' || p_contexto || ' es obligatorio.');
+    END IF;
+
+    BEGIN
+      o_array := json_array_t.parse(p_json);
+    EXCEPTION
+      WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20101, 'El JSON de ' || p_contexto || ' es inválido: ' || SQLERRM);
+    END;
+
+    v_size := o_array.get_size;
+    IF v_size > c_max_preguntas THEN
+      RAISE_APPLICATION_ERROR(-20102, 'Solo se permiten ' || c_max_preguntas || ' elementos por ' || p_contexto || '.');
+    END IF;
+
+    IF v_size = 0 THEN
+      RETURN;
+    END IF;
+
+    FOR idx IN 0 .. v_size - 1 LOOP
+      v_obj := o_array.get_object(idx);
+
+      IF v_obj IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20103, 'Cada elemento de ' || p_contexto || ' debe ser un objeto JSON.');
+      END IF;
+
+      IF NOT v_obj.has('texto') THEN
+        RAISE_APPLICATION_ERROR(-20104, 'Cada elemento de ' || p_contexto || ' debe incluir la propiedad "texto".');
+      END IF;
+
+      v_texto := v_obj.get_string('texto');
+      IF v_texto IS NULL OR TRIM(v_texto) = '' THEN
+        RAISE_APPLICATION_ERROR(-20105, 'El campo "texto" de ' || p_contexto || ' no puede estar vacío.');
+      END IF;
+
+      IF p_requerir_obligatorio AND NOT v_obj.has('obligatorio') THEN
+        RAISE_APPLICATION_ERROR(-20106, 'Cada pregunta de ' || p_contexto || ' debe indicar si es obligatoria.');
+      END IF;
+
+      IF v_obj.has('obligatorio') THEN
+        BEGIN
+          v_obj.get_boolean('obligatorio');
+        EXCEPTION
+          WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20107, 'La bandera "obligatorio" de ' || p_contexto || ' debe ser booleana.');
+        END;
+      END IF;
+    END LOOP;
+  END validar_json_array;
 
   PROCEDURE ensure_tipo_usuario_empresa IS
     v_exists NUMBER := 0;
@@ -358,6 +422,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
     p_pais           IN OFERTAS.PAIS%TYPE,
     p_seniority      IN OFERTAS.SENIORITY%TYPE,
     p_tipo_contrato  IN OFERTAS.TIPO_CONTRATO%TYPE,
+    p_preguntas_json IN CLOB,
     o_id_oferta      OUT OFERTAS.ID_OFERTA%TYPE
   ) IS
     v_titulo         OFERTAS.TITULO%TYPE;
@@ -367,6 +432,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
     v_pais           OFERTAS.PAIS%TYPE;
     v_seniority      OFERTAS.SENIORITY%TYPE;
     v_tipo_contrato  OFERTAS.TIPO_CONTRATO%TYPE;
+    v_preguntas      json_array_t;
   BEGIN
     IF p_id_empresa IS NULL THEN
       RAISE_APPLICATION_ERROR(-20070, 'El identificador de la empresa es obligatorio.');
@@ -408,6 +474,8 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       RAISE_APPLICATION_ERROR(-20077, 'Debes indicar el tipo de contrato.');
     END IF;
 
+    validar_json_array(p_preguntas_json, 'preguntas de la oferta', TRUE, v_preguntas);
+
     INSERT INTO ofertas (
       id_empresa,
       titulo,
@@ -417,6 +485,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       pais,
       seniority,
       tipo_contrato,
+      preguntas_json,
       fecha_creacion,
       activa
     ) VALUES (
@@ -428,6 +497,7 @@ CREATE OR REPLACE PACKAGE BODY sp_empresas_pkg AS
       v_pais,
       v_seniority,
       v_tipo_contrato,
+      p_preguntas_json,
       SYSTIMESTAMP,
       1
     ) RETURNING id_oferta INTO o_id_oferta;
@@ -663,11 +733,13 @@ END sp_listar_postulantes_oferta;
     p_id_oferta           IN OFERTAS.ID_OFERTA%TYPE,
     p_id_usuario          IN USUARIOS.ID_USUARIO%TYPE,
     p_carta_presentacion  IN POSTULACIONES.CARTA_PRESENTACION%TYPE,
+    p_respuestas_json     IN CLOB,
     o_id_postulacion      OUT POSTULACIONES.ID_POSTULACION%TYPE
   ) IS
     v_activa        OFERTAS.ACTIVA%TYPE;
     v_biografia     POSTULACIONES.CARTA_PRESENTACION%TYPE;
     v_dummy         NUMBER;
+    v_respuestas    json_array_t;
   BEGIN
     IF p_id_oferta IS NULL THEN
       RAISE_APPLICATION_ERROR(-20080, 'Debes seleccionar una oferta válida.');
@@ -713,18 +785,22 @@ END sp_listar_postulantes_oferta;
       RAISE_APPLICATION_ERROR(-20085, 'Ya has postulado a esta oferta.');
     END IF;
 
+    validar_json_array(p_respuestas_json, 'respuestas de la postulación', FALSE, v_respuestas);
+
     v_biografia := p_carta_presentacion;
 
     INSERT INTO postulaciones (
       id_oferta,
       id_usuario,
       carta_presentacion,
+      respuestas_json,
       estado,
       fecha_creacion
     ) VALUES (
       p_id_oferta,
       p_id_usuario,
       v_biografia,
+      p_respuestas_json,
       'enviada',
       SYSTIMESTAMP
     ) RETURNING id_postulacion INTO o_id_postulacion;
