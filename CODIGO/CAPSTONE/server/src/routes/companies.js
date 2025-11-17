@@ -1,5 +1,6 @@
 const { getClientIp } = require('../utils/request');
 const { handleOracleError } = require('../utils/errors');
+const { serializeOfferQuestions } = require('../utils/questions');
 const {
   normalizeCompanyPayload,
   createCompany,
@@ -18,6 +19,18 @@ const {
 } = require('../services/companies');
 const { getUserIdFromAccessToken } = require('../services/auth');
 const { requireAccessToken } = require('../middleware/auth');
+
+function normalizeApplicantsWithQa(applicants) {
+  if (!Array.isArray(applicants)) {
+    return [];
+  }
+
+  return applicants.map((applicant) => ({
+    ...applicant,
+    questions: Array.isArray(applicant?.questions) ? applicant.questions : [],
+    answers: Array.isArray(applicant?.answers) ? applicant.answers : []
+  }));
+}
 
 function registerCompanyRoutes(app) {
   app.post('/companies', async (req, res) => {
@@ -119,10 +132,24 @@ function registerCompanyRoutes(app) {
         return res.status(404).json({ ok: false, error: 'No se encontró una empresa asociada al usuario.' });
       }
 
+      let questionsJson = '[]';
+
+      try {
+        questionsJson = serializeOfferQuestions(req.body?.questions ?? req.body?.preguntas);
+      } catch (validationError) {
+        const message =
+          validationError instanceof Error
+            ? validationError.message
+            : 'Las preguntas ingresadas para la oferta no son válidas.';
+
+        return res.status(400).json({ ok: false, error: message });
+      }
+
+      const payload = { ...(req.body || {}), questionsJson };
       let offer;
 
       try {
-        offer = await createOffer(company.id, req.body || {});
+        offer = await createOffer(company.id, payload);
       } catch (validationError) {
         const message = validationError instanceof Error ? validationError.message : 'Los datos de la oferta no son válidos.';
         return res.status(400).json({ ok: false, error: message });
@@ -279,7 +306,7 @@ function registerCompanyRoutes(app) {
 
       const applicants = await listApplicantsForOffer(company.id, offerId);
 
-      return res.json({ ok: true, applicants });
+      return res.json({ ok: true, applicants: normalizeApplicantsWithQa(applicants) });
     } catch (error) {
       if (error instanceof CompanyOfferError) {
         return res.status(error.statusCode).json({ ok: false, error: error.message, code: error.code });
@@ -315,7 +342,7 @@ function registerCompanyRoutes(app) {
         getApplicationSummary(company.id)
       ]);
 
-      return res.json({ ok: true, applicants, summary });
+      return res.json({ ok: true, applicants: normalizeApplicantsWithQa(applicants), summary });
     } catch (error) {
       console.error('[Companies] Failed to list applicants', {
         path: req.originalUrl,

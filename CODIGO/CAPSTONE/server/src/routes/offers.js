@@ -2,6 +2,7 @@ const { requireAccessToken } = require('../middleware/auth');
 const { getClientIp } = require('../utils/request');
 const { getUserIdFromAccessToken } = require('../services/auth');
 const { listPublicOffers, applyToOffer, OfferApplicationError } = require('../services/offers');
+const { serializeOfferAnswers } = require('../utils/questions');
 
 function registerOfferRoutes(app) {
   app.get('/offers', async (req, res) => {
@@ -48,7 +49,20 @@ function registerOfferRoutes(app) {
       const coverLetter =
         typeof req.body?.coverLetter === 'string' ? req.body.coverLetter : null;
 
-      const application = await applyToOffer(rawOfferId, userId, coverLetter);
+      let answersJson = '[]';
+
+      try {
+        answersJson = serializeOfferAnswers(req.body?.answers ?? req.body?.respuestas);
+      } catch (validationError) {
+        const message =
+          validationError instanceof Error
+            ? validationError.message
+            : 'Las respuestas enviadas no son válidas.';
+
+        return res.status(400).json({ ok: false, error: message });
+      }
+
+      const application = await applyToOffer(rawOfferId, userId, coverLetter, answersJson);
 
       return res.status(201).json({
         ok: true,
