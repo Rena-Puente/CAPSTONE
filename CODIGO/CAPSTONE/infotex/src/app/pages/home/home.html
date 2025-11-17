@@ -200,25 +200,64 @@
               {{ offer.description || 'La empresa no proporcionó una descripción detallada para esta oferta.' }}
             </p>
 
-            <div class="offer-actions">
-              <button
-                type="button"
-                class="btn btn-apply"
-                (click)="applyToOffer(offer)"
-                [disabled]="isApplying(offer.id) || isApplied(offer.id) || missingBiography()"
-              >
-                <span *ngIf="isApplying(offer.id)" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                <ng-container *ngIf="isApplied(offer.id); else applyLabel">
-                  <span class="me-2">✅</span>
-                  Ya postulaste
-                </ng-container>
-                <ng-template #applyLabel>Postular</ng-template>
-              </button>
+            <form
+              class="offer-application-form"
+              (submit)="$event.preventDefault(); applyToOffer(offer)"
+              novalidate
+            >
+              <div class="offer-questions" *ngIf="offer.questions?.length">
+                <p class="offer-questions__title mb-2">Preguntas de la empresa</p>
+                <p class="offer-questions__hint text-muted small">
+                  Responde estas preguntas para complementar tu postulación.
+                </p>
+                <div
+                  class="offer-question"
+                  *ngFor="let question of offer.questions; let i = index; trackBy: trackByQuestionIndex"
+                >
+                  <label class="form-label" [attr.for]="'offer-question-' + offer.id + '-' + i">
+                    {{ question.text }}
+                    <span *ngIf="question.required" class="text-danger" aria-hidden="true">*</span>
+                  </label>
+                  <textarea
+                    class="form-control"
+                    rows="3"
+                    [attr.id]="'offer-question-' + offer.id + '-' + i"
+                    [value]="getAnswerValue(offer.id, i)"
+                    (input)="handleAnswerInput(offer, i, $any($event.target).value)"
+                    [attr.aria-required]="question.required"
+                  ></textarea>
+                  <div
+                    class="text-danger small mt-1"
+                    *ngIf="question.required && hasAnswerError(offer.id, i)"
+                  >
+                    Esta pregunta es obligatoria.
+                  </div>
+                </div>
+              </div>
 
-              <span *ngIf="getApplicationError(offer.id)" class="text-danger small ms-3">
-                {{ getApplicationError(offer.id) }}
-              </span>
-            </div>
+              <div class="offer-actions">
+                <button
+                  type="submit"
+                  class="btn btn-apply"
+                  [disabled]="isApplying(offer.id) || isApplied(offer.id) || missingBiography()"
+                >
+                  <span
+                    *ngIf="isApplying(offer.id)"
+                    class="spinner-border spinner-border-sm me-2"
+                    role="status"
+                  ></span>
+                  <ng-container *ngIf="isApplied(offer.id); else applyLabel">
+                    <span class="me-2">✅</span>
+                    Ya postulaste
+                  </ng-container>
+                  <ng-template #applyLabel>Postular</ng-template>
+                </button>
+
+                <span *ngIf="getApplicationError(offer.id)" class="text-danger small ms-3">
+                  {{ getApplicationError(offer.id) }}
+                </span>
+              </div>
+            </form>
           </div>
         </article>
       </div>
