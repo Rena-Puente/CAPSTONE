@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApplicationsService } from '../../services/applications.service';
 import { OffersService, PublicOffer } from '../../services/offers.service';
 import { ProfileData, ProfileService } from '../../services/profile.service';
+import { ProfileFieldsService } from '../../services/profilefields.service';
 import chileRegionsData from '../../../assets/data/ciudades.json';
 
 type FilterKey = 'career' | 'modality' | 'region';
@@ -175,8 +176,14 @@ export class Home {
   private readonly offersService = inject(OffersService);
   private readonly applicationsService = inject(ApplicationsService);
   private readonly profileService = inject(ProfileService);
+  private readonly profileFieldsService = inject(ProfileFieldsService);
   private readonly hostElement = inject(ElementRef<HTMLElement>);
-  private readonly offerMetadataCache = new WeakMap<PublicOffer, OfferFilterMetadata>();
+  private readonly offerMetadataCache = new WeakMap<
+    PublicOffer,
+    { version: number; metadata: OfferFilterMetadata }
+  >();
+  private metadataCacheVersion = 0;
+  private catalogCareerLookup = new Map<string, string>();
 
   protected readonly loading = signal(false);
   protected readonly offers = signal<PublicOffer[]>([]);
@@ -200,6 +207,7 @@ export class Home {
   protected readonly modalityOptions = MODALITY_OPTIONS;
   protected readonly regionOptions = REGION_FILTER_OPTIONS;
   protected readonly filterMenuIds = FILTER_MENU_IDS;
+  protected readonly catalogCareerCategories = signal<string[]>([]);
   protected readonly activeFiltersCount = computed(
     () =>
       this.selectedCareerCategories().size +
@@ -224,6 +232,7 @@ export class Home {
     void this.loadOffers();
     void this.loadExistingApplications();
     void this.loadProfile();
+    void this.loadCareerCatalog();
   }
 
   protected trackByOfferId(_: number, offer: PublicOffer): number {
@@ -432,6 +441,20 @@ export class Home {
     const categories = new Map<string, string>();
     let includeUnknown = false;
 
+    for (const catalogCategory of this.catalogCareerCategories()) {
+      const label = formatDisplayLabel(catalogCategory);
+
+      if (!label) {
+        continue;
+      }
+
+      const key = normalizeLookup(label);
+
+      if (key && !categories.has(key)) {
+        categories.set(key, label);
+      }
+    }
+
     for (const offer of this.offers()) {
       const category = this.getOfferFilterMetadata(offer).category;
 
@@ -456,19 +479,19 @@ export class Home {
   }
 
   private getOfferFilterMetadata(offer: PublicOffer): OfferFilterMetadata {
-    let metadata = this.offerMetadataCache.get(offer);
+    const cached = this.offerMetadataCache.get(offer);
 
-    if (metadata) {
-      return metadata;
+    if (cached && cached.version === this.metadataCacheVersion) {
+      return cached.metadata;
     }
 
-    metadata = {
+    const metadata: OfferFilterMetadata = {
       category: this.computeOfferCategory(offer),
       region: this.computeOfferRegion(offer),
       modality: this.computeOfferModality(offer)
     };
 
-    this.offerMetadataCache.set(offer, metadata);
+    this.offerMetadataCache.set(offer, { version: this.metadataCacheVersion, metadata });
 
     return metadata;
   }
@@ -487,7 +510,27 @@ export class Home {
         'especialidad'
       );
 
-    return formatDisplayLabel(rawCategory);
+    const formattedCategory = formatDisplayLabel(rawCategory);
+
+    if (formattedCategory) {
+      return formattedCategory;
+    }
+
+    const careerCandidates = [
+      offer.seniority,
+      offer.career,
+      this.readStringField(offer, 'careerName', 'carrera', 'especialidad', 'career')
+    ];
+
+    for (const candidate of careerCandidates) {
+      const category = this.lookupCareerCategory(candidate);
+
+      if (category) {
+        return category;
+      }
+    }
+
+    return null;
   }
 
   private computeOfferRegion(offer: PublicOffer): string | null {
@@ -535,6 +578,16 @@ export class Home {
       this.readStringField(offer, 'modalidad', 'workMode', 'work_mode', 'tipoUbicacion');
 
     return resolveModalityFromString(rawModality);
+  }
+
+  private lookupCareerCategory(career: string | null | undefined): string | null {
+    const normalized = normalizeLookup(career);
+
+    if (!normalized) {
+      return null;
+    }
+
+    return this.catalogCareerLookup.get(normalized) ?? null;
   }
 
   private readStringField(source: unknown, ...keys: string[]): string | null {
@@ -634,11 +687,13 @@ export class Home {
     try {
       const offers = await firstValueFrom(this.offersService.listOffers());
       this.offers.set(offers);
+      this.invalidateOfferMetadataCache();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'No se pudieron obtener las ofertas disponibles.';
       this.error.set(message);
       this.offers.set([]);
+      this.invalidateOfferMetadataCache();
     } finally {
       this.loading.set(false);
     }
@@ -688,5 +743,57 @@ export class Home {
 
     this.biography.set(profile.biography ?? '');
     this.displayName.set(profile.displayName ?? null);
+  }
+
+  private async loadCareerCatalog(): Promise<void> {
+    try {
+      const careerMap = await firstValueFrom(this.profileFieldsService.getCareerMap());
+      this.applyCareerCatalog(careerMap);
+    } catch (error) {
+      console.error('[Home] Failed to load career catalog', error);
+      this.catalogCareerCategories.set([]);
+      this.catalogCareerLookup = new Map<string, string>();
+      this.invalidateOfferMetadataCache();
+    }
+  }
+
+  private applyCareerCatalog(map: Record<string, readonly string[]>): void {
+    const entries = Object.entries(map ?? {})
+      .map(([category, careers]) => {
+        const formattedCategory = formatDisplayLabel(category);
+
+        if (!formattedCategory) {
+          return null;
+        }
+
+        const formattedCareers = (careers ?? [])
+          .map((career) => formatDisplayLabel(career))
+          .filter((career): career is string => Boolean(career));
+
+        return { category: formattedCategory, careers: formattedCareers };
+      })
+      .filter((entry): entry is { category: string; careers: string[] } => Boolean(entry));
+
+    entries.sort((a, b) => a.category.localeCompare(b.category, 'es'));
+
+    const lookup = new Map<string, string>();
+
+    for (const entry of entries) {
+      for (const career of entry.careers) {
+        const normalizedCareer = normalizeLookup(career);
+
+        if (normalizedCareer && !lookup.has(normalizedCareer)) {
+          lookup.set(normalizedCareer, entry.category);
+        }
+      }
+    }
+
+    this.catalogCareerLookup = lookup;
+    this.catalogCareerCategories.set(entries.map((entry) => entry.category));
+    this.invalidateOfferMetadataCache();
+  }
+
+  private invalidateOfferMetadataCache(): void {
+    this.metadataCacheVersion = (this.metadataCacheVersion + 1) % Number.MAX_SAFE_INTEGER;
   }
 }
