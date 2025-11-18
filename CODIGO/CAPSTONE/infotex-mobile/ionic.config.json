@@ -1,0 +1,7 @@
+{
+  "name": "infotex-mobile",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

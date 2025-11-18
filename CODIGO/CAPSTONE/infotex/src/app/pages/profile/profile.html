@@ -1175,19 +1175,19 @@
               <label for="educationField" class="form-label">Área de estudio</label>
               <input id="educationField" type="text" class="form-control" formControlName="fieldOfStudy" />
             </div>
-<div class="col-md-3">
-  <label for="educationStart" class="form-label">Año inicio</label>
-  <select id="educationStart" class="form-control" formControlName="startDate">
-    <option *ngFor="let year of years" [value]="year">{{ year }}</option>
-  </select>
-</div>
+              <div class="col-md-3">
+                <label for="educationStart" class="form-label">Año inicio</label>
+                <select id="educationStart" class="form-control" formControlName="startDate">
+                  <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+                </select>
+              </div>
 
-<div class="col-md-3">
-  <label for="educationEnd" class="form-label">Año fin</label>
-  <select id="educationEnd" class="form-control" formControlName="endDate">
-    <option *ngFor="let year of years" [value]="year">{{ year }}</option>
-  </select>
-</div>
+              <div class="col-md-3">
+                <label for="educationEnd" class="form-label">Año fin</label>
+                <select id="educationEnd" class="form-control" formControlName="endDate">
+                  <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+                </select>
+              </div>
 
             <div class="col-12">
               <label for="educationDescription" class="form-label">Descripción</label>
@@ -1279,14 +1279,14 @@
             </div>
             <div class="col-md-3">
               <label for="experienceStart" class="form-label">Año inicio</label>
-              <select id="experienceStart" class="form-control" formControlName="startDate">
+              <select id="experienceStart" class="form-select" formControlName="startDate">
                 <option value="">Selecciona un año</option>
                 <option *ngFor="let year of years" [value]="year">{{ year }}</option>
               </select>
             </div>
             <div class="col-md-3">
               <label for="experienceEnd" class="form-label">Año fin</label>
-              <select id="experienceEnd" class="form-control" formControlName="endDate">
+              <select id="experienceEnd" class="form-select" formControlName="endDate">
                 <option value="">Presente</option>
                 <option *ngFor="let year of years" [value]="year">{{ year }}</option>
               </select>

@@ -11,7 +11,20 @@ import {
 
 /** ciudades.json: Record<Region, Record<CiudadId, CiudadNombre>> */
 type CityDataset = Record<string, Record<string, string>>;
-type InstitutionDataset = readonly string[];
+interface StudyHouseCatalogEntry {
+  id?: number | string | null;
+  name?: string | null;
+  casa_estudios?: string | null;
+  ID?: number | string | null;
+  NAME?: string | null;
+  id_casa_estudios?: number | string | null;
+}
+
+interface StudyHouseCatalogResponse {
+  ok: boolean;
+  houses?: StudyHouseCatalogEntry[] | null;
+  error?: string | null;
+}
 
 const DEFAULT_API_URL = 'http://localhost:3000';
 const configuredApiUrl = import.meta.env.NG_APP_API_URL as string | undefined;
@@ -53,16 +66,30 @@ export class ProfileFieldsService {
 
   /** ====== Instituciones ====== */
   private readonly institutions$ = this.http
-    .get<InstitutionDataset>('assets/data/instituciones.json')
+    .get<StudyHouseCatalogResponse>(`${this.apiUrl}/catalogs/study-houses`)
     .pipe(
-      map((dataset) => {
+        map((response) => {
+        if (!response.ok) {
+          throw new Error(response.error || 'No se pudo cargar el listado de instituciones.');
+        }
         const institutions = new Set<string>();
+        const dataset = Array.isArray(response.houses) ? response.houses : [];
 
-        if (Array.isArray(dataset)) {
-          for (const item of dataset) {
-            if (typeof item !== 'string') continue;
-            const normalized = item.trim();
-            if (normalized.length > 0) institutions.add(normalized);
+        for (const entry of dataset) {
+          if (!entry || typeof entry !== 'object') continue;
+
+          const rawName =
+            typeof entry.name === 'string'
+              ? entry.name
+              : typeof entry.casa_estudios === 'string'
+              ? entry.casa_estudios
+              : typeof entry.NAME === 'string'
+              ? entry.NAME
+              : null;
+          const normalized = (rawName ?? '').trim();
+
+          if (normalized.length > 0) {
+            institutions.add(normalized);
           }
         }
 
