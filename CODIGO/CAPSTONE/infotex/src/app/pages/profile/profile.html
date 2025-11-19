@@ -776,13 +776,26 @@
 </div>
 
 <ng-container *ngIf="editorOpen()">
-  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="profileEditorTitle">
-    <div class="profile-editor__backdrop" (click)="closeEditor()"></div>
-    <div class="profile-editor__panel" (click)="$event.stopPropagation()">
+  <div
+    class="profile-editor"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="profileEditorTitle"
+    aria-describedby="profileEditorDescription"
+  >
+    <div class="profile-editor__backdrop" aria-hidden="true" (click)="closeEditor()"></div>
+    <div
+      class="profile-editor__panel"
+      (click)="$event.stopPropagation()"
+      tabindex="-1"
+      #profileEditorPanel
+    >
       <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
         <div>
           <h2 id="profileEditorTitle" class="h5 mb-1 text-white">Editar perfil</h2>
-          <p class="mb-0 text-secondary">Actualiza y guarda tu información personal.</p>
+          <p id="profileEditorDescription" class="mb-0 text-secondary">
+            Actualiza y guarda tu información personal.
+          </p>
         </div>
         <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="closeEditor()"></button>
       </div>
@@ -802,6 +815,7 @@
               type="text"
               class="form-control"
               formControlName="displayName"
+              #profileEditorFirstField
               [class.is-invalid]="
                 (displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)) ||
                 fieldState().displayName.ok === false

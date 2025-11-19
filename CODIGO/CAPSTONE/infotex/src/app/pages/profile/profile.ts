@@ -11,6 +11,7 @@ import {
   inject,
   signal
 } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   AbstractControl,
   FormBuilder,
@@ -144,15 +145,30 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly PFService = inject(ProfileFieldsService);
   private readonly document = inject(DOCUMENT);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   private slugAvailabilitySubscription: Subscription | null = null;
   private educationInstitutionSubscription: Subscription | null = null;
 
   @ViewChild('alertPlaceholder', { static: true })
   private alertPlaceholderRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('profileEditorPanel')
+  private profileEditorPanel?: ElementRef<HTMLElement>;
+  @ViewChild('profileEditorFirstField')
+  private profileEditorFirstField?: ElementRef<HTMLInputElement>;
 
   private readonly activeAlerts = new Map<string, HTMLElement>();
   private alertEffectsInitialized = false;
+  private routeQueryParamSubscription: Subscription | null = null;
+  private pendingEditorOpenFromRoute = false;
+  private lastFocusedElement: HTMLElement | null = null;
+  private readonly editorKeydownHandler = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeEditor();
+    }
+  };
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -402,6 +418,20 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   private readonly githubAccountWatcher = effect(() => {
     this.handleGithubAccountChange(this.githubAccount());
   });
+  private readonly routeEditorWatcher = effect(() => {
+    if (!this.loading()) {
+      this.tryOpenEditorFromRoute();
+    }
+  });
+  private readonly editorVisibilityWatcher = effect(() => {
+    if (this.editorOpen()) {
+      this.attachEditorListeners();
+      this.scheduleEditorFocus();
+    } else {
+      this.detachEditorListeners();
+      this.restoreFocusToTrigger();
+    }
+  });
 
   protected readonly profileForm = this.fb.nonNullable.group({
     displayName: ['', [Validators.required]],
@@ -450,9 +480,13 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
     this.slugAvailabilitySubscription = null;
     this.educationInstitutionSubscription?.unsubscribe();
     this.educationInstitutionSubscription = null;
+    this.routeQueryParamSubscription?.unsubscribe();
+    this.routeQueryParamSubscription = null;
+    this.detachEditorListeners();
   }
 
   async ngOnInit(): Promise<void> {
+    this.observeRouteEditorParam();
     this.observeSlugChanges();
     const institutionControl = this.educationForm.controls.institution;
     this.educationInstitutionSubscription?.unsubscribe();
@@ -482,10 +516,11 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
   }
 
   protected openEditor(): void {
-    if (this.loading()) {
+    if (this.loading() || this.editorOpen()) {
       return;
     }
 
+    this.storeLastFocusedElement();
     this.editorOpen.set(true);
     this.profileForm.enable({ emitEvent: false });
   }
@@ -719,6 +754,96 @@ export class Profile implements OnInit, AfterViewInit, OnDestroy {
           return char;
       }
     });
+  }
+
+  private observeRouteEditorParam(): void {
+    this.routeQueryParamSubscription?.unsubscribe();
+    this.routeQueryParamSubscription = this.route.queryParamMap.subscribe((params) => {
+      const shouldOpen = params.get('profileEditor') === 'open';
+
+      if (shouldOpen) {
+        this.pendingEditorOpenFromRoute = true;
+        this.tryOpenEditorFromRoute();
+      }
+    });
+  }
+
+  private tryOpenEditorFromRoute(): void {
+    if (!this.pendingEditorOpenFromRoute || this.loading()) {
+      return;
+    }
+
+    this.pendingEditorOpenFromRoute = false;
+    this.openEditor();
+    this.clearProfileEditorQueryParam();
+  }
+
+  private clearProfileEditorQueryParam(): void {
+    void this.router.navigate([], {
+      queryParams: { profileEditor: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+  }
+
+  private attachEditorListeners(): void {
+    const doc = this.document as Document | null;
+
+    if (!doc) {
+      return;
+    }
+
+    doc.addEventListener('keydown', this.editorKeydownHandler, true);
+    doc.body?.classList.add('profile-editor-open');
+  }
+
+  private detachEditorListeners(): void {
+    const doc = this.document as Document | null;
+
+    if (!doc) {
+      return;
+    }
+
+    doc.removeEventListener('keydown', this.editorKeydownHandler, true);
+    doc.body?.classList.remove('profile-editor-open');
+  }
+
+  private scheduleEditorFocus(): void {
+    Promise.resolve().then(() => this.focusEditorSurface());
+  }
+
+  private focusEditorSurface(): void {
+    const firstField = this.profileEditorFirstField?.nativeElement;
+
+    if (firstField?.focus) {
+      firstField.focus({ preventScroll: true });
+      return;
+    }
+
+    const panel = this.profileEditorPanel?.nativeElement;
+
+    if (panel?.focus) {
+      panel.focus({ preventScroll: true });
+    }
+  }
+
+  private storeLastFocusedElement(): void {
+    const active = this.document?.activeElement;
+    this.lastFocusedElement = active instanceof HTMLElement ? active : null;
+  }
+
+  private restoreFocusToTrigger(): void {
+    if (!this.lastFocusedElement) {
+      return;
+    }
+
+    try {
+      this.lastFocusedElement.focus();
+    } catch {
+      // Ignored on purpose.
+    } finally {
+      this.lastFocusedElement = null;
+    }
   }
 
   protected closeEditor(): void {
