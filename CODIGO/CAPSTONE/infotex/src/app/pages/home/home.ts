@@ -1,5 +1,6 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, computed, ElementRef, HostListener, inject, signal } from '@angular/core';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { ApplicationsService } from '../../services/applications.service';
@@ -178,6 +179,7 @@ export class Home {
   private readonly applicationsService = inject(ApplicationsService);
   private readonly profileService = inject(ProfileService);
   private readonly profileFieldsService = inject(ProfileFieldsService);
+  private readonly router = inject(Router);
   private readonly hostElement = inject(ElementRef<HTMLElement>);
   private readonly offerMetadataCache = new WeakMap<
     PublicOffer,
@@ -237,6 +239,13 @@ export class Home {
     void this.loadExistingApplications();
     void this.loadProfile();
     void this.loadCareerCatalog();
+  }
+
+  protected async openProfileEditor(): Promise<void> {
+    await this.router.navigate(['/profile'], {
+      queryParams: { profileEditor: 'open' },
+      queryParamsHandling: 'merge'
+    });
   }
 
   protected trackByOfferId(_: number, offer: PublicOffer): number {

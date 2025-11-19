@@ -22,7 +22,17 @@
       class="alert alert-warning border-0 shadow-sm"
       role="alert"
     >
-      Completa tu biografía en tu perfil para usarla como carta de presentación al postular.
+      <div class="d-flex flex-column flex-md-row gap-3 justify-content-between align-items-md-center">
+        <span>Completa tu biografía en tu perfil para usarla como carta de presentación al postular.</span>
+        <button
+          type="button"
+          class="btn btn-outline-dark btn-sm fw-semibold"
+          (click)="openProfileEditor()"
+          aria-label="Abrir el editor de perfil"
+        >
+          Editar perfil
+        </button>
+      </div>
     </div>
 
     <div *ngIf="loading()" class="alert alert-info border-0 shadow-sm" role="status">
