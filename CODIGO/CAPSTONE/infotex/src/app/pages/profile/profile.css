@@ -1,15 +1,22 @@
 :root {
+  /* GitHub Dark inspired palette */
   --profile-color-body: #0d1117;
   --profile-color-surface: #161b22;
   --profile-color-surface-elevated: #1f242d;
+  --profile-color-surface-subtle: #21262d;
   --profile-color-border: #30363d;
+  --profile-color-border-strong: #484f58;
   --profile-color-overlay: rgba(1, 4, 9, 0.85);
+  --profile-color-overlay-strong: rgba(13, 17, 23, 0.95);
   --profile-color-primary: #58a6ff;
   --profile-color-primary-strong: #1f6feb;
+  --profile-color-primary-muted: rgba(88, 166, 255, 0.12);
   --profile-color-text: #e6edf3;
   --profile-color-text-muted: #8b949e;
+  --profile-color-focus-ring: rgba(88, 166, 255, 0.35);
   --profile-radius-lg: 0.75rem;
   --profile-radius-xl: 1.25rem;
+  --profile-spacing-md: 1rem;
   --profile-spacing-lg: 1.5rem;
   --profile-spacing-xl: 2rem;
 }
@@ -723,10 +730,10 @@
 .profile-editor__backdrop {
   position: absolute;
   inset: 0;
-  background: var(--profile-color-overlay);
-  backdrop-filter: blur(6px);
-  transition: opacity 0.3s ease;
-  animation: profile-editor-fade-in 0.3s ease;
+  background: var(--profile-color-overlay-strong);
+  backdrop-filter: blur(10px) saturate(125%);
+  opacity: 0;
+  animation: profile-editor-fade-in 0.35s ease forwards;
 }
 
 .profile-editor__panel {
@@ -737,16 +744,16 @@
   border: 1px solid var(--profile-color-border);
   border-radius: 0.75rem;
   color: var(--profile-color-text);
-  box-shadow: 0 35px 70px rgba(1, 4, 9, 0.75), 0 0 0 1px rgba(48, 54, 61, 0.4);
+  box-shadow: 0 25px 80px rgba(1, 4, 9, 0.85), 0 0 0 1px rgba(48, 54, 61, 0.6);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
   overflow: hidden;
   transform-origin: center;
   opacity: 0;
-  transform: translateY(12px) scale(0.98);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  animation: profile-editor-dialog-in 0.35s ease forwards;
+  transform: translateY(16px) scale(0.97);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  animation: profile-editor-dialog-in 0.4s ease forwards;
 }
 
 .profile-editor__header {
@@ -758,11 +765,13 @@
   padding: var(--profile-spacing-lg);
   overflow-y: auto;
   overscroll-behavior: contain;
+  flex: 1 1 auto;
 }
 
 .profile-editor__panel label {
   color: var(--profile-color-text);
   font-weight: 600;
+  margin-bottom: 0.35rem;
 }
 
 .profile-editor__panel .form-control,
@@ -775,6 +784,7 @@
   border: 1px solid var(--profile-color-border);
   color: var(--profile-color-text);
   border-radius: var(--profile-radius-lg);
+  padding: 0.65rem 0.85rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
@@ -784,9 +794,9 @@
 .profile-editor__panel input[type="text"]:focus,
 .profile-editor__panel input[type="email"]:focus,
 .profile-editor__panel input[type="number"]:focus {
-  background-color: rgba(240, 246, 252, 0.09);
+  background-color: rgba(240, 246, 252, 0.08);
   border-color: var(--profile-color-primary);
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.25);
+  box-shadow: 0 0 0 2px var(--profile-color-focus-ring);
   outline: none;
 }
 
@@ -803,11 +813,13 @@
   color: #ffaba8;
 }
 
+
 .profile-editor__panel .btn {
   border-radius: var(--profile-radius-lg);
   border: 1px solid var(--profile-color-border);
   background-color: var(--profile-color-surface-elevated);
   color: var(--profile-color-text);
+  font-weight: 600;
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
@@ -818,17 +830,23 @@
   color: #010409;
 }
 
+.profile-editor__panel .btn:not(.btn-primary):hover,
+.profile-editor__panel .btn:not(.btn-primary):focus-visible {
+  background-color: var(--profile-color-surface-subtle);
+}
+
 .profile-editor__panel .btn:hover,
 .profile-editor__panel .btn:focus-visible {
   border-color: var(--profile-color-primary);
   color: var(--profile-color-text);
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2);
+  box-shadow: 0 0 0 2px var(--profile-color-focus-ring);
 }
 
 .profile-editor__panel .btn-primary:hover,
 .profile-editor__panel .btn-primary:focus-visible {
   background-color: var(--profile-color-primary-strong);
   color: #f8f9fa;
+  box-shadow: 0 0 0 2px var(--profile-color-focus-ring);
 }
 
 .profile-editor__panel .avatar-option {
@@ -841,7 +859,7 @@
 }
 
 .profile-editor__panel .avatar-option:focus-visible {
-  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.25);
+  box-shadow: 0 0 0 2px var(--profile-color-focus-ring);
   outline: none;
 }
 
@@ -872,6 +890,7 @@
 
   .profile-editor__panel {
     width: min(640px, 90vw);
+    max-height: 90vh;
   }
 
   .profile-editor__header,
@@ -895,9 +914,9 @@
   }
 
   .profile-editor__panel {
-    width: 100%;
-    max-height: calc(100vh - 2rem);
-    border-radius: 1rem;
+    width: min(640px, 90vw);
+    max-height: 90vh;
+    border-radius: var(--profile-radius-lg);
   }
 }
 .github-connect {
