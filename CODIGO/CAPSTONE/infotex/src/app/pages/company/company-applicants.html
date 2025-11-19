@@ -165,7 +165,7 @@
                 <td data-title="Oferta">{{ applicant.offerTitle || ('Oferta #' + applicant.offerId) }}</td>
                 <td data-title="Postulante">{{ applicant.applicantName || 'Sin nombre' }}</td>
                 <td data-title="Correo">{{ applicant.applicantEmail || 'Sin correo' }}</td>
-                <td data-title="Teléfono">{{ applicant.applicantPhone || '-' }}</td>
+                <td data-title="Teléfono">{{'+56' + applicant.applicantPhone || '-' }}</td>
                 <td data-title="Perfil">
                   <ng-container *ngIf="buildProfileUrl(applicant) as profileUrl; else noProfile">
                     <a
