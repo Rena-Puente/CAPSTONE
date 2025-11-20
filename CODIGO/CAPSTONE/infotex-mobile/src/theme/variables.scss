@@ -65,4 +65,11 @@
   --ion-color-light-contrast-rgb: 10, 28, 47;
   --ion-color-light-shade: #d8dadd;
   --ion-color-light-tint: #f6f8fb;
+
+  /* Tokens de estilo para pantallas de autenticación */
+  --infotex-surface: #ffffff;
+  --infotex-border: #e2e8f0;
+  --infotex-shadow: 0 18px 60px rgba(10, 28, 47, 0.12);
+  --infotex-radius: 18px;
+  --infotex-field-radius: 14px;
 }
