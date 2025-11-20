@@ -14,7 +14,6 @@ import {
   IonCardHeader,
   IonCardSubtitle,
   IonCardTitle,
-  IonPage,
   IonRow,
   IonCol,
   IonText,
@@ -24,6 +23,8 @@ import {
   IonSpinner,
 } from '@ionic/angular/standalone';
 import { AuthService, LoginCredentials } from '../../../core/services/auth.service';
+
+type ToastColor = 'primary' | 'success' | 'danger';
 
 @Component({
   standalone: true,
@@ -44,7 +45,6 @@ import { AuthService, LoginCredentials } from '../../../core/services/auth.servi
     IonCardHeader,
     IonCardSubtitle,
     IonCardTitle,
-    IonPage,
     IonRow,
     IonCol,
     IonText,
@@ -65,10 +65,10 @@ export class LoginPage {
   });
 
   loading = false;
-  toast = {
+   toast: { open: boolean; message: string; color: ToastColor } = {
     open: false,
     message: '',
-    color: 'primary' as const,
+    color: 'primary',
   };
 
   get emailControl() {
@@ -110,7 +110,7 @@ export class LoginPage {
     this.toast.open = false;
   }
 
-  private showToast(message: string, color: 'primary' | 'success' | 'danger'): void {
+  private showToast(message: string, color: ToastColor): void {
     this.toast = {
       open: true,
       message,

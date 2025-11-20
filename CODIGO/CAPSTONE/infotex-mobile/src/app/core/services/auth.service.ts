@@ -54,7 +54,10 @@ export class AuthServiceError extends Error {
     public readonly status: number,
     options?: { cause?: unknown }
   ) {
-    super(message, options);
+    super(message);
+    if (options?.cause) {
+      (this as Error & { cause?: unknown }).cause = options.cause;
+    }
     this.name = 'AuthServiceError';
   }
 }

@@ -15,7 +15,6 @@ import {
   IonCardHeader,
   IonCardSubtitle,
   IonCardTitle,
-  IonPage,
   IonRow,
   IonSpinner,
   IonText,
@@ -25,6 +24,8 @@ import {
 } from '@ionic/angular/standalone';
 
 import { AuthService, RegisterPayload } from '../../../core/services/auth.service';
+
+type ToastColor = 'primary' | 'success' | 'danger';
 
 @Component({
   standalone: true,
@@ -46,7 +47,6 @@ import { AuthService, RegisterPayload } from '../../../core/services/auth.servic
     IonCardHeader,
     IonCardSubtitle,
     IonCardTitle,
-    IonPage,
     IonRow,
     IonSpinner,
     IonText,
@@ -71,10 +71,10 @@ export class RegisterPage {
   );
 
   loading = false;
-  toast = {
+  toast: { open: boolean; message: string; color: ToastColor } = {
     open: false,
     message: '',
-    color: 'primary' as const,
+    color: 'primary',
   };
 
   get fullNameControl() {
@@ -125,7 +125,7 @@ export class RegisterPage {
     this.toast.open = false;
   }
 
-  private passwordsMatchValidator = (control: AbstractControl): ValidationErrors | null => {
+    private passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.get('password')?.value;
     const confirmPassword = control.get('confirmPassword')?.value;
 
@@ -134,9 +134,9 @@ export class RegisterPage {
     }
 
     return null;
-  };
+  }
 
-  private showToast(message: string, color: 'primary' | 'success' | 'danger'): void {
+    private showToast(message: string, color: ToastColor): void {
     this.toast = {
       open: true,
       message,
