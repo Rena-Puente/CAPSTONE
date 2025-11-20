@@ -14,3 +14,36 @@ body {
 .card {
   border-radius: 8px;
 }
+
+/* Superficie común para formularios: resalta los bordes y añade respiro alrededor de los campos */
+.form-surface {
+  background: linear-gradient(145deg, #0f1623 0%, #0c121c 100%);
+  border: 1.5px solid #30363d;
+  border-radius: 1rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+/* Estilo oscuro coherente para selects y controles nativos */
+.form-control,
+.form-select {
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: #0d1117;
+  color: #f0f6fc;
+  border-color: #2f81f7;
+  box-shadow: 0 0 0 0.25rem rgba(47, 129, 247, 0.25);
+}
+
+.form-select option {
+  background-color: #161b22;
+  color: #c9d1d9;
+}
