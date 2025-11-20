@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, ValidationErrors, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -17,10 +18,11 @@ import {
   IonCardTitle,
   IonRow,
   IonSpinner,
-  IonText,
   IonTitle,
   IonToast,
   IonToolbar,
+  IonList,
+  IonNote,
 } from '@ionic/angular/standalone';
 
 import { AuthService, RegisterPayload } from '../../../core/services/auth.service';
@@ -33,6 +35,7 @@ type ToastColor = 'primary' | 'success' | 'danger';
   templateUrl: './register.page.html',
   styleUrls: ['./register.page.scss'],
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     IonButton,
     IonCol,
@@ -49,10 +52,11 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonCardTitle,
     IonRow,
     IonSpinner,
-    IonText,
     IonTitle,
     IonToast,
     IonToolbar,
+    IonList,
+    IonNote,
   ],
 })
 export class RegisterPage {
@@ -125,7 +129,7 @@ export class RegisterPage {
     this.toast.open = false;
   }
 
-    private passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
+     private passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.get('password')?.value;
     const confirmPassword = control.get('confirmPassword')?.value;
 

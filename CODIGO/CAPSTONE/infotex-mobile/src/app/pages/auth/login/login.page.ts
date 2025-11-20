@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -16,11 +17,12 @@ import {
   IonCardTitle,
   IonRow,
   IonCol,
-  IonText,
   IonTitle,
   IonToast,
   IonToolbar,
   IonSpinner,
+  IonList,
+  IonNote,
 } from '@ionic/angular/standalone';
 import { AuthService, LoginCredentials } from '../../../core/services/auth.service';
 
@@ -32,6 +34,7 @@ type ToastColor = 'primary' | 'success' | 'danger';
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
   imports: [
+    CommonModule,
     ReactiveFormsModule,
     IonButton,
     IonContent,
@@ -47,11 +50,12 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonCardTitle,
     IonRow,
     IonCol,
-    IonText,
     IonTitle,
     IonToast,
     IonToolbar,
     IonSpinner,
+    IonList,
+    IonNote,
   ],
 })
 export class LoginPage {
@@ -65,7 +69,7 @@ export class LoginPage {
   });
 
   loading = false;
-   toast: { open: boolean; message: string; color: ToastColor } = {
+    toast: { open: boolean; message: string; color: ToastColor } = {
     open: false,
     message: '',
     color: 'primary',
