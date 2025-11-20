@@ -1,9 +1,9 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, map, Observable, throwError } from 'rxjs';
+import { catchError, map, Observable, tap, throwError } from 'rxjs';
 
 import { API_AUTH_BASE } from '../../../environments/environment';
-
+import { SessionService } from './session.service';
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -62,12 +62,13 @@ export class AuthServiceError extends Error {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
-
+  private readonly sessionService = inject(SessionService);
   login(credentials: LoginCredentials): Observable<AuthResult> {
     return this.http
       .post<AuthApiResponse>(`${API_AUTH_BASE}/login`, credentials)
       .pipe(
         map((response) => this.normalizeAuthResponse(response)),
+        tap((result) => this.persistTokens(result.tokens)),
         catchError((error) => this.handleError(error))
       );
   }
@@ -77,10 +78,14 @@ export class AuthService {
       .post<AuthApiResponse>(`${API_AUTH_BASE}/register`, payload)
       .pipe(
         map((response) => this.normalizeAuthResponse(response)),
+        tap((result) => this.persistTokens(result.tokens)),
         catchError((error) => this.handleError(error))
+        
       );
   }
-
+  async logout(): Promise<void> {
+    await this.sessionService.clear();
+  }
   private normalizeAuthResponse(response: AuthApiResponse): AuthResult {
     const accessToken =
       response.accessToken ||
@@ -157,5 +162,9 @@ export class AuthService {
       default:
         return 'auth.errors.generic';
     }
+  }
+  
+  private persistTokens(tokens: AuthTokens): void {
+    void this.sessionService.setTokens(tokens);
   }
 }
