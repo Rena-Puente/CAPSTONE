@@ -7,7 +7,8 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    canActivate: [guestGuard],
+    // ❌ NO se puede usar canActivate junto a redirectTo
+    // canActivate: [guestGuard],
     redirectTo: 'login',
   },
   {
