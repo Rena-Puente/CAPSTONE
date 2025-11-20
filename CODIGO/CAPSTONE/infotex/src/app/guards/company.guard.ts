@@ -12,7 +12,7 @@ export const companyGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
 
   if (!authService.isAuthenticated()) {
-    return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
+      return router.createUrlTree(['/welcome']);
   }
 
   const userType = authService.getUserType();

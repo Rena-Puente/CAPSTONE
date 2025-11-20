@@ -21,20 +21,4 @@ describe('App Routes', () => {
     expect(route?.canActivate).toBeDefined();
     expect(route?.canActivate).toContain(guestGuard);
   });
-
-  it('should expose login route protected by guestGuard', () => {
-    const route = findRoute('auth/login');
-
-    expect(route).toBeTruthy();
-    expect(route?.canActivate).toBeDefined();
-    expect(route?.canActivate).toContain(guestGuard);
-  });
-
-  it('should expose register route protected by guestGuard', () => {
-    const route = findRoute('auth/register');
-
-    expect(route).toBeTruthy();
-    expect(route?.canActivate).toBeDefined();
-    expect(route?.canActivate).toContain(guestGuard);
-  });
 });

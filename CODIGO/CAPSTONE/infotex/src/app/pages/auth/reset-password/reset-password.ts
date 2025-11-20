@@ -103,6 +103,6 @@ export class ResetPassword {
   }
 
   async goToLogin(): Promise<void> {
-    await this.router.navigate(['/auth/login'], { queryParams: { passwordResetCompleted: '1' } });
+    await this.router.navigate(['/welcome'], { queryParams: { passwordResetCompleted: '1' } });
   }
 }
