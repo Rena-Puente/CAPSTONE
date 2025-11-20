@@ -18,6 +18,8 @@ import { AdminCareers } from './pages/admin/admin-careers';
 import { Aplications } from './pages/aplications/aplications';
 import { ForgotPassword } from './pages/auth/forgot-password/forgot-password';
 import { ResetPassword } from './pages/auth/reset-password/reset-password';
+import { Login } from './pages/auth/login/login';
+import { Register } from './pages/auth/register/register';
 
 export const routes: Routes = [
   { path: 'home', component: Home, canActivate: [authGuard] },
@@ -38,10 +40,14 @@ export const routes: Routes = [
   },
   { path: 'admin/careers', component: AdminCareers, canActivate: [authGuard, adminGuard] },
   { path: 'welcome', component: Welcome, canActivate: [guestGuard] },
+  { path: 'auth/login', component: Login, canActivate: [guestGuard] },
+  { path: 'auth/register', component: Register, canActivate: [guestGuard] },
   { path: 'auth/forgot-password', component: ForgotPassword, canActivate: [guestGuard] },
   { path: 'auth/reset-password', component: ResetPassword, canActivate: [guestGuard] },
   { path: 'auth/github/callback', component: GithubCallback },
   { path: 'auth/verify-email', component: VerifyEmail },
+  { path: 'login', redirectTo: 'auth/login', pathMatch: 'full' },
+  { path: 'register', redirectTo: 'auth/register', pathMatch: 'full' },
   {
     path: 'user/:slug',
     loadComponent: () =>
