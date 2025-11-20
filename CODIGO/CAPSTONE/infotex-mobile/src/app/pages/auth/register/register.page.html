@@ -16,72 +16,91 @@
           </ion-card-header>
 
           <ion-card-content>
-            <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-              <ion-item fill="solid" class="field">
-                <ion-label position="stacked">Nombre completo</ion-label>
-                <ion-input
-                  type="text"
-                  formControlName="fullName"
-                  placeholder="Tu nombre y apellido"
-                  autocomplete="name"
-                  required
-                ></ion-input>
-              </ion-item>
-              <ion-text color="danger" *ngIf="fullNameControl.touched && fullNameControl.invalid">
-                <small *ngIf="fullNameControl.hasError('required')">El nombre es obligatorio.</small>
-                <small *ngIf="fullNameControl.hasError('minlength')">Ingresa al menos 3 caracteres.</small>
-              </ion-text>
+            <form class="auth-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+              <ion-list class="auth-fields" lines="none">
+                <ion-item
+                  fill="solid"
+                  class="field"
+                  [class.invalid]="fullNameControl.touched && fullNameControl.invalid"
+                >
+                  <ion-label position="stacked">Nombre completo</ion-label>
+                  <ion-input
+                    type="text"
+                    formControlName="fullName"
+                    placeholder="Tu nombre y apellido"
+                    autocomplete="name"
+                    required
+                  ></ion-input>
+                </ion-item>
+                <ion-note class="helper-text" color="danger" *ngIf="fullNameControl.touched && fullNameControl.invalid">
+                  <small *ngIf="fullNameControl.hasError('required')">El nombre es obligatorio.</small>
+                  <small *ngIf="fullNameControl.hasError('minlength')">Ingresa al menos 3 caracteres.</small>
+                </ion-note>
 
-              <ion-item fill="solid" class="field">
-                <ion-label position="stacked">Correo electrónico</ion-label>
-                <ion-input
-                  type="email"
-                  formControlName="email"
-                  inputmode="email"
-                  placeholder="correo@ejemplo.com"
-                  autocomplete="email"
-                  required
-                ></ion-input>
-              </ion-item>
-              <ion-text color="danger" *ngIf="emailControl.touched && emailControl.invalid">
-                <small *ngIf="emailControl.hasError('required')">El correo es obligatorio.</small>
-                <small *ngIf="emailControl.hasError('email')">Debes ingresar un correo válido.</small>
-              </ion-text>
+                <ion-item
+                  fill="solid"
+                  class="field"
+                  [class.invalid]="emailControl.touched && emailControl.invalid"
+                >
+                  <ion-label position="stacked">Correo electrónico</ion-label>
+                  <ion-input
+                    type="email"
+                    formControlName="email"
+                    inputmode="email"
+                    placeholder="correo@ejemplo.com"
+                    autocomplete="email"
+                    required
+                  ></ion-input>
+                </ion-item>
+                <ion-note class="helper-text" color="danger" *ngIf="emailControl.touched && emailControl.invalid">
+                  <small *ngIf="emailControl.hasError('required')">El correo es obligatorio.</small>
+                  <small *ngIf="emailControl.hasError('email')">Debes ingresar un correo válido.</small>
+                </ion-note>
 
-              <ion-item fill="solid" class="field">
-                <ion-label position="stacked">Contraseña</ion-label>
-                <ion-input
-                  type="password"
-                  formControlName="password"
-                  placeholder="Mínimo 6 caracteres"
-                  autocomplete="new-password"
-                  required
-                ></ion-input>
-              </ion-item>
-              <ion-text color="danger" *ngIf="passwordControl.touched && passwordControl.invalid">
-                <small *ngIf="passwordControl.hasError('required')">La contraseña es obligatoria.</small>
-                <small *ngIf="passwordControl.hasError('minlength')">
-                  La contraseña debe tener al menos 6 caracteres.
-                </small>
-              </ion-text>
+                <ion-item
+                  fill="solid"
+                  class="field"
+                  [class.invalid]="passwordControl.touched && passwordControl.invalid"
+                >
+                  <ion-label position="stacked">Contraseña</ion-label>
+                  <ion-input
+                    type="password"
+                    formControlName="password"
+                    placeholder="Mínimo 6 caracteres"
+                    autocomplete="new-password"
+                    required
+                  ></ion-input>
+                </ion-item>
+                <ion-note class="helper-text" color="danger" *ngIf="passwordControl.touched && passwordControl.invalid">
+                  <small *ngIf="passwordControl.hasError('required')">La contraseña es obligatoria.</small>
+                  <small *ngIf="passwordControl.hasError('minlength')">
+                    La contraseña debe tener al menos 6 caracteres.
+                  </small>
+                </ion-note>
 
-              <ion-item fill="solid" class="field">
-                <ion-label position="stacked">Confirmar contraseña</ion-label>
-                <ion-input
-                  type="password"
-                  formControlName="confirmPassword"
-                  placeholder="Repite la contraseña"
-                  autocomplete="new-password"
-                  required
-                ></ion-input>
-              </ion-item>
-              <ion-text
-                color="danger"
-                *ngIf="confirmPasswordControl.touched && (confirmPasswordControl.invalid || form.hasError('passwordMismatch'))"
-              >
-                <small *ngIf="confirmPasswordControl.hasError('required')">Debes confirmar tu contraseña.</small>
-                <small *ngIf="form.hasError('passwordMismatch')">Las contraseñas no coinciden.</small>
-              </ion-text>
+                <ion-item
+                  fill="solid"
+                  class="field"
+                  [class.invalid]="confirmPasswordControl.touched && (confirmPasswordControl.invalid || form.hasError('passwordMismatch'))"
+                >
+                  <ion-label position="stacked">Confirmar contraseña</ion-label>
+                  <ion-input
+                    type="password"
+                    formControlName="confirmPassword"
+                    placeholder="Repite la contraseña"
+                    autocomplete="new-password"
+                    required
+                  ></ion-input>
+                </ion-item>
+                <ion-note
+                  class="helper-text"
+                  color="danger"
+                  *ngIf="confirmPasswordControl.touched && (confirmPasswordControl.invalid || form.hasError('passwordMismatch'))"
+                >
+                  <small *ngIf="confirmPasswordControl.hasError('required')">Debes confirmar tu contraseña.</small>
+                  <small *ngIf="form.hasError('passwordMismatch')">Las contraseñas no coinciden.</small>
+                </ion-note>
+              </ion-list>
 
               <div class="form-actions">
                 <ion-button

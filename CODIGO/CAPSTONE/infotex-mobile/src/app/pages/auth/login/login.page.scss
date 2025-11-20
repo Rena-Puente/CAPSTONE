@@ -1,18 +1,7 @@
+:host {
+  display: block;
+}
+
 ion-content {
   --background: transparent;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.field {
-  margin-bottom: 0.25rem;
-}
-
-ion-text small {
-  display: block;
-  margin: 0.25rem 0 0.75rem;
 }
