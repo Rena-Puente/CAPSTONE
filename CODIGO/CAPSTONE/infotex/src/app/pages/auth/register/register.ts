@@ -7,7 +7,7 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../../services/auth.service';
@@ -24,41 +24,31 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
 }
 
 @Component({
-  selector: 'app-reset-password',
+  selector: 'app-register',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
-  templateUrl: './reset-password.html',
-  styleUrl: './reset-password.scss'
+  templateUrl: './register.html',
+  styleUrl: '../shared/auth-flow.scss'
 })
-export class ResetPassword {
+export class Register {
   private readonly fb = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
   readonly form = this.fb.nonNullable.group(
     {
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      passwordConfirmation: ['', [Validators.required, Validators.minLength(8)]]
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      passwordConfirmation: ['', [Validators.required, Validators.minLength(6)]]
     },
     { validators: passwordsMatchValidator }
   );
 
   readonly loading = signal(false);
-  readonly successMessage = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
-  readonly tokenMissing = signal(false);
 
-  private readonly resetToken = this.route.snapshot.queryParamMap.get('token');
-
-  constructor() {
-    if (!this.resetToken) {
-      this.tokenMissing.set(true);
-      this.errorMessage.set(
-        'El enlace de restablecimiento es inválido o ya fue utilizado. Solicita uno nuevo para continuar.'
-      );
-      this.form.disable();
-    }
+  get emailControl() {
+    return this.form.controls.email;
   }
 
   get passwordControl() {
@@ -70,7 +60,7 @@ export class ResetPassword {
   }
 
   async submit(): Promise<void> {
-    if (this.loading() || this.tokenMissing()) {
+    if (this.loading()) {
       return;
     }
 
@@ -83,26 +73,18 @@ export class ResetPassword {
 
     this.loading.set(true);
 
-    const { password, passwordConfirmation } = this.form.getRawValue();
+    const { email, password, passwordConfirmation } = this.form.getRawValue();
 
     try {
-      const message = await firstValueFrom(
-        this.authService.resetPassword(this.resetToken as string, password, passwordConfirmation)
-      );
-      this.successMessage.set(message);
-      this.form.disable();
+      await firstValueFrom(this.authService.register(email, password, passwordConfirmation));
+      await this.router.navigate(['/auth/login'], {
+        queryParams: { registered: '1', email }
+      });
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'No se pudo restablecer la contraseña. Intenta nuevamente.';
+      const message = error instanceof Error ? error.message : 'No se pudo crear la cuenta.';
       this.errorMessage.set(message);
     } finally {
       this.loading.set(false);
     }
-  }
-
-  async goToLogin(): Promise<void> {
-    await this.router.navigate(['/auth/login'], { queryParams: { passwordResetCompleted: '1' } });
   }
 }

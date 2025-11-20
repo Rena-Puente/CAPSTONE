@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, ValidationErrors, AbstractControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonCol,
@@ -17,6 +17,8 @@ import {
   IonCardTitle,
   IonRow,
   IonSpinner,
+  IonList,
+  IonNote,
   IonText,
   IonTitle,
   IonToast,
@@ -49,10 +51,13 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonCardTitle,
     IonRow,
     IonSpinner,
+    IonList,
+    IonNote,
     IonText,
     IonTitle,
     IonToast,
     IonToolbar,
+    RouterLink,
   ],
 })
 export class RegisterPage {
@@ -125,7 +130,7 @@ export class RegisterPage {
     this.toast.open = false;
   }
 
-    private passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
+  private passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.get('password')?.value;
     const confirmPassword = control.get('confirmPassword')?.value;
 
@@ -136,7 +141,7 @@ export class RegisterPage {
     return null;
   }
 
-    private showToast(message: string, color: ToastColor): void {
+  private showToast(message: string, color: ToastColor): void {
     this.toast = {
       open: true,
       message,

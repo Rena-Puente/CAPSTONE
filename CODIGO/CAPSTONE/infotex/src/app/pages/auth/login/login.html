@@ -1,0 +1,67 @@
+<section class="auth-flow" aria-labelledby="loginTitle">
+  <div class="auth-flow__container">
+    <article class="auth-flow__card" role="form" aria-describedby="loginDescription">
+      <div class="auth-flow__icon" aria-hidden="true">👋</div>
+      <h1 id="loginTitle" class="auth-flow__title">Bienvenido de vuelta</h1>
+      <p id="loginDescription" class="auth-flow__message">
+        Accede a tu cuenta para continuar gestionando tus vacantes y postulaciones.
+      </p>
+
+      <form class="auth-flow__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="auth-flow__label" for="loginEmail">Correo electrónico</label>
+        <input
+          id="loginEmail"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          [class.is-invalid]="emailControl.invalid && (emailControl.dirty || emailControl.touched)"
+          [disabled]="loading()"
+        />
+        <div class="auth-flow__field-error" *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
+          El correo es obligatorio.
+        </div>
+        <div class="auth-flow__field-error" *ngIf="emailControl.hasError('email') && emailControl.touched">
+          Ingresa un correo electrónico válido.
+        </div>
+
+        <label class="auth-flow__label" for="loginPassword">Contraseña</label>
+        <input
+          id="loginPassword"
+          type="password"
+          formControlName="password"
+          autocomplete="current-password"
+          [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)"
+          [disabled]="loading()"
+        />
+        <div class="auth-flow__field-error" *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
+          La contraseña es obligatoria.
+        </div>
+        <div class="auth-flow__field-error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
+          Ingresa al menos 6 caracteres.
+        </div>
+
+        <button type="submit" class="auth-flow__button" [disabled]="loading()">
+          <span *ngIf="!loading()">Iniciar sesión</span>
+          <span *ngIf="loading()" class="auth-flow__spinner" aria-hidden="true"></span>
+          <span class="visually-hidden" *ngIf="loading()">Ingresando...</span>
+        </button>
+      </form>
+
+      <p
+        *ngIf="message()"
+        class="auth-flow__feedback"
+        [class.auth-flow__feedback--error]="message()?.type === 'error'"
+        [class.auth-flow__feedback--success]="message()?.type === 'success'"
+        role="status"
+      >
+        {{ message()?.text }}
+      </p>
+
+      <div class="auth-flow__actions">
+        <a class="auth-flow__link" routerLink="/auth/forgot-password">¿Olvidaste tu contraseña?</a>
+        <a class="auth-flow__link" routerLink="/auth/register">Crear una cuenta nueva</a>
+        <a class="auth-flow__link" routerLink="/welcome">Volver al inicio</a>
+      </div>
+    </article>
+  </div>
+</section>

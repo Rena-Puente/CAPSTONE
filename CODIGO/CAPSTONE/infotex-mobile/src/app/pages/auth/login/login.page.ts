@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonContent,
@@ -16,6 +16,8 @@ import {
   IonCardTitle,
   IonRow,
   IonCol,
+  IonList,
+  IonNote,
   IonText,
   IonTitle,
   IonToast,
@@ -47,11 +49,14 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonCardTitle,
     IonRow,
     IonCol,
+    IonList,
+    IonNote,
     IonText,
     IonTitle,
     IonToast,
     IonToolbar,
     IonSpinner,
+    RouterLink,
   ],
 })
 export class LoginPage {
@@ -65,7 +70,7 @@ export class LoginPage {
   });
 
   loading = false;
-   toast: { open: boolean; message: string; color: ToastColor } = {
+  toast: { open: boolean; message: string; color: ToastColor } = {
     open: false,
     message: '',
     color: 'primary',
