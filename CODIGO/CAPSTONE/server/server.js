@@ -31,3 +31,7 @@ start().catch((error) => {
 module.exports = {
   app
 };
+
+app.get('/', (req, res) => {
+  res.send('API InfoTex corriendo ✅'+'CHUPALO SEBA');
+});
