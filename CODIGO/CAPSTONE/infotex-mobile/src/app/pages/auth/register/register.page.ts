@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, ValidationErrors, AbstractControl } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonCol,
@@ -57,6 +57,7 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonToolbar,
     IonList,
     IonNote,
+    RouterLink,
   ],
 })
 export class RegisterPage {
