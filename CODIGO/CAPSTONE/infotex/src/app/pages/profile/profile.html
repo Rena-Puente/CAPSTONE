@@ -131,35 +131,6 @@
                                 </span>
                               </div>
                             </div>
-                            <div class="col">
-                              <div class="profile-detail">
-                                <span class="profile-detail-label">URL pública</span>
-                                <div class="profile-detail-value" [class.text-secondary]="!profile()?.slug">
-                                  <ng-container *ngIf="profile()?.slug as slug; else noSlug">
-                                    <div class="profile-public-link">
-                                      <code class="profile-public-link__url" [title]="publicProfileBaseUrl + slug">
-                                        {{ publicProfileBaseUrl }}{{ slug }}
-                                      </code>
-                                      <button
-                                        type="button"
-                                        class="btn btn-outline-light btn-sm profile-public-link__copy"
-                                        (click)="copyPublicProfileUrl()"
-                                        [disabled]="!publicProfileUrl()"
-                                        aria-label="Copiar enlace público"
-                                      >
-                                        <i class="bi bi-clipboard"></i>
-                                      </button>
-                                    </div>
-                                    <div *ngIf="publicLinkFeedback() as feedback" class="profile-public-link__feedback" [class.text-success]="feedback.type === 'success'" [class.text-warning]="feedback.type === 'error'">
-                                      {{ feedback.message }}
-                                    </div>
-                                  </ng-container>
-                                </div>
-                                <ng-template #noSlug>
-                                  <span class="profile-detail-value text-secondary">Sin registrar</span>
-                                </ng-template>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </div>
