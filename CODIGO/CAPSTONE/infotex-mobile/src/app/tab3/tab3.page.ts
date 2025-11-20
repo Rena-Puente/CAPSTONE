@@ -4,6 +4,7 @@ import { ExploreContainerComponent } from '../explore-container/explore-containe
 
 @Component({
   selector: 'app-tab3',
+  standalone: true,
   templateUrl: 'tab3.page.html',
   styleUrls: ['tab3.page.scss'],
   imports: [IonHeader, IonToolbar, IonTitle, IonContent, ExploreContainerComponent],
