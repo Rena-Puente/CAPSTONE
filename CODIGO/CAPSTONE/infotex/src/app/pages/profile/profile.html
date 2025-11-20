@@ -11,11 +11,21 @@
             <div class="profile-header__actions">
               <button
                 type="button"
-                class="icon-button icon-button--ghost"
+                class="icon-button btn btn-outline-primary"
                 (click)="retry()"
                 [disabled]="loading()"
                 aria-label="Actualizar información del perfil"
               >
+              <a
+                class="btn btn-primary btn-sm ms-3 profile-public-link__preview"
+                [href]="publicProfileUrl()"
+                target="_blank"
+                aria-label="Vista previa del perfil"
+                [class.disabled]="!publicProfileUrl()"
+              >
+                <i class="bi bi-box-arrow-up-right"></i> Vista previa del perfil
+                </a>
+                <br>
                 <span class="spinner-border spinner-border-sm" role="status" *ngIf="loading()"></span>
                 <i class="bi bi-arrow-clockwise" *ngIf="!loading()"></i>
               </button>
