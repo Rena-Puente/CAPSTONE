@@ -1,0 +1,88 @@
+<section class="auth-flow" aria-labelledby="registerTitle">
+  <div class="auth-flow__container">
+    <article class="auth-flow__card" role="form" aria-describedby="registerDescription">
+      <div class="auth-flow__icon" aria-hidden="true">✨</div>
+      <h1 id="registerTitle" class="auth-flow__title">Crea tu cuenta</h1>
+      <p id="registerDescription" class="auth-flow__message">
+        Regístrate para publicar ofertas, postular a empleos y recibir alertas personalizadas.
+      </p>
+
+      <form class="auth-flow__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <label class="auth-flow__label" for="registerEmail">Correo electrónico</label>
+        <input
+          id="registerEmail"
+          type="email"
+          formControlName="email"
+          autocomplete="email"
+          [class.is-invalid]="emailControl.invalid && (emailControl.dirty || emailControl.touched)"
+          [disabled]="loading()"
+        />
+        <div class="auth-flow__field-error" *ngIf="emailControl.hasError('required') && (emailControl.dirty || emailControl.touched)">
+          El correo es obligatorio.
+        </div>
+        <div class="auth-flow__field-error" *ngIf="emailControl.hasError('email') && emailControl.touched">
+          Ingresa un correo electrónico válido.
+        </div>
+
+        <label class="auth-flow__label" for="registerPassword">Contraseña</label>
+        <input
+          id="registerPassword"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          [class.is-invalid]="passwordControl.invalid && (passwordControl.dirty || passwordControl.touched)"
+          [disabled]="loading()"
+        />
+        <div class="auth-flow__field-error" *ngIf="passwordControl.hasError('required') && (passwordControl.dirty || passwordControl.touched)">
+          La contraseña es obligatoria.
+        </div>
+        <div class="auth-flow__field-error" *ngIf="passwordControl.hasError('minlength') && passwordControl.touched">
+          Usa al menos 6 caracteres.
+        </div>
+
+        <label class="auth-flow__label" for="registerPasswordConfirmation">Confirma tu contraseña</label>
+        <input
+          id="registerPasswordConfirmation"
+          type="password"
+          formControlName="passwordConfirmation"
+          autocomplete="new-password"
+          [class.is-invalid]="passwordConfirmationControl.invalid && (passwordConfirmationControl.dirty || passwordConfirmationControl.touched)"
+          [disabled]="loading()"
+        />
+        <div
+          class="auth-flow__field-error"
+          *ngIf="passwordConfirmationControl.hasError('required') && (passwordConfirmationControl.dirty || passwordConfirmationControl.touched)"
+        >
+          Confirma tu contraseña.
+        </div>
+        <div
+          class="auth-flow__field-error"
+          *ngIf="passwordConfirmationControl.hasError('minlength') && passwordConfirmationControl.touched"
+        >
+          Usa al menos 6 caracteres.
+        </div>
+        <div
+          class="auth-flow__field-error"
+          *ngIf="form.hasError('passwordMismatch') && (passwordControl.dirty || passwordConfirmationControl.dirty)"
+        >
+          Las contraseñas no coinciden.
+        </div>
+
+        <button type="submit" class="auth-flow__button" [disabled]="loading()">
+          <span *ngIf="!loading()">Crear cuenta</span>
+          <span *ngIf="loading()" class="auth-flow__spinner" aria-hidden="true"></span>
+          <span class="visually-hidden" *ngIf="loading()">Enviando...</span>
+        </button>
+      </form>
+
+      <p class="auth-flow__feedback auth-flow__feedback--error" *ngIf="errorMessage()" role="alert">
+        {{ errorMessage() }}
+      </p>
+
+      <div class="auth-flow__actions">
+        <a class="auth-flow__link" routerLink="/auth/login">¿Ya tienes cuenta? Inicia sesión</a>
+        <a class="auth-flow__link" routerLink="/welcome">Volver al inicio</a>
+      </div>
+    </article>
+  </div>
+</section>

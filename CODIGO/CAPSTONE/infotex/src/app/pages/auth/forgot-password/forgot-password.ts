@@ -79,7 +79,7 @@ export class ForgotPassword {
   }
 
   async returnToLogin(): Promise<void> {
-    await this.router.navigate(['/welcome'], { queryParams: { passwordResetRequested: '1' } });
+    await this.router.navigate(['/auth/login'], { queryParams: { passwordResetRequested: '1' } });
   }
 
   tryAgain(): void {

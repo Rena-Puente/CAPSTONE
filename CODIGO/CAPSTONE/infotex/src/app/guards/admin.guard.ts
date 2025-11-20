@@ -8,7 +8,7 @@ export const adminGuard: CanActivateFn = (_route, state) => {
   const router = inject(Router);
 
   if (!authService.isAuthenticated()) {
-    return router.createUrlTree(['/welcome']);
+    return router.createUrlTree(['/auth/login'], { queryParams: { returnUrl: state.url } });
   }
 
   const userType = authService.getUserType();
