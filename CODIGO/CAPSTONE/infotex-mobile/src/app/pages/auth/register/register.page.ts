@@ -23,6 +23,7 @@ import {
   IonToolbar,
   IonList,
   IonNote,
+  IonIcon,
 } from '@ionic/angular/standalone';
 
 import { AuthService, RegisterPayload } from '../../../core/services/auth.service';
@@ -57,6 +58,7 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonToolbar,
     IonList,
     IonNote,
+    IonIcon,
     RouterLink,
   ],
 })

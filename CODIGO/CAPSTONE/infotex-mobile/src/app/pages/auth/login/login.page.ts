@@ -23,6 +23,7 @@ import {
   IonSpinner,
   IonList,
   IonNote,
+  IonIcon,
 } from '@ionic/angular/standalone';
 import { AuthService, LoginCredentials } from '../../../core/services/auth.service';
 
@@ -56,6 +57,7 @@ type ToastColor = 'primary' | 'success' | 'danger';
     IonSpinner,
     IonList,
     IonNote,
+    IonIcon,
     RouterLink,
   ],
 })
