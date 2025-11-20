@@ -36,12 +36,24 @@
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
 
+:root {
+  --infotex-bg: #0d1117;
+  --infotex-surface: #161b22;
+  --infotex-border: #30363d;
+  --infotex-muted: #8b949e;
+  --infotex-accent: #2f81f7;
+  --infotex-accent-2: #7ee787;
+  --infotex-radius: 20px;
+  --infotex-field-radius: 14px;
+  --infotex-shadow: 0 14px 60px rgba(0, 0, 0, 0.35);
+}
+
 body {
   font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
-  background: radial-gradient(circle at 10% 20%, #e8f1ff, #f5f7fb 40%),
-    radial-gradient(circle at 90% 10%, #e8fff9, transparent 35%),
-    var(--ion-color-light);
-  color: var(--ion-color-dark);
+  background: radial-gradient(circle at 20% 20%, rgba(47, 129, 247, 0.15), transparent 25%),
+    radial-gradient(circle at 80% 0%, rgba(126, 231, 135, 0.12), transparent 22%),
+    var(--infotex-bg);
+  color: #c9d1d9;
 }
 
 .auth-shell {
@@ -50,29 +62,79 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: radial-gradient(circle at 10% 20%, rgba(31, 111, 235, 0.08), transparent 30%),
-    radial-gradient(circle at 85% 15%, rgba(77, 210, 178, 0.1), transparent 35%);
+  background: linear-gradient(135deg, rgba(22, 27, 34, 0.92), rgba(13, 17, 23, 0.92)),
+    radial-gradient(circle at 25% 25%, rgba(47, 129, 247, 0.08), transparent 35%),
+    radial-gradient(circle at 80% 10%, rgba(126, 231, 135, 0.08), transparent 32%),
+    var(--infotex-bg);
+  color: #c9d1d9;
 }
 
 .auth-card {
   box-shadow: var(--infotex-shadow);
   border-radius: var(--infotex-radius);
-  background: var(--infotex-surface);
-  backdrop-filter: blur(8px);
+  background: linear-gradient(145deg, rgba(22, 27, 34, 0.95), rgba(22, 27, 34, 0.82));
+  border: 1px solid var(--infotex-border);
+  backdrop-filter: blur(12px);
+  color: #c9d1d9;
 }
 
 .auth-card ion-card-header {
   text-align: center;
-  padding-bottom: 0;
+  padding-bottom: 0.35rem;
 }
 
 .auth-card ion-card-title {
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: -0.02em;
+  color: #e6edf3;
 }
 
 .auth-card ion-card-subtitle {
-  color: var(--ion-color-medium);
+  color: var(--infotex-muted);
+}
+
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--infotex-border);
+  background: rgba(47, 129, 247, 0.08);
+  color: #e6edf3;
+  border-radius: 999px;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.auth-badge ion-icon {
+  color: var(--infotex-accent-2);
+}
+
+.auth-highlight {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--infotex-border);
+  background: rgba(22, 27, 34, 0.8);
+  border-radius: 14px;
+}
+
+.auth-highlight ion-icon {
+  color: var(--infotex-accent);
+  font-size: 1.4rem;
+}
+
+.auth-highlight h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #e6edf3;
+}
+
+.auth-highlight p {
+  margin: 0.15rem 0 0;
+  color: var(--infotex-muted);
 }
 
 .auth-form {
@@ -84,7 +146,7 @@ body {
 .auth-fields {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
   padding: 0;
 }
 
@@ -93,12 +155,19 @@ body {
   border: 1px solid var(--infotex-border);
   border-radius: var(--infotex-field-radius);
   --inner-border-width: 0;
-  --highlight-color-focused: var(--ion-color-primary);
-  --highlight-color-valid: var(--ion-color-primary);
+  --highlight-color-focused: var(--infotex-accent);
+  --highlight-color-valid: var(--infotex-accent);
   --padding-start: 1rem;
   --padding-end: 1rem;
-  --background: linear-gradient(135deg, rgba(31, 111, 235, 0.05), rgba(77, 210, 178, 0.05));
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  --background: #0d1117;
+  --color: #c9d1d9;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.auth-fields .field:focus-within {
+  border-color: var(--infotex-accent);
+  box-shadow: 0 0 0 2px rgba(47, 129, 247, 0.18);
+  transform: translateY(-1px);
 }
 
 .auth-fields .field.invalid {
@@ -107,14 +176,14 @@ body {
 }
 
 .auth-fields ion-label {
-  color: var(--ion-color-dark);
+  color: #e6edf3;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .auth-fields ion-input {
-  --padding-top: 0.35rem;
-  --padding-bottom: 0.35rem;
+  --padding-top: 0.45rem;
+  --padding-bottom: 0.45rem;
   font-size: 1rem;
 }
 
@@ -131,13 +200,26 @@ body {
   margin-top: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
+}
+
+.form-actions ion-button {
+  --border-radius: 12px;
+  --box-shadow: none;
+  font-weight: 700;
+}
+
+.form-actions ion-button[type="submit"] {
+  --background: linear-gradient(120deg, #2f81f7, #7ee787);
+  --background-hover: linear-gradient(120deg, #3580e8, #6cd97c);
+  color: #0d1117;
+  text-transform: none;
 }
 
 .form-actions ion-button + ion-button {
-  --background: transparent;
-  --color: var(--ion-color-primary);
-  --box-shadow: none;
+  --background: rgba(47, 129, 247, 0.12);
+  --color: #e6edf3;
+  --box-shadow: inset 0 0 0 1px var(--infotex-border);
   font-weight: 600;
 }
 

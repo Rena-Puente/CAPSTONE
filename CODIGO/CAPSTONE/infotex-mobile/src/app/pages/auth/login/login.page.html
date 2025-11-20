@@ -10,11 +10,23 @@
       <ion-col size="12" size-md="8" size-lg="6" size-xl="5">
         <ion-card class="auth-card">
           <ion-card-header>
+            <div class="auth-badge">
+              <ion-icon name="shield-checkmark-outline"></ion-icon>
+              <span>Acceso seguro</span>
+            </div>
             <ion-card-title>Iniciar sesión</ion-card-title>
             <ion-card-subtitle>Ingresa tus credenciales para continuar</ion-card-subtitle>
           </ion-card-header>
 
           <ion-card-content>
+            <div class="auth-highlight">
+              <ion-icon name="moon-outline"></ion-icon>
+              <div>
+                <h4>Modo oscuro inspirado en GitHub</h4>
+                <p>Interfaz limpia, con alto contraste y detalles neón para guiarte.</p>
+              </div>
+            </div>
+
             <form class="auth-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
               <ion-list class="auth-fields" lines="none">
                 <ion-item

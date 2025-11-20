@@ -10,11 +10,23 @@
       <ion-col size="12" size-md="8" size-lg="6" size-xl="5">
         <ion-card class="auth-card">
           <ion-card-header>
+            <div class="auth-badge">
+              <ion-icon name="sparkles-outline"></ion-icon>
+              <span>Nuevo talento</span>
+            </div>
             <ion-card-title>Crear cuenta</ion-card-title>
             <ion-card-subtitle>Crea una cuenta para continuar con tu postulación</ion-card-subtitle>
           </ion-card-header>
 
           <ion-card-content>
+            <div class="auth-highlight">
+              <ion-icon name="moon-outline"></ion-icon>
+              <div>
+                <h4>Experiencia oscura cuidada</h4>
+                <p>Inspirada en GitHub: minimalista, moderna y enfocada en la legibilidad.</p>
+              </div>
+            </div>
+
             <form class="auth-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
               <ion-list class="auth-fields" lines="none">
                 <ion-item

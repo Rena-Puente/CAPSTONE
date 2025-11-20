@@ -1,5 +1,18 @@
 :host {
   display: block;
+  background: var(--infotex-bg);
+}
+
+ion-header,
+ion-toolbar,
+ion-title {
+  --background: transparent;
+  --color: #e6edf3;
+  color: #e6edf3;
+}
+
+ion-toolbar {
+  border-bottom: 1px solid var(--infotex-border);
 }
 
 ion-content {
