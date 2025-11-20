@@ -3,8 +3,11 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  apiUrl: 'https://infotex.cl.ngrok.pizza'
 };
+
+export const API_AUTH_BASE = `${environment.apiUrl}/api/auth`;
 
 /*
  * For easier debugging in development mode, you can import the following file
