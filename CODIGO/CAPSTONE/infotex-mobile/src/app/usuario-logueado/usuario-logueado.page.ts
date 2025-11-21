@@ -8,19 +8,19 @@ import {
   IonRouterOutlet,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { triangle, ellipse, square } from 'ionicons/icons';
+import { briefcase, clipboard, person } from 'ionicons/icons';
 
 @Component({
-  selector: 'app-tabs',
+  selector: 'app-usuario-logueado',
   standalone: true,
-  templateUrl: 'tabs.page.html',
-  styleUrls: ['tabs.page.scss'],
+  templateUrl: 'usuario-logueado.page.html',
+  styleUrls: ['usuario-logueado.page.scss'],
   imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet],
 })
-export class TabsPage {
+export class UsuarioLogueadoPage {
   public environmentInjector = inject(EnvironmentInjector);
 
   constructor() {
-    addIcons({ triangle, ellipse, square });
+    addIcons({ briefcase, clipboard, person });
   }
 }

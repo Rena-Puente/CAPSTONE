@@ -24,9 +24,10 @@ export const routes: Routes = [
       import('./pages/auth/register/register.page').then((m) => m.RegisterPage),
   },
   {
-    path: 'tabs',
+    path: 'usuario-logueado',
     canActivate: [authGuard],
-    loadChildren: () => import('./tabs/tabs.routes').then((m) => m.routes),
+    loadChildren: () =>
+      import('./usuario-logueado/usuario-logueado.routes').then((m) => m.routes),
   },
   {
     path: '**',

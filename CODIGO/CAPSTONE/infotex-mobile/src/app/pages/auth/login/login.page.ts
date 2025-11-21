@@ -102,7 +102,9 @@ export class LoginPage {
         this.loading = false;
         this.showToast('Inicio de sesión exitoso', 'success');
 
-        const nextUrl = result.isProfileComplete ? '/tabs/tab1' : '/profile/setup';
+        const nextUrl = result.isProfileComplete
+          ? '/usuario-logueado/empleos'
+          : '/profile/setup';
         void this.router.navigateByUrl(nextUrl);
       },
       error: (error) => {

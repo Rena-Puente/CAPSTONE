@@ -1,21 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { TabsPage } from './tabs.page';
+import { UsuarioLogueadoPage } from './usuario-logueado.page';
 
-describe('TabsPage', () => {
-  let component: TabsPage;
-  let fixture: ComponentFixture<TabsPage>;
+describe('UsuarioLogueadoPage', () => {
+  let component: UsuarioLogueadoPage;
+  let fixture: ComponentFixture<UsuarioLogueadoPage>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TabsPage],
+      imports: [UsuarioLogueadoPage],
       providers: [provideRouter([])]
     }).compileComponents();
   });
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(TabsPage);
+    fixture = TestBed.createComponent(UsuarioLogueadoPage);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

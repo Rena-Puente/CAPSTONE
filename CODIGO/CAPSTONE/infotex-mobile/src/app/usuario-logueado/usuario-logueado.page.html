@@ -1,0 +1,19 @@
+<ion-tabs>
+  <ion-router-outlet></ion-router-outlet>
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="empleos" href="/usuario-logueado/empleos">
+      <ion-icon aria-hidden="true" name="briefcase"></ion-icon>
+      <ion-label>Empleos</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="mis-empleos" href="/usuario-logueado/mis-empleos">
+      <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
+      <ion-label>Mis empleos</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button tab="mi-perfil" href="/usuario-logueado/mi-perfil">
+      <ion-icon aria-hidden="true" name="person"></ion-icon>
+      <ion-label>Mi perfil</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>
