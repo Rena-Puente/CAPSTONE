@@ -22,12 +22,12 @@
     </ion-toolbar>
   </ion-header>
 
-  <div class="profile-hero" *ngIf="!loading && profileData; else profileHeroSkeleton">
+  <div class="profile-hero" *ngIf="!loading && profileData as profile; else profileHeroSkeleton">
     <ion-avatar class="profile-avatar">
-      <ng-container *ngIf="profileData.profile.avatarUrl; else avatarPlaceholder">
+      <ng-container *ngIf="profile.profile.avatarUrl; else avatarPlaceholder">
         <img
-          [src]="profileData.profile.avatarUrl"
-          [alt]="'Avatar de ' + profileData.profile.displayName"
+          [src]="profile.profile.avatarUrl"
+          [alt]="'Avatar de ' + (profile.profile.displayName || 'usuario')"
         />
       </ng-container>
       <ng-template #avatarPlaceholder>
@@ -36,10 +36,10 @@
     </ion-avatar>
 
     <div class="profile-meta">
-      <h2>{{ profileData.profile.displayName }}</h2>
-      <p class="career">{{ profileData.profile.career }}</p>
-      <p class="location">{{ profileData.profile.city }} · {{ profileData.profile.country }}</p>
-      <p class="slug">Slug: {{ profileData.profile.slug || 'No disponible' }}</p>
+      <h2>{{ profile.profile.displayName }}</h2>
+      <p class="career">{{ profile.profile.career }}</p>
+      <p class="location">{{ profile.profile.city }} · {{ profile.profile.country }}</p>
+      <p class="slug">Slug: {{ profile.profile.slug || 'No disponible' }}</p>
 
       <div class="badges">
         <ion-badge [color]="sessionSummary.isLoggedIn ? 'success' : 'medium'">
@@ -84,7 +84,7 @@
       </ion-col>
     </ion-row>
 
-    <ion-row *ngIf="profileData">
+    <ion-row *ngIf="profileData as profile">
       <ion-col size="12">
         <ion-card>
           <ion-card-header>
@@ -93,7 +93,7 @@
           </ion-card-header>
 
           <ion-card-content>
-            <p class="bio">{{ profileData.profile.biography }}</p>
+            <p class="bio">{{ profile.profile.biography }}</p>
 
             <ion-list lines="full">
               <ion-item>
@@ -127,7 +127,7 @@
                 <ion-icon slot="start" name="call-outline" aria-hidden="true"></ion-icon>
                 <ion-label>
                   <h3>Contacto</h3>
-                  <p>{{ profileData.profile.phoneNumber }}</p>
+                  <p>{{ profile.profile.phoneNumber }}</p>
                 </ion-label>
               </ion-item>
             </ion-list>
@@ -136,7 +136,7 @@
       </ion-col>
     </ion-row>
 
-    <ion-row *ngIf="profileData">
+    <ion-row *ngIf="profileData as profile">
       <ion-col size="12" sizeMd="6">
         <ion-card>
           <ion-card-header>
@@ -145,9 +145,9 @@
           </ion-card-header>
 
           <ion-card-content>
-            <ng-container *ngIf="profileData.education.length; else noEducation">
+            <ng-container *ngIf="profile.education.length; else noEducation">
               <ion-list lines="full">
-                <ion-item *ngFor="let education of profileData.education; trackBy: trackById">
+                <ion-item *ngFor="let education of profile.education; trackBy: trackById">
                   <ion-icon slot="start" name="school-outline" aria-hidden="true"></ion-icon>
                   <ion-label>
                     <h3>{{ education.institution }}</h3>
@@ -172,9 +172,9 @@
           </ion-card-header>
 
           <ion-card-content>
-            <ng-container *ngIf="profileData.experience.length; else noExperience">
+            <ng-container *ngIf="profile.experience.length; else noExperience">
               <ion-list lines="full">
-                <ion-item *ngFor="let job of profileData.experience; trackBy: trackById">
+                <ion-item *ngFor="let job of profile.experience; trackBy: trackById">
                   <ion-icon slot="start" name="briefcase-outline" aria-hidden="true"></ion-icon>
                   <ion-label>
                     <h3>{{ job.title }}</h3>
@@ -194,7 +194,7 @@
       </ion-col>
     </ion-row>
 
-    <ion-row *ngIf="profileData">
+    <ion-row *ngIf="profileData as profile">
       <ion-col size="12">
         <ion-card>
           <ion-card-header>
@@ -203,9 +203,9 @@
           </ion-card-header>
 
           <ion-card-content>
-            <ng-container *ngIf="profileData.skills.length; else noSkills">
+            <ng-container *ngIf="profile.skills.length; else noSkills">
               <ion-list>
-                <ion-item *ngFor="let skill of profileData.skills; trackBy: trackById">
+                <ion-item *ngFor="let skill of profile.skills; trackBy: trackById">
                   <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
                   <ion-label>
                     <h3>{{ skill.name }}</h3>

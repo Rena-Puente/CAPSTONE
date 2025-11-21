@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -75,6 +76,7 @@ import {
     IonTitle,
     IonToolbar,
     RouterLink,
+    CommonModule,
   ],
 })
 export class MiPerfilPage implements OnInit {
