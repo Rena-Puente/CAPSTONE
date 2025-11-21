@@ -3,13 +3,21 @@
   height: 100%;
 }
 
+ion-page.usuario-logueado {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 ion-tabs {
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 ion-router-outlet {
-  flex: 1;       /* esta es la clave */
+  flex: 1; /* esta es la clave */
   height: 100%;
+  min-height: 0;
 }
