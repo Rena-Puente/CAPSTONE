@@ -1,44 +1,46 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>Empleos</ion-title>
-  </ion-toolbar>
-</ion-header>
+<ion-page>
+  <ion-header [translucent]="true">
+    <ion-toolbar>
+      <ion-title>Empleos</ion-title>
+    </ion-toolbar>
+  </ion-header>
 
-<ion-content>
-  <ion-refresher slot="fixed" (ionRefresh)="loadJobs($event)">
-    <ion-refresher-content></ion-refresher-content>
-  </ion-refresher>
+  <ion-content [scrollY]="true">
+    <ion-refresher slot="fixed" (ionRefresh)="loadJobs($event)">
+      <ion-refresher-content></ion-refresher-content>
+    </ion-refresher>
 
-  <div class="filters">
-    <ion-searchbar placeholder="Buscar por título o empresa" (ionInput)="onSearchChange($event)"></ion-searchbar>
-    <ion-input placeholder="Filtrar por ubicación" (ionInput)="onLocationChange($event)"></ion-input>
-  </div>
+    <div class="filters">
+      <ion-searchbar placeholder="Buscar por título o empresa" (ionInput)="onSearchChange($event)"></ion-searchbar>
+      <ion-input placeholder="Filtrar por ubicación" (ionInput)="onLocationChange($event)"></ion-input>
+    </div>
 
-  <ion-list *ngIf="!loading && filteredJobs.length">
-    <app-job-card
-      *ngFor="let job of filteredJobs"
-      [job]="job"
-      [favorite]="favorites.has(job.id)"
-      [applied]="applied.has(job.id)"
-      (favoriteChange)="toggleFavorite(job)"
-      (apply)="openApply(job)"
-      (view)="viewDetail(job)"
-    ></app-job-card>
-  </ion-list>
+    <ion-list *ngIf="!loading && filteredJobs.length">
+      <app-job-card
+        *ngFor="let job of filteredJobs"
+        [job]="job"
+        [favorite]="favorites.has(job.id)"
+        [applied]="applied.has(job.id)"
+        (favoriteChange)="toggleFavorite(job)"
+        (apply)="openApply(job)"
+        (view)="viewDetail(job)"
+      ></app-job-card>
+    </ion-list>
 
-  <div class="empty-state" *ngIf="!loading && !filteredJobs.length">
-    No se encontraron ofertas con los filtros actuales.
-  </div>
+    <div class="empty-state" *ngIf="!loading && !filteredJobs.length">
+      No se encontraron ofertas con los filtros actuales.
+    </div>
 
-  <div class="loading" *ngIf="loading">Cargando ofertas...</div>
-  <div class="error" *ngIf="error">{{ error }}</div>
-</ion-content>
+    <div class="loading" *ngIf="loading">Cargando ofertas...</div>
+    <div class="error" *ngIf="error">{{ error }}</div>
+  </ion-content>
 
-<app-apply-modal
-  [open]="!!applyingJob"
-  [job]="applyingJob"
-  [submitting]="submitting"
-  [presentingElement]="presentingElement"
-  (close)="closeApply()"
-  (submitApplication)="submitApplication($event)"
-></app-apply-modal>
+  <app-apply-modal
+    [open]="!!applyingJob"
+    [job]="applyingJob"
+    [submitting]="submitting"
+    [presentingElement]="presentingElement"
+    (close)="closeApply()"
+    (submitApplication)="submitApplication($event)"
+  ></app-apply-modal>
+</ion-page>
