@@ -35,11 +35,17 @@
             <ng-container *ngIf="!loadError()">
               <ng-container *ngIf="profile(); else noProfileData">
                 <div class="profile-accordion mt-4">
-                  <section class="profile-section profile-accordion__item profile-section--overview"
+                  <section
+                    class="profile-section profile-accordion__item profile-section--overview"
                     [class.profile-accordion__item--expanded]="expandedSections().overview">
                     <div class="profile-section__header">
-                      <button type="button" class="profile-section__toggle" (click)="toggleSection('overview')"
-                        [attr.aria-expanded]="expandedSections().overview" aria-controls="profile-section-overview">
+                      <button
+                        type="button"
+                        class="profile-section__toggle"
+                        (click)="toggleSection('overview')"
+                        [attr.aria-expanded]="expandedSections().overview"
+                        aria-controls="profile-section-overview"
+                      >
                         <span class="profile-section__chevron" aria-hidden="true">
                           <i class="bi bi-chevron-down"></i>
                         </span>
@@ -48,22 +54,36 @@
                           <span class="profile-section__title">Información general</span>
                         </span>
                       </button>
+                    
                       <div class="profile-section__actions">
-                        <button type="button" class="icon-button icon-button--primary" (click)="openEditor()"
-                          aria-label="Editar información general">
+                        <button
+                          type="button"
+                          class="icon-button icon-button--primary"
+                          (click)="openEditor()"
+                          aria-label="Editar información general"
+                        >
                           <i class="bi bi-pencil-square" width="40" height="40"></i>
                         </button>
                       </div>
                     </div>
-
-                    <div class="profile-section__body" id="profile-section-overview"
+                  
+                    <div
+                      class="profile-section__body"
+                      id="profile-section-overview"
                       [class.profile-section__body--collapsed]="!expandedSections().overview"
-                      [attr.aria-hidden]="!expandedSections().overview">
+                      [attr.aria-hidden]="!expandedSections().overview"
+                    >
                       <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
+                      
+                        <!-- Avatar -->
                         <div class="profile-avatar-wrapper">
                           <ng-container *ngIf="profile()?.avatarUrl && !avatarHasError(); else avatarPlaceholder">
-                            <img [src]="profile()?.avatarUrl ?? ''" alt="Foto de perfil" class="profile-avatar-img"
-                              (error)="handleAvatarError()" />
+                            <img
+                              [src]="profile()?.avatarUrl ?? ''"
+                              alt="Foto de perfil"
+                              class="profile-avatar-img"
+                              (error)="handleAvatarError()"
+                            />
                           </ng-container>
                           <ng-template #avatarPlaceholder>
                             <div class="profile-avatar-placeholder">
@@ -71,18 +91,28 @@
                             </div>
                           </ng-template>
                         </div>
-
+                      
+                        <!-- Datos generales -->
                         <div class="flex-grow-1 w-100">
-                          <h3 class="h4 mb-1" [class.text-white]="!!profile()?.displayName"
-                            [class.text-secondary]="!profile()?.displayName">
+                          <h3
+                            class="h4 mb-1"
+                            [class.text-white]="!!profile()?.displayName"
+                            [class.text-secondary]="!profile()?.displayName"
+                          >
                             {{ profile()?.displayName || 'Nombre no registrado' }}
                           </h3>
-                          <p class="mb-3" [class.text-light]="!!profile()?.career"
-                            [class.text-secondary]="!profile()?.career">
+                        
+                          <p
+                            class="mb-3"
+                            [class.text-light]="!!profile()?.career"
+                            [class.text-secondary]="!profile()?.career"
+                          >
                             {{ profile()?.career || 'Carrera no registrada' }}
                           </p>
-
+                        
+                          <!-- Grid de detalles -->
                           <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 profile-details">
+
                             <div class="col">
                               <div class="profile-detail">
                                 <span class="profile-detail-label">País</span>
@@ -91,6 +121,7 @@
                                 </span>
                               </div>
                             </div>
+                          
                             <div class="col">
                               <div class="profile-detail">
                                 <span class="profile-detail-label">Ciudad</span>
@@ -99,6 +130,7 @@
                                 </span>
                               </div>
                             </div>
+                          
                             <div class="col">
                               <div class="profile-detail">
                                 <span class="profile-detail-label">Teléfono</span>
@@ -107,17 +139,25 @@
                                 </span>
                               </div>
                             </div>
-                          </div>
-                          <div class="col">
-                            <h4 class="profile-detail-label">Biografía</h4>
-                            <p class="mb-0" [class.text-secondary]="!profile()?.biography">
-                              {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-      </section>
+                          
+                            <!-- 🔥 Biografía integrada con el mismo formato -->
+                            <div class="col">
+                              <div class="profile-detail">
+                                <span class="profile-detail-label">Biografía</span>
+                                <span
+                                  class="profile-detail-value"
+                                  [class.text-secondary]="!profile()?.biography"
+                                >
+                                  {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
+                                </span>
+                              </div>
+                            </div>
+                          
+                          </div> <!-- /row -->
+                        </div> <!-- /flex-grow -->
+                      </div> <!-- /d-flex -->
+                    </div> <!-- /profile-section__body -->
+                  </section>
 
       <section class="profile-section profile-accordion__item profile-section--education"
         [class.profile-accordion__item--expanded]="expandedSections().education">
