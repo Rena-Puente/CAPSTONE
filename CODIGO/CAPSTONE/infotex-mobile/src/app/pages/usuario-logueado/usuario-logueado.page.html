@@ -6,9 +6,22 @@
       <ion-label>Empleos</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="mis-empleos" href="/usuario-logueado/mis-empleos">
+    <ion-tab-button
+      *ngIf="isCompany()"
+      tab="mis-empleos"
+      href="/usuario-logueado/mis-empleos"
+    >
       <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
       <ion-label>Mis empleos</ion-label>
+    </ion-tab-button>
+
+    <ion-tab-button
+      *ngIf="isCandidate()"
+      tab="mis-postulaciones"
+      href="/usuario-logueado/mis-postulaciones"
+    >
+      <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
+      <ion-label>Mis postulaciones</ion-label>
     </ion-tab-button>
 
     <ion-tab-button tab="mi-perfil" href="/usuario-logueado/mi-perfil">

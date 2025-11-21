@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { UsuarioLogueadoPage } from './usuario-logueado.page';
+import { candidateGuard } from '../../core/guards/candidate.guard';
+import { companyGuard } from '../../core/guards/company.guard';
 
 export const routes: Routes = [
   {
@@ -13,8 +15,17 @@ export const routes: Routes = [
       },
       {
         path: 'mis-empleos',
+        canActivate: [companyGuard],
         loadComponent: () =>
           import('../mis-empleos/mis-empleos.page').then((m) => m.MisEmpleosPage),
+      },
+      {
+        path: 'mis-postulaciones',
+        canActivate: [candidateGuard],
+        loadComponent: () =>
+          import('../mis-postulaciones/mis-postulaciones.page').then(
+            (m) => m.MisPostulacionesPage
+          ),
       },
       {
         path: 'mi-perfil',
