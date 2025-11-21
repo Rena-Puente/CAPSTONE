@@ -9,6 +9,7 @@
   --profile-color-overlay: #0d1117;
   --profile-color-overlay-strong: #0b111a;
   --profile-color-surface-opaque: #161b22;
+  --profile-color-input: #11192a;
   --profile-color-primary: #58a6ff;
   --profile-color-primary-strong: #1f6feb;
   --profile-color-primary-muted: rgba(88, 166, 255, 0.12);
@@ -641,32 +642,32 @@
 }
 
 .profile-form .form-control:disabled {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
+  background-color: var(--profile-color-input);
+  color: rgba(230, 237, 243, 0.7);
 }
 
 .profile-form .form-select {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--profile-color-input);
+  color: var(--profile-color-text);
+  border-color: var(--profile-color-border);
 }
 
 .profile-form .form-select:disabled {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(230, 237, 243, 0.7);
 }
 
 .profile-form .form-select:focus {
   color: #fff;
-  border-color: rgba(13, 110, 253, 0.65);
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  border-color: var(--profile-color-primary);
+  box-shadow: 0 0 0 0.2rem var(--profile-color-focus-ring);
 }
 
 .profile-form .form-select option {
-  color: #000;
+  color: #0b0f16;
 }
 
 .profile-form .form-select optgroup {
-  color: #212529;
+  color: #0b0f16;
   font-weight: 600;
 }
 
@@ -826,12 +827,18 @@
 .profile-editor__panel input[type="text"],
 .profile-editor__panel input[type="email"],
 .profile-editor__panel input[type="number"] {
-  background-color: var(--profile-color-surface);
+  background-color: var(--profile-color-input);
   border: 1px solid var(--profile-color-border);
   color: var(--profile-color-text);
   border-radius: var(--profile-radius-lg);
   padding: 0.65rem 0.85rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.profile-editor__panel .input-group-text {
+  background-color: var(--profile-color-input);
+  border: 1px solid var(--profile-color-border);
+  color: var(--profile-color-text-muted);
 }
 
 .profile-editor__panel .form-control:focus,
