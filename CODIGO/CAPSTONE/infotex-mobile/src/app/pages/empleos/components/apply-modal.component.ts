@@ -16,7 +16,8 @@ import {
   IonToolbar
 } from '@ionic/angular/standalone';
 
-import { ApplyJobPayload, Job } from '../../../core/services/job.service';
+import { ApplyJobPayload } from '../../../core/services/job.service';
+import { Job, JobQuestion } from '../../../core/models';
 
 @Component({
   selector: 'app-apply-modal',
@@ -112,7 +113,7 @@ export class ApplyModalComponent implements OnChanges {
 
     const payload: ApplyJobPayload = {
       coverLetter: this.coverLetter ?? '',
-      answers: this.job.questions?.map((question, index) => ({
+      answers: this.job.questions?.map((question: JobQuestion, index: number) => ({
         question: question.text,
         answer: this.answers[index] ?? '',
       })),
