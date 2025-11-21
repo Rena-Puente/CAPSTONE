@@ -14,12 +14,6 @@ export const routes: Routes = [
           import('../empleos/empleos.page').then((m) => m.EmpleosPage),
       },
       {
-        path: 'mis-empleos',
-        canActivate: [companyGuard],
-        loadComponent: () =>
-          import('../mis-empleos/mis-empleos.page').then((m) => m.MisEmpleosPage),
-      },
-      {
         path: 'mis-postulaciones',
         canActivate: [candidateGuard],
         loadComponent: () =>

@@ -1,9 +1,7 @@
-
 ion-content::part(scroll) {
   padding: 1rem;
-  overflow-y: auto;
+  /* no toques overflow acá */
 }
-
 .filters {
   display: flex;
   flex-direction: column;

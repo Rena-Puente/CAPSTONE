@@ -4,7 +4,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" [scrollY]="true" class="content-scroll">
   <ion-refresher slot="fixed" (ionRefresh)="loadApplications($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>

@@ -1,1 +1,15 @@
+:host {
+  display: block;
+  height: 100%;
+}
 
+ion-tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+ion-router-outlet {
+  flex: 1;       /* esta es la clave */
+  height: 100%;
+}

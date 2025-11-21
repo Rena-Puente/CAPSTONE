@@ -400,8 +400,6 @@
   border-radius: 0.75rem;
   padding: 1rem 1.25rem;
   height: 100%;
-
-  /* 🔥 Evitar que cualquier tarjeta se desborde */
   overflow-wrap: anywhere;
   word-break: break-word;
 }

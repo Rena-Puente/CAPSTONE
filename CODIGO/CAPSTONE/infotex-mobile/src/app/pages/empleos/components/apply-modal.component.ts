@@ -24,7 +24,11 @@ import { Job, JobQuestion } from '../../../core/models';
   standalone: true,
   imports: [CommonModule, FormsModule, IonModal, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonInput, IonTextarea, IonButton, IonFooter],
   template: `
-    <ion-modal [isOpen]="open" (willDismiss)="close.emit()" [presentingElement]="presentingElement">
+    <ion-modal
+  *ngIf="open"
+  [isOpen]="open"
+  (willDismiss)="close.emit()"
+  [presentingElement]="presentingElement">
       <ion-header>
         <ion-toolbar color="primary">
           <ion-title>Postular a {{ job?.title }}</ion-title>
@@ -98,13 +102,17 @@ export class ApplyModalComponent implements OnChanges {
   protected coverLetter: string | null = null;
   protected answers: string[] = [];
 
-  ngOnChanges(): void {
-    if (this.job?.questions?.length) {
-      this.answers = new Array(this.job.questions.length).fill('');
-    } else {
-      this.answers = [];
-    }
+ngOnChanges(): void {
+  if (this.open) {
+    this.coverLetter = '';
   }
+
+  if (this.job?.questions?.length) {
+    this.answers = new Array(this.job.questions.length).fill('');
+  } else {
+    this.answers = [];
+  }
+}
 
   protected submit(): void {
     if (!this.job) {
