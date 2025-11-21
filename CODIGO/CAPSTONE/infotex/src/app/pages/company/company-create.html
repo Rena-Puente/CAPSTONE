@@ -55,13 +55,21 @@
 
                 <div class="col-12 col-md-6">
                   <label for="company-country" class="form-label">País</label>
-                  <input
+                  <select
                     id="company-country"
-                    type="text"
                     formControlName="country"
                     class="form-control"
                     [class.is-invalid]="shouldShowError(form.controls.country)"
-                    autocomplete="country-name" />
+                    [disabled]="isSubmitting()"
+                    aria-label="Selecciona el país principal de la empresa"
+                  >
+                    <option value="" disabled [selected]="!form.controls.country.value">
+                      Selecciona un país
+                    </option>
+                    <option *ngFor="let country of countryOptions; trackBy: trackByValue" [value]="country">
+                      {{ country }}
+                    </option>
+                  </select>
                   <div class="invalid-feedback" *ngIf="getControlErrorMessage('country') as error">
                     {{ error }}
                   </div>
@@ -69,13 +77,23 @@
 
                 <div class="col-12 col-md-6">
                   <label for="company-city" class="form-label">Ciudad</label>
-                  <input
+                  <select
                     id="company-city"
-                    type="text"
                     formControlName="city"
                     class="form-control"
                     [class.is-invalid]="shouldShowError(form.controls.city)"
-                    autocomplete="address-level2" />
+                    [disabled]="citiesLoading() || isSubmitting() || !!citiesError() || cityOptions().length === 0"
+                    aria-label="Selecciona la ciudad principal de la empresa"
+                  >
+                    <option value="" disabled [selected]="!form.controls.city.value">
+                      Selecciona una ciudad
+                    </option>
+                    <option *ngFor="let city of cityOptions(); trackBy: trackByValue" [value]="city">
+                      {{ city }}
+                    </option>
+                  </select>
+                  <div class="form-text" *ngIf="citiesLoading()">Cargando ciudades...</div>
+                  <div class="invalid-feedback" *ngIf="citiesError()">{{ citiesError() }}</div>
                   <div class="invalid-feedback" *ngIf="getControlErrorMessage('city') as error">
                     {{ error }}
                   </div>
