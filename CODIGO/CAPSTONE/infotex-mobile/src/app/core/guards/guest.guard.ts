@@ -3,7 +3,7 @@ import { CanActivateFn, Router, UrlTree } from '@angular/router';
 
 import { SessionService } from '../services/session.service';
 
-const HOME_ROUTE = '/tabs/tab1';
+const HOME_ROUTE = '/usuario-logueado/empleos';
 
 export const guestGuard: CanActivateFn = async (): Promise<boolean | UrlTree> => {
   const sessionService = inject(SessionService);
