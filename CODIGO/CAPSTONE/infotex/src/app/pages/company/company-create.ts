@@ -56,9 +56,6 @@ export class CompanyCreate implements OnInit {
   protected readonly submitAttempted = signal(false);
   protected readonly submitSuccess = signal(false);
   protected readonly submitError = signal<string | null>(null);
-  protected readonly cityOptions = signal<string[]>([]);
-  protected readonly citiesLoading = signal(false);
-  protected readonly citiesError = signal<string | null>(null);
   protected readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     website: [
