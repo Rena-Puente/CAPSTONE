@@ -12,6 +12,7 @@ const { registerOfferRoutes } = require('./routes/offers');
 const { registerCareerRoutes } = require('./routes/careers');
 const { registerStudyHouseRoutes } = require('./routes/study-houses');
 const { registerApplicationRoutes } = require('./routes/applications');
+const { registerAdminRoutes } = require('./routes/admin');
 
 function createApp() {
   const app = express();
@@ -30,6 +31,7 @@ function createApp() {
   registerCareerRoutes(app);
   registerStudyHouseRoutes(app);
   registerApplicationRoutes(app);
+  registerAdminRoutes(app);
 
   return app;
 }
