@@ -1,0 +1,19 @@
+
+ion-content::part(scroll) {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state,
+.loading,
+.error {
+  text-align: center;
+  padding: 1.5rem;
+}

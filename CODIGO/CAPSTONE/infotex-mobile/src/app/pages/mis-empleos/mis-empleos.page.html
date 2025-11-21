@@ -4,7 +4,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" [scrollY]="true">
   <ion-refresher slot="fixed" (ionRefresh)="loadCompanyJobs($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>

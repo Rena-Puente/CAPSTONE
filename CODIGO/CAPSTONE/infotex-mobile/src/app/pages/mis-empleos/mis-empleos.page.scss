@@ -1,0 +1,12 @@
+
+ion-content::part(scroll) {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.empty-state,
+.loading,
+.error {
+  text-align: center;
+  padding: 1.5rem;
+}
