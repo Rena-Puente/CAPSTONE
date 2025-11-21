@@ -227,9 +227,9 @@
 }
 
 .admin-summary__table .table {
-  --bs-table-bg: transparent;
-  --bs-table-striped-bg: rgba(88, 166, 255, 0.08);
-  --bs-table-striped-color: #c9d1d9;
+  --bs-table-bg: #0d1117;                   /* fondo base para todas las filas */
+  --bs-table-striped-bg: #161b22;           /* filas impares */
+  --bs-table-striped-color: #c9d1d9;        /* texto en filas impares */
   --bs-table-hover-bg: rgba(56, 139, 253, 0.12);
   --bs-table-hover-color: #f0f6fc;
   color: #c9d1d9;
@@ -250,15 +250,14 @@
   border-color: #30363d;
 }
 
-.admin-summary__table tbody tr:hover {
-  background: rgba(56, 139, 253, 0.12);
+.admin-summary__table tbody tr {
+  background-color: #0d1117; /* base para filas pares */
+}
+.admin-summary__table td,
+.admin-summary__table th {
+  color: #c9d1d9 !important;
 }
 
-.admin-summary__table th,
-.admin-summary__table td {
-  border-color: #30363d;
-  vertical-align: middle;
-}
 
 .admin-summary__table tbody th {
   color: #f0f6fc;
