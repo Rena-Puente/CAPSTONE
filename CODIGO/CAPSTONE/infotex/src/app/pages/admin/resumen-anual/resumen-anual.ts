@@ -1,6 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import {
   defaultResumenEjecutivo,
@@ -27,9 +34,9 @@ function isoDateValidator() {
   return Validators.pattern(pattern);
 }
 
-function dateRangeValidator() {
-  return (group: ReturnType<FormBuilder['group']>) => {
-    const { fechaInicio, fechaFin } = group.controls;
+function dateRangeValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const group = control as ReturnType<FormBuilder['group']>;
 
     if (!fechaInicio || !fechaFin) {
       return null;
@@ -213,6 +220,10 @@ export class ResumenAnual {
     return Array.from(labels).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   }
 
+
+    protected getSerieTotal(series: SerieMensual[], mes: string): number {
+    return series.find((item) => item.mes === mes)?.total ?? 0;
+  }
   private buildPoints(labels: string[], series: SerieMensual[], maxValue: number): string {
     if (labels.length === 0) {
       return '';

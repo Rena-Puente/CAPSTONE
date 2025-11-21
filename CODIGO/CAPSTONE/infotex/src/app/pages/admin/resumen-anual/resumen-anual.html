@@ -128,10 +128,10 @@
           <tbody>
             <tr *ngFor="let mes of chartModel()?.labels">
               <th scope="row">{{ mes }}</th>
-              <td>{{ resumenData.postulantes_por_mes.find((item) => item.mes === mes)?.total || 0 }}</td>
-              <td>{{ resumenData.empresas_por_mes.find((item) => item.mes === mes)?.total || 0 }}</td>
-              <td>{{ resumenData.ofertas_por_mes.find((item) => item.mes === mes)?.total || 0 }}</td>
-              <td>{{ resumenData.postulaciones_por_mes.find((item) => item.mes === mes)?.total || 0 }}</td>
+              <td>{{ getSerieTotal(resumenData.postulantes_por_mes, mes) }}</td>
+              <td>{{ getSerieTotal(resumenData.empresas_por_mes, mes) }}</td>
+              <td>{{ getSerieTotal(resumenData.ofertas_por_mes, mes) }}</td>
+              <td>{{ getSerieTotal(resumenData.postulaciones_por_mes, mes) }}</td>
             </tr>
           </tbody>
         </table>
