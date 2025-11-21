@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -8,6 +8,7 @@ import {
 } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { CompanyService, CompanyRegistrationPayload } from '../../services/company.service';
+import { ProfileFieldsService } from '../../services/profilefields.service';
 
 type CompanyFormControlName =
   | 'name'
@@ -27,13 +28,22 @@ type CompanyFormControlName =
   templateUrl: './company-create.html',
   styleUrl: './company-create.css'
 })
-export class CompanyCreate {
+export class CompanyCreate implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly companyService = inject(CompanyService);
+  private readonly profileFieldsService = inject(ProfileFieldsService);
+
+  protected readonly countryOptions = ['Chile'];
+  private readonly defaultCountry = this.countryOptions[0] ?? '';
+
+  protected readonly cityOptions = signal<string[]>([]);
+  protected readonly citiesLoading = signal(false);
+  protected readonly citiesError = signal<string | null>(null);
 
   private readonly emptyFormValue: Record<CompanyFormControlName, string> = {
     name: '',
     website: '',
-    country: '',
+    country: this.defaultCountry,
     city: '',
     email: '',
     password: '',
@@ -57,7 +67,7 @@ export class CompanyCreate {
         Validators.pattern(/^https?:\/\/[\w.-]+(?:\/[\w\-./?%&=]*)?$/i)
       ]
     ],
-    country: ['', [Validators.required, Validators.maxLength(80)]],
+    country: [this.defaultCountry, [Validators.required, Validators.maxLength(80)]],
     city: ['', [Validators.required, Validators.maxLength(80)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(160)]],
     password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(64)]],
@@ -73,7 +83,10 @@ export class CompanyCreate {
     description: ['', [Validators.maxLength(500)]]
   });
 
-  private readonly companyService = inject(CompanyService);
+  async ngOnInit(): Promise<void> {
+    this.form.controls.country.setValue(this.defaultCountry, { emitEvent: false });
+    await this.loadCityOptions();
+  }
 
   protected async submit(): Promise<void> {
     this.submitAttempted.set(true);
@@ -132,6 +145,10 @@ export class CompanyCreate {
     }
 
     return control.invalid && (control.dirty || control.touched || this.submitAttempted());
+  }
+
+  protected trackByValue(_: number, item: string): string {
+    return item;
   }
 
   protected getControlErrorMessage(controlName: CompanyFormControlName): string | null {
@@ -201,5 +218,43 @@ export class CompanyCreate {
     }
 
     return null;
+  }
+
+  private async loadCityOptions(): Promise<void> {
+    this.citiesLoading.set(true);
+    this.citiesError.set(null);
+
+    try {
+      const cities = await firstValueFrom(this.profileFieldsService.getCities());
+      this.cityOptions.set(cities);
+      this.normalizeCity(this.form.controls.city.value);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudieron cargar las ciudades disponibles.';
+      console.error('[CompanyCreate] Failed to load cities', { error: message });
+      this.citiesError.set(message);
+      this.cityOptions.set([]);
+      this.form.controls.city.reset('', { emitEvent: false });
+    } finally {
+      this.citiesLoading.set(false);
+    }
+  }
+
+  private normalizeCity(value: string | null | undefined): void {
+    const control = this.form.controls.city;
+    const trimmed = typeof value === 'string' ? value.trim() : '';
+    const options = this.cityOptions();
+
+    if (!trimmed) {
+      control.setValue('', { emitEvent: false });
+      return;
+    }
+
+    if (options.includes(trimmed)) {
+      control.setValue(trimmed, { emitEvent: false });
+      return;
+    }
+
+    control.setValue('', { emitEvent: false });
   }
 }
