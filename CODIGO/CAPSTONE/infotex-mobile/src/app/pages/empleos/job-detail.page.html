@@ -1,0 +1,53 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/usuario-logueado/empleos"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Detalle de la oferta</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="scrollable-page" [fullscreen]="true" [scrollY]="true">
+  <div class="state" *ngIf="loading">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Cargando oferta...</span>
+  </div>
+
+  <div class="state error" *ngIf="!loading && error">
+    <p>{{ error }}</p>
+    <ion-button fill="outline" size="small" (click)="reload()">Reintentar</ion-button>
+  </div>
+
+  <ng-container *ngIf="!loading && job">
+    <section class="hero">
+      <div>
+        <p class="overline">{{ job.company?.name || 'Empresa no disponible' }}</p>
+        <h1>{{ job.title || 'Oferta sin título' }}</h1>
+      </div>
+      <ion-badge color="primary" *ngIf="job.contractType">{{ job.contractType }}</ion-badge>
+    </section>
+
+    <ion-list class="meta" lines="none">
+      <ion-item>
+        <ion-icon name="location-outline" slot="start"></ion-icon>
+        <ion-label>
+          {{ job.city || 'Ubicación no especificada' }}
+          <ng-container *ngIf="job.country"> - {{ job.country }}</ng-container>
+        </ion-label>
+      </ion-item>
+      <ion-item *ngIf="job.seniority">
+        <ion-icon name="briefcase-outline" slot="start"></ion-icon>
+        <ion-label>Seniority: {{ job.seniority }}</ion-label>
+      </ion-item>
+      <ion-item *ngIf="job.createdAt">
+        <ion-icon name="time-outline" slot="start"></ion-icon>
+        <ion-label>Publicada el {{ job.createdAt | date:'mediumDate' }}</ion-label>
+      </ion-item>
+    </ion-list>
+
+    <section class="description">
+      <h2>Descripción</h2>
+      <div class="description__content" [innerHTML]="sanitizedDescription"></div>
+    </section>
+  </ng-container>
+</ion-content>

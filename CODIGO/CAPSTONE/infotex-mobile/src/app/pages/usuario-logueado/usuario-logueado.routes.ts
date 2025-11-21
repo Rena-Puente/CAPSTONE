@@ -9,6 +9,11 @@ export const routes: Routes = [
     component: UsuarioLogueadoPage,
     children: [
       {
+        path: 'empleos/:id',
+        loadComponent: () =>
+          import('../empleos/job-detail.page').then((m) => m.JobDetailPage),
+      },
+      {
         path: 'empleos',
         loadComponent: () =>
           import('../empleos/empleos.page').then((m) => m.EmpleosPage),
