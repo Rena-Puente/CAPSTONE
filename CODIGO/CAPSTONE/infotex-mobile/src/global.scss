@@ -236,3 +236,21 @@ body {
     padding: 0.25rem;
   }
 }
+
+/* Debug helpers for modal/layout outlines (enable with `body.debug-layout`) */
+:root {
+  --debug-layout-enabled: 0;
+}
+
+body.debug-layout {
+  --debug-layout-enabled: 1;
+}
+
+body.debug-layout ion-app {
+  border: 2px dashed #2196f3;
+}
+
+body.debug-layout .modal-content {
+  border: 2px solid #f44336 !important;
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.25);
+}
