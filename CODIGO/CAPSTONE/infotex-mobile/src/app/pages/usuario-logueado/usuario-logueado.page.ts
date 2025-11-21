@@ -4,6 +4,7 @@ import {
   IonTabs,
   IonTabBar,
   IonTabButton,
+  IonPage,
   IonIcon,
   IonLabel,
   IonRouterOutlet,
@@ -20,7 +21,16 @@ const COMPANY_USER_TYPE = 3;
   standalone: true,
   templateUrl: 'usuario-logueado.page.html',
   styleUrls: ['usuario-logueado.page.scss'],
-  imports: [CommonModule, IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet],
+  imports: [
+    CommonModule,
+    IonTabs,
+    IonTabBar,
+    IonTabButton,
+    IonPage,
+    IonIcon,
+    IonLabel,
+    IonRouterOutlet,
+  ],
 })
 export class UsuarioLogueadoPage implements OnInit {
   public environmentInjector = inject(EnvironmentInjector);
