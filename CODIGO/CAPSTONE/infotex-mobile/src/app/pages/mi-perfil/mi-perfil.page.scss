@@ -1,0 +1,41 @@
+.profile-hero {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.25rem 1rem 0.5rem;
+}
+
+.profile-avatar {
+  --size: 72px;
+  background: var(--ion-color-primary-tint);
+  color: var(--ion-color-primary-contrast);
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+}
+
+.profile-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profile-meta h2 {
+  margin: 0;
+  font-weight: 700;
+}
+
+.profile-meta p {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
+ion-badge + ion-badge {
+  margin-left: 0.35rem;
+}
+
+ion-card .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

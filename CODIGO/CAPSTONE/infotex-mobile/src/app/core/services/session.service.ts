@@ -71,6 +71,11 @@ export class SessionService {
     return this.sessionCache?.companyId ?? null;
   }
 
+  async getProfileCompletionStatus(): Promise<boolean | null> {
+    await this.ensureInitialized();
+    return this.sessionCache?.isProfileComplete ?? null;
+  }
+
   async isLoggedIn(): Promise<boolean> {
     const accessToken = await this.getAccessToken();
     return Boolean(accessToken);
