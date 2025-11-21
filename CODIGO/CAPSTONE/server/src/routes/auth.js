@@ -144,6 +144,30 @@ async function calculateProfileStatus(userId) {
   }
 }
 
+async function fetchProfileSlug(userId) {
+  try {
+    const result = await executeQuery(
+      `SELECT slug
+         FROM perfiles
+        WHERE id_usuario = :userId
+          AND slug IS NOT NULL
+        FETCH FIRST 1 ROWS ONLY`,
+      { userId }
+    );
+
+    const rawSlug = result.rows?.[0]?.SLUG ?? result.rows?.[0]?.slug ?? null;
+    if (typeof rawSlug === 'string') {
+      const normalized = rawSlug.trim();
+      return normalized.length > 0 ? normalized : null;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('[Auth] Failed to fetch profile slug', { userId, error: error?.message || error });
+    return null;
+  }
+}
+
 function registerAuthRoutes(app) {
   const { accessTokenMinutes, refreshTokenDays } = config.tokens;
 
@@ -245,10 +269,12 @@ function registerAuthRoutes(app) {
       }
 
       let isProfileComplete = null;
+      let profileSlug = null;
 
       if (userType === USER_TYPE.CANDIDATE) {
         const profileStatus = await calculateProfileStatus(userId);
         isProfileComplete = profileStatus?.isProfileComplete ?? null;
+        profileSlug = await fetchProfileSlug(userId);
       }
 
       logAuthEvent('Login successful', {
@@ -259,7 +285,8 @@ function registerAuthRoutes(app) {
         refreshToken: summarizeToken(refreshToken),
         accessExpiresAt: toIsoString(accessExpires),
         refreshExpiresAt: toIsoString(refreshExpires),
-        isProfileComplete
+        isProfileComplete,
+        profileSlug
       });
 
       res.json({
@@ -271,7 +298,8 @@ function registerAuthRoutes(app) {
         refreshToken,
         accessExpiresAt: toIsoString(accessExpires),
         refreshExpiresAt: toIsoString(refreshExpires),
-        isProfileComplete
+        isProfileComplete,
+        slug: profileSlug
       });
     } catch (error) {
       console.error('[Auth] Login failed:', error);
@@ -437,10 +465,12 @@ function registerAuthRoutes(app) {
       const outBinds = sessionResult.outBinds ?? {};
       const userType = await fetchUserType(userId);
       let isProfileComplete = null;
+      let profileSlug = null;
 
       if (userType === USER_TYPE.CANDIDATE) {
         const profileStatus = await calculateProfileStatus(userId);
         isProfileComplete = profileStatus?.isProfileComplete ?? null;
+        profileSlug = await fetchProfileSlug(userId);
       }
 
       logAuthEvent('GitHub login successful', {
@@ -452,7 +482,8 @@ function registerAuthRoutes(app) {
         accessExpiresAt: toIsoString(outBinds.accessExpires),
         refreshExpiresAt: toIsoString(outBinds.refreshExpires),
         isProfileComplete,
-        companyId: null
+        companyId: null,
+        profileSlug
       });
 
       res.json({
@@ -464,7 +495,8 @@ function registerAuthRoutes(app) {
         accessExpiresAt: toIsoString(outBinds.accessExpires),
         refreshExpiresAt: toIsoString(outBinds.refreshExpires),
         isProfileComplete,
-        companyId: null
+        companyId: null,
+        slug: profileSlug
       });
     } catch (error) {
       console.error('[Auth] GitHub callback failed:', error);
