@@ -1,3 +1,4 @@
+import { CommonModule } from '@angular/common';
 import { Component, EnvironmentInjector, inject, OnInit } from '@angular/core';
 import {
   IonTabs,
@@ -19,7 +20,7 @@ const COMPANY_USER_TYPE = 3;
   standalone: true,
   templateUrl: 'usuario-logueado.page.html',
   styleUrls: ['usuario-logueado.page.scss'],
-  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet],
+  imports: [CommonModule, IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, IonRouterOutlet],
 })
 export class UsuarioLogueadoPage implements OnInit {
   public environmentInjector = inject(EnvironmentInjector);
