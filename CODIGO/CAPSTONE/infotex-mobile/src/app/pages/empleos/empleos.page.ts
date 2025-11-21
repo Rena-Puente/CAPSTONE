@@ -131,11 +131,15 @@ export class EmpleosPage implements OnInit, AfterViewInit {
       return;
     }
 
+    console.info('[Empleos] Opening apply modal', { jobId: job.id, title: job.title });
     this.applyingJob = job;
+    console.info('[Empleos] applyingJob set', this.applyingJob);
   }
 
   protected closeApply(): void {
+    console.info('[Empleos] Closing apply modal');
     this.applyingJob = null;
+    console.info('[Empleos] applyingJob reset', this.applyingJob);
   }
 
   protected submitApplication(payload: ApplyJobPayload): void {
