@@ -129,7 +129,7 @@ export class ResumenAnual {
     return { labels, datasets, maxValue };
   });
 
-  protected readonly form = this.fb.nonNullable.group(
+  readonly form = this.fb.nonNullable.group(
     {
       fechaInicio: ['', [Validators.required, isoDateValidator()]],
       fechaFin: ['', [Validators.required, isoDateValidator()]]
@@ -137,7 +137,7 @@ export class ResumenAnual {
     { validators: dateRangeValidator() }
   );
 
-  protected async consultar(): Promise<void> {
+  async consultar(): Promise<void> {
     this.hasRequested.set(true);
     this.error.set(null);
 
