@@ -145,7 +145,7 @@
   position: absolute;
   inset: 0;
   background: rgba(59, 130, 246, 0.08);
-  opacity: 0;
+  opacity: 1;
   transition: opacity 0.25s ease;
 }
 
