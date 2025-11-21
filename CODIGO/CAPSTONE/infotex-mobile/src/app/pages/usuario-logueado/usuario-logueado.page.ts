@@ -6,7 +6,6 @@ import {
   IonTabButton,
   IonIcon,
   IonLabel,
-  IonPage,
   IonRouterOutlet,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -28,7 +27,6 @@ const COMPANY_USER_TYPE = 3;
     IonTabButton,
     IonIcon,
     IonLabel,
-    IonPage,
     IonRouterOutlet,
   ],
 })

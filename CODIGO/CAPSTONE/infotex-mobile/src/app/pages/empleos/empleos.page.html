@@ -1,11 +1,10 @@
-<ion-page>
-  <ion-header [translucent]="true">
-    <ion-toolbar>
-      <ion-title>Empleos</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Empleos</ion-title>
+  </ion-toolbar>
+</ion-header>
 
-  <ion-content [scrollY]="true">
+<ion-content [scrollY]="true">
     <ion-refresher slot="fixed" (ionRefresh)="loadJobs($event)">
       <ion-refresher-content></ion-refresher-content>
     </ion-refresher>
@@ -35,12 +34,11 @@
     <div class="error" *ngIf="error">{{ error }}</div>
   </ion-content>
 
-  <app-apply-modal
-    [open]="!!applyingJob"
-    [job]="applyingJob"
-    [submitting]="submitting"
-    [presentingElement]="presentingElement"
-    (close)="closeApply()"
-    (submitApplication)="submitApplication($event)"
-  ></app-apply-modal>
-</ion-page>
+<app-apply-modal
+  [open]="!!applyingJob"
+  [job]="applyingJob"
+  [submitting]="submitting"
+  [presentingElement]="presentingElement"
+  (close)="closeApply()"
+  (submitApplication)="submitApplication($event)"
+></app-apply-modal>
