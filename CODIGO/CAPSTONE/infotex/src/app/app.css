@@ -6,3 +6,9 @@
   padding: 0.35rem 0.9rem;
 }
 
+.app-shell {
+  padding-top: 80px;
+  padding-bottom: 2rem;
+  min-height: 100vh;
+}
+

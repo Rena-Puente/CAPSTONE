@@ -2,9 +2,16 @@
 @import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
 // o, si quieres usar variables y mixins de Bootstrap:
 // @use "bootstrap/scss/bootstrap";
+html,
 body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
   background-color: #0d1117; // gris oscuro GitHub
   color: #c9d1d9;            // texto gris claro
+  overflow-y: auto;
 }
 
 .navbar {
