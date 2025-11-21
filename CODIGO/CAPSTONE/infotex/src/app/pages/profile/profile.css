@@ -768,13 +768,13 @@
   justify-content: center;
   padding: var(--profile-spacing-lg);
   overflow-y: auto;
-  background-color: var(--profile-color-overlay-strong);
+  background-color: #0d1117;
 }
 
 .profile-editor__backdrop {
   position: absolute;
   inset: 0;
-  background: var(--profile-color-overlay-strong);
+  background: #0d1117;
   animation: profile-editor-fade-in 0.35s ease forwards;
 }
 
@@ -782,11 +782,11 @@
   position: relative;
   width: min(640px, 90vw);
   max-width: 100%;
-  background-color: var(--profile-color-surface-opaque);
-  border: 1px solid var(--profile-color-border-strong);
+  background: linear-gradient(145deg, #0f1623 0%, #0c121c 100%);
+  border: 1.5px solid #30363d;
   border-radius: 0.75rem;
   color: var(--profile-color-text);
-  box-shadow: 0 25px 80px rgba(1, 4, 9, 0.85), 0 0 0 1px rgba(48, 54, 61, 0.6);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -820,8 +820,8 @@
 .profile-editor__panel input[type="text"],
 .profile-editor__panel input[type="email"],
 .profile-editor__panel input[type="number"] {
-  background-color: var(--profile-color-input);
-  border: 1px solid var(--profile-color-border);
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   color: var(--profile-color-text);
   border-radius: var(--profile-radius-lg);
   padding: 0.65rem 0.85rem;
@@ -829,8 +829,8 @@
 }
 
 .profile-editor__panel .input-group-text {
-  background-color: var(--profile-color-input);
-  border: 1px solid var(--profile-color-border);
+  background-color: #0d1117;
+  border: 1px solid #30363d;
   color: var(--profile-color-text-muted);
 }
 
@@ -840,9 +840,9 @@
 .profile-editor__panel input[type="text"]:focus,
 .profile-editor__panel input[type="email"]:focus,
 .profile-editor__panel input[type="number"]:focus {
-  background-color: var(--profile-color-surface-elevated);
-  border-color: var(--profile-color-primary);
-  box-shadow: 0 0 0 2px var(--profile-color-focus-ring);
+  background-color: #0d1117;
+  border-color: #2f81f7;
+  box-shadow: 0 0 0 0.25rem rgba(47, 129, 247, 0.25);
   outline: none;
 }
 
