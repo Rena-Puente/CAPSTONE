@@ -7,11 +7,136 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" [scrollY]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content
+      pullingIcon="refresh-outline"
+      refreshingSpinner="crescent"
+      pullingText="Desliza para actualizar"
+      refreshingText="Actualizando"
+    ></ion-refresher-content>
+  </ion-refresher>
+
   <ion-header collapse="condense">
     <ion-toolbar>
       <ion-title size="large">Mi perfil</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <app-explore-container name="Página de mi perfil"></app-explore-container>
+  <div class="profile-hero">
+    <ion-avatar class="profile-avatar">
+      <ion-icon aria-hidden="true" name="person-circle-outline"></ion-icon>
+    </ion-avatar>
+
+    <div class="profile-meta">
+      <h2>Hola nuevamente</h2>
+      <p *ngIf="sessionSummary.isLoggedIn; else loggedOutMessage">
+        Este es el resumen de tu sesión dentro de Infotex Mobile.
+      </p>
+      <ng-template #loggedOutMessage>
+        <p>No has iniciado sesión. Inicia sesión para ver los detalles de tu perfil.</p>
+      </ng-template>
+
+      <ion-badge [color]="sessionSummary.isLoggedIn ? 'success' : 'medium'">
+        {{ sessionSummary.isLoggedIn ? 'Sesión activa' : 'Sesión cerrada' }}
+      </ion-badge>
+
+      <ion-badge [color]="sessionSummary.isProfileComplete ? 'success' : 'warning'">
+        {{ profileStatusLabel }}
+      </ion-badge>
+    </div>
+  </div>
+
+  <ion-grid>
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Información básica</ion-card-subtitle>
+            <ion-card-title>Resumen de usuario</ion-card-title>
+          </ion-card-header>
+
+          <ion-card-content>
+            <ion-list lines="full">
+              <ion-item>
+                <ion-icon slot="start" name="person-circle-outline" aria-hidden="true"></ion-icon>
+                <ion-label>
+                  <h3>Identificador</h3>
+                  <p *ngIf="!loading; else userIdSkeleton">
+                    {{ sessionSummary.userId !== null ? ('Usuario #' + sessionSummary.userId) : 'No disponible' }}
+                  </p>
+                  <ng-template #userIdSkeleton>
+                    <ion-skeleton-text animated style="width: 120px"></ion-skeleton-text>
+                  </ng-template>
+                </ion-label>
+                <ion-badge slot="end" color="primary">Usuario</ion-badge>
+              </ion-item>
+
+              <ion-item>
+                <ion-icon slot="start" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+                <ion-label>
+                  <h3>Tipo de usuario</h3>
+                  <p *ngIf="!loading; else userTypeSkeleton">{{ userTypeLabel }}</p>
+                  <ng-template #userTypeSkeleton>
+                    <ion-skeleton-text animated style="width: 140px"></ion-skeleton-text>
+                  </ng-template>
+                </ion-label>
+              </ion-item>
+
+              <ion-item>
+                <ion-icon slot="start" name="business-outline" aria-hidden="true"></ion-icon>
+                <ion-label>
+                  <h3>Empresa asociada</h3>
+                  <p *ngIf="!loading; else companySkeleton">
+                    {{ sessionSummary.companyId !== null ? ('ID de empresa #' + sessionSummary.companyId) : 'No asociado' }}
+                  </p>
+                  <ng-template #companySkeleton>
+                    <ion-skeleton-text animated style="width: 160px"></ion-skeleton-text>
+                  </ng-template>
+                </ion-label>
+              </ion-item>
+
+              <ion-item>
+                <ion-icon slot="start" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+                <ion-label>
+                  <h3>Estado del perfil</h3>
+                  <p *ngIf="!loading; else profileSkeleton">{{ profileStatusLabel }}</p>
+                  <ng-template #profileSkeleton>
+                    <ion-skeleton-text animated style="width: 100px"></ion-skeleton-text>
+                  </ng-template>
+                </ion-label>
+                <ion-badge
+                  slot="end"
+                  [color]="sessionSummary.isProfileComplete ? 'success' : 'warning'"
+                >
+                  {{ sessionSummary.isProfileComplete ? 'Completo' : 'Pendiente' }}
+                </ion-badge>
+              </ion-item>
+            </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Acciones rápidas</ion-card-subtitle>
+            <ion-card-title>Gestiona tu cuenta</ion-card-title>
+          </ion-card-header>
+
+          <ion-card-content class="actions">
+            <ion-button color="primary" routerLink="/auth/login" fill="outline">
+              <ion-icon slot="start" name="log-in-outline"></ion-icon>
+              Iniciar sesión
+            </ion-button>
+            <ion-button color="medium" (click)="refreshNow()" fill="clear">
+              <ion-icon slot="start" name="refresh-outline"></ion-icon>
+              Actualizar datos
+            </ion-button>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
 </ion-content>
