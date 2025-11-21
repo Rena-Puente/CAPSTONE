@@ -36,7 +36,6 @@ export interface AuthApiResponse {
   userId?: number | null;
   companyId?: number | null;
   isProfileComplete?: boolean;
-  slug?: string;
   user?: {
     type?: string;
     role?: string;
