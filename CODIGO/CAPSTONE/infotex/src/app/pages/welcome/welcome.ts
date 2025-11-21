@@ -231,7 +231,7 @@ export class Welcome implements OnInit {
       await firstValueFrom(this.authService.register(email, password, passwordConfirmation));
       this.registerForm.reset({ email: '', password: '', passwordConfirmation: '' });
       this.loginForm.patchValue({ email, password: '' });
-      this.loginSuccessMessage.set('Tu cuenta fue creada. Inicia sesión con tu nueva contraseña.');
+      this.loginSuccessMessage.set('Tu cuenta fue creada. Verifica tu correo para ingresar.');
       this.setActiveTab('login');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'No se pudo crear la cuenta.';
