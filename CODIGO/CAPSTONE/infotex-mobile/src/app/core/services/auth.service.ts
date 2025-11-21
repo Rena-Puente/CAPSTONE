@@ -132,9 +132,9 @@ export class AuthService {
       response.user?.companyId ??
       null;
 
-    const userType = this.parseNumericValue(userTypeRaw, userTypeRaw ?? null);
-    const userId = this.parseNumericValue(userIdRaw, null);
-    const companyId = this.parseNumericValue(companyIdRaw, null);
+    const userType = this.parseUserType(userTypeRaw);
+    const userId = this.parseId(userIdRaw);
+    const companyId = this.parseId(companyIdRaw);
 
     const isProfileComplete =
       response.isProfileComplete ??
@@ -205,13 +205,13 @@ export class AuthService {
     void this.sessionService.setSession(session);
   }
 
-  private parseNumericValue(value: unknown, fallback: number | string | null): number | null | string {
+  private parseId(value: unknown): number | null {
     if (value === null || value === undefined) {
-      return typeof fallback === 'number' ? fallback : null;
+      return null;
     }
 
     if (typeof value === 'number') {
-      return Number.isFinite(value) ? value : typeof fallback === 'number' ? fallback : null;
+      return Number.isFinite(value) ? value : null;
     }
 
     if (typeof value === 'string') {
@@ -221,6 +221,23 @@ export class AuthService {
       }
     }
 
-    return fallback;
+    return null;
+  }
+
+  private parseUserType(value: unknown): number | string | null {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      return Number.isNaN(parsed) ? value : parsed;
+    }
+
+    return null;
   }
 }
