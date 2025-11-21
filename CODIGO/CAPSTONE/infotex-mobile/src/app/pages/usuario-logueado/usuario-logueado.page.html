@@ -1,34 +1,24 @@
-<ion-page class="usuario-logueado">
-  <ion-tabs>
-    <ion-router-outlet></ion-router-outlet>
-    <ion-tab-bar slot="bottom">
-      <ion-tab-button tab="empleos" href="/usuario-logueado/empleos">
-        <ion-icon aria-hidden="true" name="briefcase"></ion-icon>
-        <ion-label>Empleos</ion-label>
-      </ion-tab-button>
+<ion-tabs class="usuario-logueado">
+  <ion-router-outlet></ion-router-outlet>
+  <ion-tab-bar slot="bottom">
+    <ion-tab-button tab="empleos" href="/usuario-logueado/empleos">
+      <ion-icon aria-hidden="true" name="briefcase"></ion-icon>
+      <ion-label>Empleos</ion-label>
+    </ion-tab-button>
 
-      <ion-tab-button
-        *ngIf="isCompany()"
-        tab="mis-empleos"
-        href="/usuario-logueado/mis-empleos"
-      >
-        <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
-        <ion-label>Mis empleos</ion-label>
-      </ion-tab-button>
+    <ion-tab-button *ngIf="isCompany()" tab="mis-empleos" href="/usuario-logueado/mis-empleos">
+      <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
+      <ion-label>Mis empleos</ion-label>
+    </ion-tab-button>
 
-      <ion-tab-button
-        *ngIf="isCandidate()"
-        tab="mis-postulaciones"
-        href="/usuario-logueado/mis-postulaciones"
-      >
-        <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
-        <ion-label>Mis postulaciones</ion-label>
-      </ion-tab-button>
+    <ion-tab-button *ngIf="isCandidate()" tab="mis-postulaciones" href="/usuario-logueado/mis-postulaciones">
+      <ion-icon aria-hidden="true" name="clipboard"></ion-icon>
+      <ion-label>Mis postulaciones</ion-label>
+    </ion-tab-button>
 
-      <ion-tab-button tab="mi-perfil" href="/usuario-logueado/mi-perfil">
-        <ion-icon aria-hidden="true" name="person"></ion-icon>
-        <ion-label>Mi perfil</ion-label>
-      </ion-tab-button>
-    </ion-tab-bar>
-  </ion-tabs>
-</ion-page>
+    <ion-tab-button tab="mi-perfil" href="/usuario-logueado/mi-perfil">
+      <ion-icon aria-hidden="true" name="person"></ion-icon>
+      <ion-label>Mi perfil</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>
