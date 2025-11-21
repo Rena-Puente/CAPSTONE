@@ -24,6 +24,7 @@ export interface AuthResult {
   userId: number | null;
   companyId: number | null;
   isProfileComplete: boolean;
+  profileSlug: string | null;
 }
 
 export interface AuthApiResponse {
@@ -35,6 +36,7 @@ export interface AuthApiResponse {
   userId?: number | null;
   companyId?: number | null;
   isProfileComplete?: boolean;
+  slug?: string;
   user?: {
     type?: string;
     role?: string;
@@ -43,6 +45,7 @@ export interface AuthApiResponse {
     isProfileComplete?: boolean;
     profileComplete?: boolean;
     profileCompleted?: boolean;
+    slug?: string;
   };
   data?: {
     accessToken?: string;
@@ -51,8 +54,10 @@ export interface AuthApiResponse {
     userId?: number | null;
     companyId?: number | null;
     isProfileComplete?: boolean;
+    slug?: string;
   };
   message?: string;
+  slug?: string;
 }
 
 export class AuthServiceError extends Error {
@@ -144,6 +149,9 @@ export class AuthService {
       response.user?.profileCompleted ??
       false;
 
+    const profileSlug =
+      response.slug ?? response.data?.slug ?? response.user?.slug ?? null;
+
     return {
       tokens: {
         accessToken,
@@ -153,6 +161,7 @@ export class AuthService {
       userId,
       companyId,
       isProfileComplete,
+      profileSlug,
     };
   }
 
@@ -200,6 +209,7 @@ export class AuthService {
       userType: result.userType,
       companyId: result.companyId,
       isProfileComplete: result.isProfileComplete,
+      profileSlug: result.profileSlug,
     };
 
     void this.sessionService.setSession(session);

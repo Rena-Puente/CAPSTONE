@@ -8,6 +8,7 @@ export interface SessionData {
   userType: number | string | null;
   companyId?: number | null;
   isProfileComplete?: boolean | null;
+  profileSlug?: string | null;
 }
 
 const TOKEN_STORAGE_KEY = 'infotex.auth.tokens';
@@ -35,6 +36,7 @@ export class SessionService {
       userType: null,
       companyId: null,
       isProfileComplete: null,
+      profileSlug: null,
     });
   }
 
@@ -76,6 +78,11 @@ export class SessionService {
     return this.sessionCache?.isProfileComplete ?? null;
   }
 
+  async getProfileSlug(): Promise<string | null> {
+    await this.ensureInitialized();
+    return this.sessionCache?.profileSlug ?? null;
+  }
+
   async isLoggedIn(): Promise<boolean> {
     const accessToken = await this.getAccessToken();
     return Boolean(accessToken);
@@ -93,7 +100,7 @@ export class SessionService {
       try {
         const parsed = JSON.parse(storedSession) as SessionData;
         if (parsed?.tokens?.accessToken && parsed?.tokens?.refreshToken) {
-          return parsed;
+          return { ...parsed, profileSlug: parsed.profileSlug ?? null };
         }
       } catch (error) {
         console.error('Error parsing stored session', error);
@@ -112,6 +119,7 @@ export class SessionService {
             userType: null,
             companyId: null,
             isProfileComplete: null,
+            profileSlug: null,
           };
           localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(legacySession));
           return legacySession;
