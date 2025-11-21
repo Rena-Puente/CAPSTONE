@@ -9,8 +9,8 @@ import {
   AuthServiceError,
   LoginCredentials,
   RegisterPayload,
-  SessionService
 } from './auth.service';
+import { SessionService } from './session.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -18,8 +18,8 @@ describe('AuthService', () => {
   let sessionService: jasmine.SpyObj<SessionService>;
 
   beforeEach(() => {
-    sessionService = jasmine.createSpyObj('SessionService', ['setTokens', 'clear']);
-    sessionService.setTokens.and.resolveTo();
+    sessionService = jasmine.createSpyObj('SessionService', ['setSession', 'clear']);
+    sessionService.setSession.and.resolveTo();
     sessionService.clear.and.resolveTo();
 
     TestBed.configureTestingModule({
@@ -58,11 +58,16 @@ describe('AuthService', () => {
     expect(result).toEqual({
       tokens: { accessToken: 'access-123', refreshToken: 'refresh-456' },
       userType: 'admin',
+      userId: null,
+      companyId: null,
       isProfileComplete: true
     });
-    expect(sessionService.setTokens).toHaveBeenCalledWith({
-      accessToken: 'access-123',
-      refreshToken: 'refresh-456'
+    expect(sessionService.setSession).toHaveBeenCalledWith({
+      tokens: { accessToken: 'access-123', refreshToken: 'refresh-456' },
+      userId: null,
+      userType: 'admin',
+      companyId: null,
+      isProfileComplete: true,
     });
   });
 
@@ -92,11 +97,16 @@ describe('AuthService', () => {
     expect(result).toEqual({
       tokens: { accessToken: 'nested-access', refreshToken: 'nested-refresh' },
       userType: 'candidate',
+      userId: null,
+      companyId: null,
       isProfileComplete: false
     });
-    expect(sessionService.setTokens).toHaveBeenCalledWith({
-      accessToken: 'nested-access',
-      refreshToken: 'nested-refresh'
+    expect(sessionService.setSession).toHaveBeenCalledWith({
+      tokens: { accessToken: 'nested-access', refreshToken: 'nested-refresh' },
+      userId: null,
+      userType: 'candidate',
+      companyId: null,
+      isProfileComplete: false,
     });
   });
 

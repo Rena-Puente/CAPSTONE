@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, tap, throwError } from 'rxjs';
 
 import { API_AUTH_BASE } from '../../../environments/environment';
-import { SessionService } from './session.service';
+import { SessionService, SessionData } from './session.service';
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -20,7 +20,9 @@ export interface AuthTokens {
 
 export interface AuthResult {
   tokens: AuthTokens;
-  userType: string;
+  userType: number | string | null;
+  userId: number | null;
+  companyId: number | null;
   isProfileComplete: boolean;
 }
 
@@ -30,10 +32,14 @@ export interface AuthApiResponse {
   token?: string;
   refresh_token?: string;
   userType?: string;
+  userId?: number | null;
+  companyId?: number | null;
   isProfileComplete?: boolean;
   user?: {
     type?: string;
     role?: string;
+    id?: number | null;
+    companyId?: number | null;
     isProfileComplete?: boolean;
     profileComplete?: boolean;
     profileCompleted?: boolean;
@@ -42,6 +48,8 @@ export interface AuthApiResponse {
     accessToken?: string;
     refreshToken?: string;
     userType?: string;
+    userId?: number | null;
+    companyId?: number | null;
     isProfileComplete?: boolean;
   };
   message?: string;
@@ -71,7 +79,7 @@ export class AuthService {
       .post<AuthApiResponse>(`${API_AUTH_BASE}/login`, credentials)
       .pipe(
         map((response) => this.normalizeAuthResponse(response)),
-        tap((result) => this.persistTokens(result.tokens)),
+        tap((result) => this.persistSession(result)),
         catchError((error) => this.handleError(error))
       );
   }
@@ -81,9 +89,9 @@ export class AuthService {
       .post<AuthApiResponse>(`${API_AUTH_BASE}/register`, payload)
       .pipe(
         map((response) => this.normalizeAuthResponse(response)),
-        tap((result) => this.persistTokens(result.tokens)),
+        tap((result) => this.persistSession(result)),
         catchError((error) => this.handleError(error))
-        
+
       );
   }
   async logout(): Promise<void> {
@@ -105,12 +113,28 @@ export class AuthService {
       );
     }
 
-    const userType =
+    const userTypeRaw =
       response.userType ||
       response.data?.userType ||
       response.user?.type ||
       response.user?.role ||
-      'guest';
+      null;
+
+    const userIdRaw =
+      response.userId ??
+      response.data?.userId ??
+      response.user?.id ??
+      null;
+
+    const companyIdRaw =
+      response.companyId ??
+      response.data?.companyId ??
+      response.user?.companyId ??
+      null;
+
+    const userType = this.parseNumericValue(userTypeRaw, userTypeRaw ?? null);
+    const userId = this.parseNumericValue(userIdRaw, null);
+    const companyId = this.parseNumericValue(companyIdRaw, null);
 
     const isProfileComplete =
       response.isProfileComplete ??
@@ -126,6 +150,8 @@ export class AuthService {
         refreshToken,
       },
       userType,
+      userId,
+      companyId,
       isProfileComplete,
     };
   }
@@ -167,7 +193,34 @@ export class AuthService {
     }
   }
   
-  private persistTokens(tokens: AuthTokens): void {
-    void this.sessionService.setTokens(tokens);
+  private persistSession(result: AuthResult): void {
+    const session: SessionData = {
+      tokens: result.tokens,
+      userId: result.userId,
+      userType: result.userType,
+      companyId: result.companyId,
+      isProfileComplete: result.isProfileComplete,
+    };
+
+    void this.sessionService.setSession(session);
+  }
+
+  private parseNumericValue(value: unknown, fallback: number | string | null): number | null | string {
+    if (value === null || value === undefined) {
+      return typeof fallback === 'number' ? fallback : null;
+    }
+
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : typeof fallback === 'number' ? fallback : null;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+
+    return fallback;
   }
 }
