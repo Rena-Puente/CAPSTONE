@@ -4,16 +4,10 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" [scrollY]="true">
+<ion-content>
   <ion-refresher slot="fixed" (ionRefresh)="loadJobs($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
-
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Empleos</ion-title>
-    </ion-toolbar>
-  </ion-header>
 
   <div class="filters">
     <ion-searchbar placeholder="Buscar por título o empresa" (ionInput)="onSearchChange($event)"></ion-searchbar>
