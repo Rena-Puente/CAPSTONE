@@ -4,7 +4,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [scrollY]="true">
+<ion-content class="scrollable-page" [scrollY]="true">
     <ion-refresher slot="fixed" (ionRefresh)="loadJobs($event)">
       <ion-refresher-content></ion-refresher-content>
     </ion-refresher>

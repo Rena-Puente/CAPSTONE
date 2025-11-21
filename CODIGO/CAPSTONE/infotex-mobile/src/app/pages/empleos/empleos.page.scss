@@ -1,6 +1,8 @@
-ion-content::part(scroll) {
-  padding: 1rem;
-  /* no toques overflow acá */
+ion-content.scrollable-page {
+  --padding-top: 16px;
+  --padding-end: 16px;
+  --padding-bottom: 20px;
+  --padding-start: 16px;
 }
 .filters {
   display: flex;
