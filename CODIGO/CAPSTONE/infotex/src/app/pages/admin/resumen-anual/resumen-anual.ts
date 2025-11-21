@@ -137,10 +137,12 @@ export class ResumenAnual {
     return { labels, datasets, maxValue };
   });
 
+  private readonly defaultDates = this.buildDefaultDates();
+
   readonly form = this.fb.nonNullable.group(
     {
-      fechaInicio: ['', [Validators.required, isoDateValidator()]],
-      fechaFin: ['', [Validators.required, isoDateValidator()]]
+      fechaInicio: [this.defaultDates.inicio, [Validators.required, isoDateValidator()]],
+      fechaFin: [this.defaultDates.fin, [Validators.required, isoDateValidator()]]
     },
     { validators: dateRangeValidator() }
   );
@@ -221,9 +223,24 @@ export class ResumenAnual {
     return Array.from(labels).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
   }
 
-
-    protected getSerieTotal(series: SerieMensual[], mes: string): number {
+  protected getSerieTotal(series: SerieMensual[], mes: string): number {
     return series.find((item) => item.mes === mes)?.total ?? 0;
+  }
+
+  private buildDefaultDates(): { inicio: string; fin: string } {
+    const end = new Date();
+    const start = new Date();
+    start.setFullYear(start.getFullYear() - 1);
+
+    return {
+      inicio: this.toIsoDate(start),
+      fin: this.toIsoDate(end)
+    };
+  }
+
+  private toIsoDate(date: Date): string {
+    const withoutTimezoneOffset = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+    return withoutTimezoneOffset.toISOString().slice(0, 10);
   }
   private buildPoints(labels: string[], series: SerieMensual[], maxValue: number): string {
     if (labels.length === 0) {
