@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonPage } from '@ionic/angular/standalone';
 import { ExploreContainerComponent } from '../explore-container/explore-container.component';
 
 @Component({
@@ -7,7 +7,7 @@ import { ExploreContainerComponent } from '../explore-container/explore-containe
   standalone: true,
   templateUrl: 'mi-perfil.page.html',
   styleUrls: ['mi-perfil.page.scss'],
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, ExploreContainerComponent],
+  imports: [IonHeader, IonToolbar, IonTitle, IonContent, IonPage, ExploreContainerComponent],
 })
 export class MiPerfilPage {
   constructor() {}
