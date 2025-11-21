@@ -6,6 +6,7 @@ const {
   oracledb
 } = require('../db/oracle');
 const { toNullableTrimmedString } = require('../utils/format');
+const { readOracleClob } = require('../utils/oracle');
 
 const MAX_SKILL_CATEGORY_LENGTH = 100;
 const MAX_SKILL_NAME_LENGTH = 150;
@@ -87,34 +88,6 @@ function normalizeCatalogSkillId(value) {
   }
 
   return parsed;
-}
-
-async function readOracleClob(value) {
-  if (value === null || value === undefined) {
-    return '';
-  }
-
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (typeof value === 'object' && typeof value.getData === 'function') {
-    return new Promise((resolve, reject) => {
-      value.setEncoding('utf8');
-
-      let data = '';
-
-      value.on('data', (chunk) => {
-        data += chunk;
-      });
-
-      value.on('end', () => resolve(data));
-      value.on('close', () => resolve(data));
-      value.on('error', (error) => reject(error));
-    });
-  }
-
-  return String(value);
 }
 
 function extractSkillOracleErrorCode(error) {
