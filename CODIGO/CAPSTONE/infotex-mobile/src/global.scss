@@ -58,15 +58,19 @@ body {
 
 .auth-shell {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   padding: 1.5rem;
   background: linear-gradient(135deg, rgba(22, 27, 34, 0.92), rgba(13, 17, 23, 0.92)),
     radial-gradient(circle at 25% 25%, rgba(47, 129, 247, 0.08), transparent 35%),
     radial-gradient(circle at 80% 10%, rgba(126, 231, 135, 0.08), transparent 32%),
     var(--infotex-bg);
   color: #c9d1d9;
+}
+
+.auth-shell__body {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .auth-card {
