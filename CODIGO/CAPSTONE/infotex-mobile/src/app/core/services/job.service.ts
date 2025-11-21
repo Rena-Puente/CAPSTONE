@@ -50,6 +50,12 @@ export class JobService {
       .pipe(map((response) => response.offers ?? []));
   }
 
+  getPublicJob(offerId: number): Observable<Job> {
+    return this.http
+      .get<{ ok: boolean; offer: Job }>(`${API_OFFERS_BASE}/${offerId}`)
+      .pipe(map((response) => response.offer));
+  }
+
   applyToJob(offerId: number, payload: ApplyJobPayload): Observable<Application> {
     return this.withAuthHeaders((headers) =>
       this.http
