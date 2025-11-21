@@ -9,21 +9,11 @@
               <p class="mb-0 text-secondary">Revisa la información que has registrado.</p>
             </div>
             <div class="profile-header__actions">
-              <button
-                type="button"
-                class="icon-button btn btn-outline-primary"
-                (click)="retry()"
-                [disabled]="loading()"
-                aria-label="Actualizar información del perfil"
-              >
-              <a
-                class="btn btn-primary btn-sm ms-3 profile-public-link__preview"
-                [href]="publicProfileUrl()"
-                target="_blank"
-                aria-label="Vista previa del perfil"
-                [class.disabled]="!publicProfileUrl()"
-              >
-                <i class="bi bi-box-arrow-up-right"></i> Vista previa del perfil
+              <button type="button" class="icon-button btn btn-outline-primary" (click)="retry()" [disabled]="loading()"
+                aria-label="Actualizar información del perfil">
+                <a class="btn btn-primary btn-sm ms-3 profile-public-link__preview" [href]="publicProfileUrl()"
+                  target="_blank" aria-label="Vista previa del perfil" [class.disabled]="!publicProfileUrl()">
+                  <i class="bi bi-box-arrow-up-right"></i> Vista previa del perfil
                 </a>
                 <br>
                 <span class="spinner-border spinner-border-sm" role="status" *ngIf="loading()"></span>
@@ -45,18 +35,11 @@
             <ng-container *ngIf="!loadError()">
               <ng-container *ngIf="profile(); else noProfileData">
                 <div class="profile-accordion mt-4">
-                  <section
-                    class="profile-section profile-accordion__item profile-section--overview"
-                    [class.profile-accordion__item--expanded]="expandedSections().overview"
-                  >
+                  <section class="profile-section profile-accordion__item profile-section--overview"
+                    [class.profile-accordion__item--expanded]="expandedSections().overview">
                     <div class="profile-section__header">
-                      <button
-                        type="button"
-                        class="profile-section__toggle"
-                        (click)="toggleSection('overview')"
-                        [attr.aria-expanded]="expandedSections().overview"
-                        aria-controls="profile-section-overview"
-                      >
+                      <button type="button" class="profile-section__toggle" (click)="toggleSection('overview')"
+                        [attr.aria-expanded]="expandedSections().overview" aria-controls="profile-section-overview">
                         <span class="profile-section__chevron" aria-hidden="true">
                           <i class="bi bi-chevron-down"></i>
                         </span>
@@ -66,32 +49,21 @@
                         </span>
                       </button>
                       <div class="profile-section__actions">
-                        <button
-                          type="button"
-                          class="icon-button icon-button--primary"
-                          (click)="openEditor()"
-                          aria-label="Editar información general"
-                        >
+                        <button type="button" class="icon-button icon-button--primary" (click)="openEditor()"
+                          aria-label="Editar información general">
                           <i class="bi bi-pencil-square" width="40" height="40"></i>
                         </button>
                       </div>
                     </div>
 
-                    <div
-                      class="profile-section__body"
-                      id="profile-section-overview"
+                    <div class="profile-section__body" id="profile-section-overview"
                       [class.profile-section__body--collapsed]="!expandedSections().overview"
-                      [attr.aria-hidden]="!expandedSections().overview"
-                    >
+                      [attr.aria-hidden]="!expandedSections().overview">
                       <div class="d-flex flex-column flex-lg-row align-items-start gap-4">
                         <div class="profile-avatar-wrapper">
                           <ng-container *ngIf="profile()?.avatarUrl && !avatarHasError(); else avatarPlaceholder">
-                            <img
-                              [src]="profile()?.avatarUrl ?? ''"
-                              alt="Foto de perfil"
-                              class="profile-avatar-img"
-                              (error)="handleAvatarError()"
-                            />
+                            <img [src]="profile()?.avatarUrl ?? ''" alt="Foto de perfil" class="profile-avatar-img"
+                              (error)="handleAvatarError()" />
                           </ng-container>
                           <ng-template #avatarPlaceholder>
                             <div class="profile-avatar-placeholder">
@@ -101,18 +73,12 @@
                         </div>
 
                         <div class="flex-grow-1 w-100">
-                          <h3
-                            class="h4 mb-1"
-                            [class.text-white]="!!profile()?.displayName"
-                            [class.text-secondary]="!profile()?.displayName"
-                          >
+                          <h3 class="h4 mb-1" [class.text-white]="!!profile()?.displayName"
+                            [class.text-secondary]="!profile()?.displayName">
                             {{ profile()?.displayName || 'Nombre no registrado' }}
                           </h3>
-                          <p
-                            class="mb-3"
-                            [class.text-light]="!!profile()?.career"
-                            [class.text-secondary]="!profile()?.career"
-                          >
+                          <p class="mb-3" [class.text-light]="!!profile()?.career"
+                            [class.text-secondary]="!profile()?.career">
                             {{ profile()?.career || 'Carrera no registrada' }}
                           </p>
 
@@ -142,635 +108,473 @@
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section
-                    class="profile-section profile-accordion__item profile-section--biography"
-                    [class.profile-accordion__item--expanded]="expandedSections().biography"
-                  >
-                    <div class="profile-section__header">
-                      <button
-                        type="button"
-                        class="profile-section__toggle"
-                        (click)="toggleSection('biography')"
-                        [attr.aria-expanded]="expandedSections().biography"
-                        aria-controls="profile-section-biography"
-                      >
-                        <span class="profile-section__chevron" aria-hidden="true">
-                          <i class="bi bi-chevron-down"></i>
-                        </span>
-                        <span class="profile-section__heading">
-                          <span class="profile-section__eyebrow">Historia</span>
-                          <span class="profile-section__title">Biografía</span>
-                          <span class="profile-section__subtitle">Comparte quién eres y tu experiencia.</span>
-                        </span>
-                      </button>
-                      <div class="profile-section__actions">
-                        <button
-                          type="button"
-                          class="icon-button icon-button--primary"
-                          (click)="openEditor()"
-                          aria-label="Editar biografía"
-                        >
-                          <i class="bi bi-pencil-square"></i>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div
-                      class="profile-section__body"
-                      id="profile-section-biography"
-                      [class.profile-section__body--collapsed]="!expandedSections().biography"
-                      [attr.aria-hidden]="!expandedSections().biography"
-                    >
-                      <p class="mb-0" [class.text-secondary]="!profile()?.biography">
-                        {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
-                      </p>
-                    </div>
-                  </section>
-
-                  <section
-                    class="profile-section profile-accordion__item profile-section--education"
-                    [class.profile-accordion__item--expanded]="expandedSections().education"
-                  >
-                    <div class="profile-section__header">
-                      <button
-                        type="button"
-                        class="profile-section__toggle"
-                        (click)="toggleSection('education')"
-                        [attr.aria-expanded]="expandedSections().education"
-                        aria-controls="profile-section-education"
-                      >
-                        <span class="profile-section__chevron" aria-hidden="true">
-                          <i class="bi bi-chevron-down"></i>
-                        </span>
-                        <span class="profile-section__heading">
-                          <span class="profile-section__eyebrow">Formación</span>
-                          <span class="profile-section__title">Educación</span>
-                          <span class="profile-section__subtitle">
-                            <ng-container *ngIf="educationSummary() as summary; else educationSummaryFallback">
-                              <ng-container *ngIf="summary.totalRecords > 0; else noEducationRecords">
-                                {{ summary.totalRecords === 1 ? '1 registro educativo' : summary.totalRecords + ' registros educativos' }}.
-                                <ng-container *ngIf="summary.invalidDateCount > 0">
-                                  {{ summary.invalidDateCount === 1 ? 'Un registro' : summary.invalidDateCount + ' registros' }} requiere revisar las fechas.
-                                </ng-container>
-                              </ng-container>
-                              <ng-template #noEducationRecords>
-                                Aún no has agregado tu educación.
-                              </ng-template>
-                            </ng-container>
-                            <ng-template #educationSummaryFallback>
-                              Aún no has agregado tu educación.
-                            </ng-template>
-                          </span>
-                        </span>
-                      </button>
-                      <div class="profile-section__actions">
-                        <button
-                          type="button"
-                          class="icon-button icon-button--primary"
-                          (click)="openEducationCreator()"
-                          aria-label="Agregar educación"
-                        >
-                          <i class="bi bi-pencil-square"></i>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div
-                      class="profile-section__body"
-                      id="profile-section-education"
-                      [class.profile-section__body--collapsed]="!expandedSections().education"
-                      [attr.aria-hidden]="!expandedSections().education"
-                    >
-                      <div *ngIf="educationError()" class="alert alert-danger" role="alert">
-                        {{ educationError() }}
-                      </div>
-
-                      <div *ngIf="educationLoading()" class="text-secondary">
-                        Cargando educación...
-                      </div>
-
-                      <ng-container *ngIf="!educationLoading() && !educationError()">
-                        <div *ngIf="education().length > 0; else noEducationItems" class="education-list mt-3">
-                          <div
-                            class="education-item card bg-dark border-secondary mb-3"
-                            *ngFor="let item of education(); trackBy: trackEducationById"
-                          >
-                            <div
-                              class="education-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3"
-                            >
-                              <div>
-                                <h4 class="h6 mb-1 text-white">{{ item.institution }}</h4>
-                                <p class="mb-1 text-secondary" *ngIf="item.degree || item.fieldOfStudy">
-                                  <ng-container *ngIf="item.degree">{{ item.degree }}</ng-container>
-                                  <ng-container *ngIf="item.degree && item.fieldOfStudy"> · </ng-container>
-                                  <ng-container *ngIf="item.fieldOfStudy">{{ item.fieldOfStudy }}</ng-container>
-                                </p>
-                                <p class="mb-0 text-secondary small">
-                                  {{ item.startDate | date:'yyyy' }} – {{ item.endDate | date:'yyyy' }}
-                                </p>
-                              </div>
-                            </div>
-                            <div class="education-item__description card-body pt-0">
-                              <p class="mb-0 text-light" *ngIf="item.description; else noEducationDescription">
-                                {{ item.description }}
-                              </p>
-                              <ng-template #noEducationDescription>
-                                <p class="mb-0 text-secondary">Sin descripción adicional.</p>
-                              </ng-template>
-                            </div>
+                          <div class="col">
+                            <h4 class="profile-detail-label">Biografía</h4>
+                            <p class="mb-0" [class.text-secondary]="!profile()?.biography">
+                              {{ profile()?.biography || 'Aún no has agregado una biografía.' }}
+                            </p>
                           </div>
                         </div>
-                        <ng-template #noEducationItems>
-                          <p class="text-secondary mt-3 mb-0">Aún no has agregado tu educación.</p>
-                        </ng-template>
-                      </ng-container>
-                    </div>
-                  </section>
-
-                  <section
-                    class="profile-section profile-accordion__item profile-section--experience"
-                    [class.profile-accordion__item--expanded]="expandedSections().experience"
-                  >
-                    <div class="profile-section__header">
-                      <button
-                        type="button"
-                        class="profile-section__toggle"
-                        (click)="toggleSection('experience')"
-                        [attr.aria-expanded]="expandedSections().experience"
-                        aria-controls="profile-section-experience"
-                      >
-                        <span class="profile-section__chevron" aria-hidden="true">
-                          <i class="bi bi-chevron-down"></i>
-                        </span>
-                        <span class="profile-section__heading">
-                          <span class="profile-section__eyebrow">Trayectoria</span>
-                          <span class="profile-section__title">Experiencia</span>
-                          <span class="profile-section__subtitle">
-                            <ng-container *ngIf="experienceSummary() as summary; else experienceSummaryFallback">
-                              <ng-container *ngIf="summary.totalRecords > 0; else noExperienceRecords">
-                                {{ summary.totalRecords === 1 ? '1 experiencia laboral' : summary.totalRecords + ' experiencias laborales' }}.
-                                <ng-container *ngIf="summary.invalidDateCount > 0">
-                                  {{ summary.invalidDateCount === 1 ? 'Un registro requiere' : summary.invalidDateCount + ' registros requieren' }} revisar las fechas.
-                                </ng-container>
-                                <ng-container *ngIf="summary.currentCount > 0">
-                                  {{ summary.currentCount === 1 ? 'Actualmente 1 rol activo.' : 'Actualmente ' + summary.currentCount + ' roles activos.' }}
-                                </ng-container>
-                              </ng-container>
-                              <ng-template #noExperienceRecords>
-                                Aún no has agregado tu experiencia laboral.
-                              </ng-template>
-                            </ng-container>
-                            <ng-template #experienceSummaryFallback>
-                              Aún no has agregado tu experiencia laboral.
-                            </ng-template>
-                          </span>
-                        </span>
-                      </button>
-                      <div class="profile-section__actions">
-                        <button
-                          type="button"
-                          class="icon-button icon-button--primary"
-                          (click)="openExperienceCreator()"
-                          aria-label="Agregar experiencia"
-                        >
-                          <i class="bi bi-briefcase"></i>
-                        </button>
                       </div>
                     </div>
+      </section>
 
-                    <div
-                      class="profile-section__body"
-                      id="profile-section-experience"
-                      [class.profile-section__body--collapsed]="!expandedSections().experience"
-                      [attr.aria-hidden]="!expandedSections().experience"
-                    >
-                      <div *ngIf="experienceError()" class="alert alert-danger" role="alert">
-                        {{ experienceError() }}
-                      </div>
+      <section class="profile-section profile-accordion__item profile-section--education"
+        [class.profile-accordion__item--expanded]="expandedSections().education">
+        <div class="profile-section__header">
+          <button type="button" class="profile-section__toggle" (click)="toggleSection('education')"
+            [attr.aria-expanded]="expandedSections().education" aria-controls="profile-section-education">
+            <span class="profile-section__chevron" aria-hidden="true">
+              <i class="bi bi-chevron-down"></i>
+            </span>
+            <span class="profile-section__heading">
+              <span class="profile-section__eyebrow">Formación</span>
+              <span class="profile-section__title">Educación</span>
+              <span class="profile-section__subtitle">
+                <ng-container *ngIf="educationSummary() as summary; else educationSummaryFallback">
+                  <ng-container *ngIf="summary.totalRecords > 0; else noEducationRecords">
+                    {{ summary.totalRecords === 1 ? '1 registro educativo' : summary.totalRecords + ' registros
+                    educativos' }}.
+                    <ng-container *ngIf="summary.invalidDateCount > 0">
+                      {{ summary.invalidDateCount === 1 ? 'Un registro' : summary.invalidDateCount + ' registros' }}
+                      requiere revisar las fechas.
+                    </ng-container>
+                  </ng-container>
+                  <ng-template #noEducationRecords>
+                    Aún no has agregado tu educación.
+                  </ng-template>
+                </ng-container>
+                <ng-template #educationSummaryFallback>
+                  Aún no has agregado tu educación.
+                </ng-template>
+              </span>
+            </span>
+          </button>
+          <div class="profile-section__actions">
+            <button type="button" class="icon-button icon-button--primary" (click)="openEducationCreator()"
+              aria-label="Agregar educación">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+          </div>
+        </div>
 
-                      <div *ngIf="experienceLoading()" class="text-secondary">
-                        Cargando experiencia...
-                      </div>
+        <div class="profile-section__body" id="profile-section-education"
+          [class.profile-section__body--collapsed]="!expandedSections().education"
+          [attr.aria-hidden]="!expandedSections().education">
+          <div *ngIf="educationError()" class="alert alert-danger" role="alert">
+            {{ educationError() }}
+          </div>
 
-                      <ng-container *ngIf="!experienceLoading() && !experienceError()">
-                        <div *ngIf="experience().length > 0; else noExperienceItems" class="experience-list mt-3">
-                          <div
-                            class="experience-item card bg-dark border-secondary mb-3"
-                            *ngFor="let item of experience(); trackBy: trackExperienceById"
-                          >
-                            <div
-                              class="experience-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3"
-                            >
-                              <div>
-                                <h4 class="h6 mb-1 text-white">{{ item.title }}</h4>
-                                <p class="mb-1 text-secondary" *ngIf="item.company || item.location">
-                                  <ng-container *ngIf="item.company">{{ item.company }}</ng-container>
-                                  <ng-container *ngIf="item.company && item.location"> · </ng-container>
-                                  <ng-container *ngIf="item.location">{{ item.location }}</ng-container>
-                                </p>
-                                <p class="mb-0 text-secondary small">
-                                  {{ item.startDate | date:'yyyy' }} –
-                                  <ng-container *ngIf="item.endDate; else currentExperience">{{ item.endDate | date:'yyyy' }}</ng-container>
-                                </p>
-                                <ng-template #currentExperience>Presente</ng-template>
-                              </div>
-                            </div>
-                            <div class="experience-item__description card-body pt-0">
-                              <p class="mb-0 text-light" *ngIf="item.description; else noExperienceDescription">
-                                {{ item.description }}
-                              </p>
-                              <ng-template #noExperienceDescription>
-                                <p class="mb-0 text-secondary">Sin descripción adicional.</p>
-                              </ng-template>
-                            </div>
-                          </div>
-                        </div>
-                        <ng-template #noExperienceItems>
-                          <p class="text-secondary mt-3 mb-0">Aún no has agregado tu experiencia laboral.</p>
-                        </ng-template>
-                      </ng-container>
-                    </div>
-                  </section>
+          <div *ngIf="educationLoading()" class="text-secondary">
+            Cargando educación...
+          </div>
 
-                  <section
-                    class="profile-section profile-accordion__item profile-section--skills"
-                    [class.profile-accordion__item--expanded]="expandedSections().skills"
-                  >
-                    <div class="profile-section__header">
-                      <button
-                        type="button"
-                        class="profile-section__toggle"
-                        (click)="toggleSection('skills')"
-                        [attr.aria-expanded]="expandedSections().skills"
-                        aria-controls="profile-section-skills"
-                      >
-                        <span class="profile-section__chevron" aria-hidden="true">
-                          <i class="bi bi-chevron-down"></i>
-                        </span>
-                        <span class="profile-section__heading">
-                          <span class="profile-section__eyebrow">Talento</span>
-                          <span class="profile-section__title">Habilidades</span>
-                          <span class="profile-section__subtitle">
-                            <ng-container *ngIf="skillsSummary() as summary; else skillsSummaryFallback">
-                              <ng-container *ngIf="summary.totalSkills > 0; else noSkillsRecords">
-                                {{ summary.totalSkills === 1 ? '1 habilidad registrada' : summary.totalSkills + ' habilidades registradas' }}.
-                                <ng-container *ngIf="summary.averageLevel !== null">
-                                  Nivel promedio {{ summary.averageLevel | number:'1.1-1' }} / 5.
-                                </ng-container>
-                                <ng-container *ngIf="summary.maxLevel !== null && summary.minLevel !== null">
-                                  Rango {{ summary.minLevel }}–{{ summary.maxLevel }}.
-                                </ng-container>
-                              </ng-container>
-                              <ng-template #noSkillsRecords>
-                                Aún no has agregado tus habilidades.
-                              </ng-template>
-                            </ng-container>
-                            <ng-template #skillsSummaryFallback>
-                              Aún no has agregado tus habilidades.
-                            </ng-template>
-                          </span>
-                        </span>
-                      </button>
-                      <div class="profile-section__actions">
-                        <button
-                          type="button"
-                          class="icon-button icon-button--primary"
-                          (click)="openSkillCreator()"
-                          aria-label="Agregar habilidad"
-                          [disabled]="skillsSaving()"
-                        >
-                          <i class="bi bi-stars"></i>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div
-                      class="profile-section__body"
-                      id="profile-section-skills"
-                      [class.profile-section__body--collapsed]="!expandedSections().skills"
-                      [attr.aria-hidden]="!expandedSections().skills"
-                    >
-                      <div *ngIf="skillsError()" class="alert alert-danger" role="alert">
-                        {{ skillsError() }}
-                      </div>
-
-                      <div *ngIf="skillsLoading()" class="text-secondary">
-                        Cargando habilidades...
-                      </div>
-
-                      <ng-container *ngIf="!skillsLoading() && !skillsError()">
-                        <div *ngIf="skills().length > 0; else noSkillItems" class="skills-list mt-3">
-                          <div
-                            class="skill-item card bg-dark border-secondary mb-3"
-                            *ngFor="let item of skills(); trackBy: trackSkillById"
-                          >
-                            <div class="skill-item__body card-body">
-                              <div class="skill-item__header">
-                                <div class="skill-item__info">
-                                  <h4 class="h6 mb-1 text-white">{{ item.name }}</h4>
-                                  <p class="mb-0 text-secondary" *ngIf="item.category">{{ item.category }}</p>
-                                </div>
-                                <div class="skill-item__stats">
-                                  <div class="skill-stat">
-                                    <span class="skill-stat__label">Nivel</span>
-                                    <span class="skill-stat__value">{{ item.level !== null ? item.level : '—' }}</span>
-                                  </div>
-                                  <div class="skill-stat">
-                                    <span class="skill-stat__label">Años</span>
-                                    <span class="skill-stat__value">
-                                      {{ item.yearsExperience !== null ? (item.yearsExperience | number:'1.0-1') : '—' }}
-                                    </span>
-                                  </div>
-                                  <div class="skill-stat">
-                                    <span class="skill-stat__label">Respaldos</span>
-                                    <span class="skill-stat__value">{{ item.endorsementCount }}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div class="skill-item__actions">
-                                <button
-                                  type="button"
-                                  class="btn btn-outline-light btn-sm"
-                                  (click)="editSkill(item)"
-                                  [disabled]="skillsSaving() || skillsDeletingId() === item.skillId"
-                                >
-                                  <i class="bi bi-pencil me-1"></i>
-                                  Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  class="btn btn-outline-danger btn-sm"
-                                  (click)="deleteSkill(item)"
-                                  [disabled]="skillsDeletingId() === item.skillId || skillsSaving()"
-                                >
-                                  <span
-                                    *ngIf="skillsDeletingId() === item.skillId"
-                                    class="spinner-border spinner-border-sm me-2"
-                                    role="status"
-                                    aria-hidden="true"
-                                  ></span>
-                                  <ng-container *ngIf="skillsDeletingId() !== item.skillId">
-                                    <i class="bi bi-trash me-1"></i>
-                                  </ng-container>
-                                  {{ skillsDeletingId() === item.skillId ? 'Eliminando...' : 'Eliminar' }}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <ng-template #noSkillItems>
-                          <p class="text-secondary mt-3 mb-0">Aún no has agregado tus habilidades.</p>
-                        </ng-template>
-                      </ng-container>
-                    </div>
-                  </section>
-
-                  <section
-                    class="profile-section profile-accordion__item profile-section--github"
-                    [class.profile-accordion__item--expanded]="expandedSections().github"
-                  >
-                    <div class="profile-section__header">
-                      <button
-                        type="button"
-                        class="profile-section__toggle"
-                        (click)="toggleSection('github')"
-                        [attr.aria-expanded]="expandedSections().github"
-                        aria-controls="profile-section-github"
-                      >
-                        <span class="profile-section__chevron" aria-hidden="true">
-                          <i class="bi bi-chevron-down"></i>
-                        </span>
-                        <span class="profile-section__heading">
-                          <span class="profile-section__eyebrow">Integraciones</span>
-                          <span class="profile-section__title">Cuenta de GitHub</span>
-                          <span class="profile-section__subtitle">
-                            Vincula tu cuenta de GitHub para compartir tus proyectos e identidad profesional en InfoTex.
-                          </span>
-                        </span>
-                      </button>
-                    </div>
-
-                    <div
-                      class="profile-section__body"
-                      id="profile-section-github"
-                      [class.profile-section__body--collapsed]="!expandedSections().github"
-                      [attr.aria-hidden]="!expandedSections().github"
-                    >
-                      <div *ngIf="githubErrorMessage()" class="alert alert-danger" role="alert">
-                        {{ githubErrorMessage() }}
-                      </div>
-
-                      <div class="github-connect">
-                        <div class="github-connect__info">
-                          <span
-                            class="github-connect__badge"
-                            [class.github-connect__badge--linked]="githubAccount().linked"
-                            [class.github-connect__badge--unlinked]="!githubAccount().linked"
-                          >
-                            {{ githubAccount().linked ? 'Vinculada' : 'No vinculada' }}
-                          </span>
-
-                          <ng-container *ngIf="githubAccount().linked; else githubLinkHint">
-                            <a
-                              class="github-connect__username"
-                              [href]="githubAccount().profileUrl || '#'"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <i class="bi bi-github me-1"></i>
-                              {{ githubAccount().username || 'Cuenta vinculada' }}
-                            </a>
-                          </ng-container>
-                          <ng-template #githubLinkHint>
-                            <span class="github-connect__username github-connect__username--placeholder">
-                              Conecta tu cuenta para mostrar tu usuario de GitHub en tu perfil.
-                            </span>
-                          </ng-template>
-
-                          <p class="github-connect__meta text-secondary mb-0" *ngIf="githubAccount().lastSyncedAt">
-                            Última actualización: {{ githubAccount().lastSyncedAt | date: 'short' }}
-                          </p>
-                        </div>
-
-                        <div class="github-connect__actions">
-                          <button
-                            type="button"
-                            class="btn btn-outline-light"
-                            *ngIf="!githubAccount().linked"
-                            (click)="startGithubLink()"
-                            [disabled]="githubLinkLoading()"
-                          >
-                            <span
-                              *ngIf="githubLinkLoading()"
-                              class="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            ></span>
-                            {{ githubLinkLoading() ? 'Conectando…' : 'Vincular con GitHub' }}
-                          </button>
-
-                          <button
-                            type="button"
-                            class="btn btn-outline-danger"
-                            *ngIf="githubAccount().linked"
-                            (click)="unlinkGithubAccount()"
-                            [disabled]="githubUnlinkLoading()"
-                          >
-                            <span
-                              *ngIf="githubUnlinkLoading()"
-                              class="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            ></span>
-                            {{ githubUnlinkLoading() ? 'Desvinculando…' : 'Desvincular cuenta' }}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div class="github-insights" *ngIf="githubAccount().linked">
-                        <div *ngIf="githubDataLoading()" class="github-insights__loading">
-                          <div class="spinner-border text-light" role="status">
-                            <span class="visually-hidden">Cargando repositorios de GitHub…</span>
-                          </div>
-                          <p class="mb-0 text-secondary">Sincronizando tu actividad pública…</p>
-                        </div>
-
-                        <div *ngIf="!githubDataLoading() && githubDataError()" class="alert alert-warning" role="alert">
-                          {{ githubDataError() }}
-                        </div>
-
-                        <ng-container *ngIf="!githubDataLoading() && !githubDataError()">
-                          <section class="github-repos" *ngIf="showGithubRepositories()">
-                            <div class="github-repos__header">
-                              <h4 class="github-repos__title">Repositorios destacados</h4>
-                              <p class="github-repos__subtitle text-secondary mb-0">
-                                Mostramos hasta seis proyectos públicos ordenados por estrellas.
-                              </p>
-                            </div>
-                            <div class="github-repos__grid">
-                              <article
-                                class="github-repo-card"
-                                *ngFor="let repo of githubTopRepositories(); trackBy: trackByRepositoryId"
-                              >
-                                <header class="github-repo-card__header">
-                                  <h5 class="github-repo-card__name mb-1">
-                                    <a
-                                      *ngIf="repo.htmlUrl; else repoName"
-                                      class="github-repo-card__link"
-                                      [href]="repo.htmlUrl || '#'"
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      {{ repo.name }}
-                                    </a>
-                                    <ng-template #repoName>{{ repo.name }}</ng-template>
-                                  </h5>
-                                  <p class="github-repo-card__description text-secondary mb-0">
-                                    {{ repo.description || 'Repositorio sin descripción pública.' }}
-                                  </p>
-                                </header>
-                                <footer class="github-repo-card__meta">
-                                  <span class="github-repo-card__stat" aria-label="Estrellas">
-                                    <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
-                                    {{ repo.stars }}
-                                  </span>
-                                  <span class="github-repo-card__stat" aria-label="Forks">
-                                    <i class="bi bi-git" aria-hidden="true"></i>
-                                    {{ repo.forks }}
-                                  </span>
-                                  <span class="github-repo-card__language" *ngIf="repo.language">
-                                    <span class="github-repo-card__language-dot" aria-hidden="true"></span>
-                                    {{ repo.language }}
-                                  </span>
-                                </footer>
-                              </article>
-                            </div>
-                          </section>
-
-                          <section class="github-languages" *ngIf="showGithubLanguages()">
-                            <div class="github-languages__header">
-                              <h4 class="github-languages__title">Lenguajes más usados</h4>
-                              <p class="github-languages__subtitle text-secondary mb-0">
-                                Calculados a partir del tamaño del código público en GitHub.
-                              </p>
-                            </div>
-                            <div
-                              class="github-languages__bar"
-                              role="img"
-                              [attr.aria-label]="githubLanguagesAriaLabel()"
-                            >
-                              <div
-                                class="github-languages__bar-segment"
-                                *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByLanguageName"
-                                [style.flex-basis.%]="segment.percentage"
-                                [style.backgroundColor]="segment.color || '#586069'"
-                                aria-hidden="true"
-                              ></div>
-                            </div>
-                            <ul class="github-languages__legend">
-                              <li
-                                class="github-languages__legend-item"
-                                *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByLanguageName"
-                              >
-                                <span
-                                  class="github-languages__swatch"
-                                  [style.backgroundColor]="segment.color || '#586069'"
-                                ></span>
-                                <span class="github-languages__label">{{ segment.name }}</span>
-                                <span class="github-languages__percentage">
-                                  {{ segment.percentage | number: '1.0-1' }}%
-                                </span>
-                              </li>
-                            </ul>
-                          </section>
-
-                          <p
-                            *ngIf="!hasGithubInsights()"
-                            class="github-insights__empty text-secondary mb-0"
-                          >
-                            Aún no hay repositorios públicos destacados para mostrar.
-                          </p>
-                        </ng-container>
-                      </div>
-                    </div>
-                  </section>
+          <ng-container *ngIf="!educationLoading() && !educationError()">
+            <div *ngIf="education().length > 0; else noEducationItems" class="education-list mt-3">
+              <div class="education-item card bg-dark border-secondary mb-3"
+                *ngFor="let item of education(); trackBy: trackEducationById">
+                <div
+                  class="education-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+                  <div>
+                    <h4 class="h6 mb-1 text-white">{{ item.institution }}</h4>
+                    <p class="mb-1 text-secondary" *ngIf="item.degree || item.fieldOfStudy">
+                      <ng-container *ngIf="item.degree">{{ item.degree }}</ng-container>
+                      <ng-container *ngIf="item.degree && item.fieldOfStudy"> · </ng-container>
+                      <ng-container *ngIf="item.fieldOfStudy">{{ item.fieldOfStudy }}</ng-container>
+                    </p>
+                    <p class="mb-0 text-secondary small">
+                      {{ item.startDate | date:'yyyy' }} – {{ item.endDate | date:'yyyy' }}
+                    </p>
+                  </div>
                 </div>
-              </ng-container>
-
-              <ng-template #noProfileData>
-                <div class="alert alert-info" role="alert">
-                  Aún no hay información de perfil registrada. Selecciona «Editar perfil» para comenzar.
+                <div class="education-item__description card-body pt-0">
+                  <p class="mb-0 text-light" *ngIf="item.description; else noEducationDescription">
+                    {{ item.description }}
+                  </p>
+                  <ng-template #noEducationDescription>
+                    <p class="mb-0 text-secondary">Sin descripción adicional.</p>
+                  </ng-template>
                 </div>
-              </ng-template>
-            </ng-container>
+              </div>
+            </div>
+            <ng-template #noEducationItems>
+              <p class="text-secondary mt-3 mb-0">Aún no has agregado tu educación.</p>
+            </ng-template>
           </ng-container>
         </div>
-      </div>
+      </section>
+
+      <section class="profile-section profile-accordion__item profile-section--experience"
+        [class.profile-accordion__item--expanded]="expandedSections().experience">
+        <div class="profile-section__header">
+          <button type="button" class="profile-section__toggle" (click)="toggleSection('experience')"
+            [attr.aria-expanded]="expandedSections().experience" aria-controls="profile-section-experience">
+            <span class="profile-section__chevron" aria-hidden="true">
+              <i class="bi bi-chevron-down"></i>
+            </span>
+            <span class="profile-section__heading">
+              <span class="profile-section__eyebrow">Trayectoria</span>
+              <span class="profile-section__title">Experiencia</span>
+              <span class="profile-section__subtitle">
+                <ng-container *ngIf="experienceSummary() as summary; else experienceSummaryFallback">
+                  <ng-container *ngIf="summary.totalRecords > 0; else noExperienceRecords">
+                    {{ summary.totalRecords === 1 ? '1 experiencia laboral' : summary.totalRecords + ' experiencias
+                    laborales' }}.
+                    <ng-container *ngIf="summary.invalidDateCount > 0">
+                      {{ summary.invalidDateCount === 1 ? 'Un registro requiere' : summary.invalidDateCount + '
+                      registros requieren' }} revisar las fechas.
+                    </ng-container>
+                    <ng-container *ngIf="summary.currentCount > 0">
+                      {{ summary.currentCount === 1 ? 'Actualmente 1 rol activo.' : 'Actualmente ' +
+                      summary.currentCount + ' roles activos.' }}
+                    </ng-container>
+                  </ng-container>
+                  <ng-template #noExperienceRecords>
+                    Aún no has agregado tu experiencia laboral.
+                  </ng-template>
+                </ng-container>
+                <ng-template #experienceSummaryFallback>
+                  Aún no has agregado tu experiencia laboral.
+                </ng-template>
+              </span>
+            </span>
+          </button>
+          <div class="profile-section__actions">
+            <button type="button" class="icon-button icon-button--primary" (click)="openExperienceCreator()"
+              aria-label="Agregar experiencia">
+              <i class="bi bi-briefcase"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-section__body" id="profile-section-experience"
+          [class.profile-section__body--collapsed]="!expandedSections().experience"
+          [attr.aria-hidden]="!expandedSections().experience">
+          <div *ngIf="experienceError()" class="alert alert-danger" role="alert">
+            {{ experienceError() }}
+          </div>
+
+          <div *ngIf="experienceLoading()" class="text-secondary">
+            Cargando experiencia...
+          </div>
+
+          <ng-container *ngIf="!experienceLoading() && !experienceError()">
+            <div *ngIf="experience().length > 0; else noExperienceItems" class="experience-list mt-3">
+              <div class="experience-item card bg-dark border-secondary mb-3"
+                *ngFor="let item of experience(); trackBy: trackExperienceById">
+                <div
+                  class="experience-item__body card-body d-flex flex-column flex-md-row justify-content-between align-items-start gap-3">
+                  <div>
+                    <h4 class="h6 mb-1 text-white">{{ item.title }}</h4>
+                    <p class="mb-1 text-secondary" *ngIf="item.company || item.location">
+                      <ng-container *ngIf="item.company">{{ item.company }}</ng-container>
+                      <ng-container *ngIf="item.company && item.location"> · </ng-container>
+                      <ng-container *ngIf="item.location">{{ item.location }}</ng-container>
+                    </p>
+                    <p class="mb-0 text-secondary small">
+                      {{ item.startDate | date:'yyyy' }} –
+                      <ng-container *ngIf="item.endDate; else currentExperience">{{ item.endDate | date:'yyyy'
+                        }}</ng-container>
+                    </p>
+                    <ng-template #currentExperience>Presente</ng-template>
+                  </div>
+                </div>
+                <div class="experience-item__description card-body pt-0">
+                  <p class="mb-0 text-light" *ngIf="item.description; else noExperienceDescription">
+                    {{ item.description }}
+                  </p>
+                  <ng-template #noExperienceDescription>
+                    <p class="mb-0 text-secondary">Sin descripción adicional.</p>
+                  </ng-template>
+                </div>
+              </div>
+            </div>
+            <ng-template #noExperienceItems>
+              <p class="text-secondary mt-3 mb-0">Aún no has agregado tu experiencia laboral.</p>
+            </ng-template>
+          </ng-container>
+        </div>
+      </section>
+
+      <section class="profile-section profile-accordion__item profile-section--skills"
+        [class.profile-accordion__item--expanded]="expandedSections().skills">
+        <div class="profile-section__header">
+          <button type="button" class="profile-section__toggle" (click)="toggleSection('skills')"
+            [attr.aria-expanded]="expandedSections().skills" aria-controls="profile-section-skills">
+            <span class="profile-section__chevron" aria-hidden="true">
+              <i class="bi bi-chevron-down"></i>
+            </span>
+            <span class="profile-section__heading">
+              <span class="profile-section__eyebrow">Talento</span>
+              <span class="profile-section__title">Habilidades</span>
+              <span class="profile-section__subtitle">
+                <ng-container *ngIf="skillsSummary() as summary; else skillsSummaryFallback">
+                  <ng-container *ngIf="summary.totalSkills > 0; else noSkillsRecords">
+                    {{ summary.totalSkills === 1 ? '1 habilidad registrada' : summary.totalSkills + ' habilidades
+                    registradas' }}.
+                    <ng-container *ngIf="summary.averageLevel !== null">
+                      Nivel promedio {{ summary.averageLevel | number:'1.1-1' }} / 5.
+                    </ng-container>
+                    <ng-container *ngIf="summary.maxLevel !== null && summary.minLevel !== null">
+                      Rango {{ summary.minLevel }}–{{ summary.maxLevel }}.
+                    </ng-container>
+                  </ng-container>
+                  <ng-template #noSkillsRecords>
+                    Aún no has agregado tus habilidades.
+                  </ng-template>
+                </ng-container>
+                <ng-template #skillsSummaryFallback>
+                  Aún no has agregado tus habilidades.
+                </ng-template>
+              </span>
+            </span>
+          </button>
+          <div class="profile-section__actions">
+            <button type="button" class="icon-button icon-button--primary" (click)="openSkillCreator()"
+              aria-label="Agregar habilidad" [disabled]="skillsSaving()">
+              <i class="bi bi-stars"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-section__body" id="profile-section-skills"
+          [class.profile-section__body--collapsed]="!expandedSections().skills"
+          [attr.aria-hidden]="!expandedSections().skills">
+          <div *ngIf="skillsError()" class="alert alert-danger" role="alert">
+            {{ skillsError() }}
+          </div>
+
+          <div *ngIf="skillsLoading()" class="text-secondary">
+            Cargando habilidades...
+          </div>
+
+          <ng-container *ngIf="!skillsLoading() && !skillsError()">
+            <div *ngIf="skills().length > 0; else noSkillItems" class="skills-list mt-3">
+              <div class="skill-item card bg-dark border-secondary mb-3"
+                *ngFor="let item of skills(); trackBy: trackSkillById">
+                <div class="skill-item__body card-body">
+                  <div class="skill-item__header">
+                    <div class="skill-item__info">
+                      <h4 class="h6 mb-1 text-white">{{ item.name }}</h4>
+                      <p class="mb-0 text-secondary" *ngIf="item.category">{{ item.category }}</p>
+                    </div>
+                    <div class="skill-item__stats">
+                      <div class="skill-stat">
+                        <span class="skill-stat__label">Nivel</span>
+                        <span class="skill-stat__value">{{ item.level !== null ? item.level : '—' }}</span>
+                      </div>
+                      <div class="skill-stat">
+                        <span class="skill-stat__label">Años</span>
+                        <span class="skill-stat__value">
+                          {{ item.yearsExperience !== null ? (item.yearsExperience | number:'1.0-1') : '—' }}
+                        </span>
+                      </div>
+                      <div class="skill-stat">
+                        <span class="skill-stat__label">Respaldos</span>
+                        <span class="skill-stat__value">{{ item.endorsementCount }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="skill-item__actions">
+                    <button type="button" class="btn btn-outline-light btn-sm" (click)="editSkill(item)"
+                      [disabled]="skillsSaving() || skillsDeletingId() === item.skillId">
+                      <i class="bi bi-pencil me-1"></i>
+                      Editar
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" (click)="deleteSkill(item)"
+                      [disabled]="skillsDeletingId() === item.skillId || skillsSaving()">
+                      <span *ngIf="skillsDeletingId() === item.skillId" class="spinner-border spinner-border-sm me-2"
+                        role="status" aria-hidden="true"></span>
+                      <ng-container *ngIf="skillsDeletingId() !== item.skillId">
+                        <i class="bi bi-trash me-1"></i>
+                      </ng-container>
+                      {{ skillsDeletingId() === item.skillId ? 'Eliminando...' : 'Eliminar' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <ng-template #noSkillItems>
+              <p class="text-secondary mt-3 mb-0">Aún no has agregado tus habilidades.</p>
+            </ng-template>
+          </ng-container>
+        </div>
+      </section>
+
+      <section class="profile-section profile-accordion__item profile-section--github"
+        [class.profile-accordion__item--expanded]="expandedSections().github">
+        <div class="profile-section__header">
+          <button type="button" class="profile-section__toggle" (click)="toggleSection('github')"
+            [attr.aria-expanded]="expandedSections().github" aria-controls="profile-section-github">
+            <span class="profile-section__chevron" aria-hidden="true">
+              <i class="bi bi-chevron-down"></i>
+            </span>
+            <span class="profile-section__heading">
+              <span class="profile-section__eyebrow">Integraciones</span>
+              <span class="profile-section__title">Cuenta de GitHub</span>
+              <span class="profile-section__subtitle">
+                Vincula tu cuenta de GitHub para compartir tus proyectos e identidad profesional en InfoTex.
+              </span>
+            </span>
+          </button>
+        </div>
+
+        <div class="profile-section__body" id="profile-section-github"
+          [class.profile-section__body--collapsed]="!expandedSections().github"
+          [attr.aria-hidden]="!expandedSections().github">
+          <div *ngIf="githubErrorMessage()" class="alert alert-danger" role="alert">
+            {{ githubErrorMessage() }}
+          </div>
+
+          <div class="github-connect">
+            <div class="github-connect__info">
+              <span class="github-connect__badge" [class.github-connect__badge--linked]="githubAccount().linked"
+                [class.github-connect__badge--unlinked]="!githubAccount().linked">
+                {{ githubAccount().linked ? 'Vinculada' : 'No vinculada' }}
+              </span>
+
+              <ng-container *ngIf="githubAccount().linked; else githubLinkHint">
+                <a class="github-connect__username" [href]="githubAccount().profileUrl || '#'" target="_blank"
+                  rel="noopener noreferrer">
+                  <i class="bi bi-github me-1"></i>
+                  {{ githubAccount().username || 'Cuenta vinculada' }}
+                </a>
+              </ng-container>
+              <ng-template #githubLinkHint>
+                <span class="github-connect__username github-connect__username--placeholder">
+                  Conecta tu cuenta para mostrar tu usuario de GitHub en tu perfil.
+                </span>
+              </ng-template>
+
+              <p class="github-connect__meta text-secondary mb-0" *ngIf="githubAccount().lastSyncedAt">
+                Última actualización: {{ githubAccount().lastSyncedAt | date: 'short' }}
+              </p>
+            </div>
+
+            <div class="github-connect__actions">
+              <button type="button" class="btn btn-outline-light" *ngIf="!githubAccount().linked"
+                (click)="startGithubLink()" [disabled]="githubLinkLoading()">
+                <span *ngIf="githubLinkLoading()" class="spinner-border spinner-border-sm me-2" role="status"
+                  aria-hidden="true"></span>
+                {{ githubLinkLoading() ? 'Conectando…' : 'Vincular con GitHub' }}
+              </button>
+
+              <button type="button" class="btn btn-outline-danger" *ngIf="githubAccount().linked"
+                (click)="unlinkGithubAccount()" [disabled]="githubUnlinkLoading()">
+                <span *ngIf="githubUnlinkLoading()" class="spinner-border spinner-border-sm me-2" role="status"
+                  aria-hidden="true"></span>
+                {{ githubUnlinkLoading() ? 'Desvinculando…' : 'Desvincular cuenta' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="github-insights" *ngIf="githubAccount().linked">
+            <div *ngIf="githubDataLoading()" class="github-insights__loading">
+              <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Cargando repositorios de GitHub…</span>
+              </div>
+              <p class="mb-0 text-secondary">Sincronizando tu actividad pública…</p>
+            </div>
+
+            <div *ngIf="!githubDataLoading() && githubDataError()" class="alert alert-warning" role="alert">
+              {{ githubDataError() }}
+            </div>
+
+            <ng-container *ngIf="!githubDataLoading() && !githubDataError()">
+              <section class="github-repos" *ngIf="showGithubRepositories()">
+                <div class="github-repos__header">
+                  <h4 class="github-repos__title">Repositorios destacados</h4>
+                  <p class="github-repos__subtitle text-secondary mb-0">
+                    Mostramos hasta seis proyectos públicos ordenados por estrellas.
+                  </p>
+                </div>
+                <div class="github-repos__grid">
+                  <article class="github-repo-card"
+                    *ngFor="let repo of githubTopRepositories(); trackBy: trackByRepositoryId">
+                    <header class="github-repo-card__header">
+                      <h5 class="github-repo-card__name mb-1">
+                        <a *ngIf="repo.htmlUrl; else repoName" class="github-repo-card__link"
+                          [href]="repo.htmlUrl || '#'" target="_blank" rel="noopener noreferrer">
+                          {{ repo.name }}
+                        </a>
+                        <ng-template #repoName>{{ repo.name }}</ng-template>
+                      </h5>
+                      <p class="github-repo-card__description text-secondary mb-0">
+                        {{ repo.description || 'Repositorio sin descripción pública.' }}
+                      </p>
+                    </header>
+                    <footer class="github-repo-card__meta">
+                      <span class="github-repo-card__stat" aria-label="Estrellas">
+                        <i class="bi bi-star-fill me-1" aria-hidden="true"></i>
+                        {{ repo.stars }}
+                      </span>
+                      <span class="github-repo-card__stat" aria-label="Forks">
+                        <i class="bi bi-git" aria-hidden="true"></i>
+                        {{ repo.forks }}
+                      </span>
+                      <span class="github-repo-card__language" *ngIf="repo.language">
+                        <span class="github-repo-card__language-dot" aria-hidden="true"></span>
+                        {{ repo.language }}
+                      </span>
+                    </footer>
+                  </article>
+                </div>
+              </section>
+
+              <section class="github-languages" *ngIf="showGithubLanguages()">
+                <div class="github-languages__header">
+                  <h4 class="github-languages__title">Lenguajes más usados</h4>
+                  <p class="github-languages__subtitle text-secondary mb-0">
+                    Calculados a partir del tamaño del código público en GitHub.
+                  </p>
+                </div>
+                <div class="github-languages__bar" role="img" [attr.aria-label]="githubLanguagesAriaLabel()">
+                  <div class="github-languages__bar-segment"
+                    *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByLanguageName"
+                    [style.flex-basis.%]="segment.percentage" [style.backgroundColor]="segment.color || '#586069'"
+                    aria-hidden="true"></div>
+                </div>
+                <ul class="github-languages__legend">
+                  <li class="github-languages__legend-item"
+                    *ngFor="let segment of githubLanguageBreakdown(); trackBy: trackByLanguageName">
+                    <span class="github-languages__swatch" [style.backgroundColor]="segment.color || '#586069'"></span>
+                    <span class="github-languages__label">{{ segment.name }}</span>
+                    <span class="github-languages__percentage">
+                      {{ segment.percentage | number: '1.0-1' }}%
+                    </span>
+                  </li>
+                </ul>
+              </section>
+
+              <p *ngIf="!hasGithubInsights()" class="github-insights__empty text-secondary mb-0">
+                Aún no hay repositorios públicos destacados para mostrar.
+              </p>
+            </ng-container>
+          </div>
+        </div>
+      </section>
     </div>
+    </ng-container>
+
+    <ng-template #noProfileData>
+      <div class="alert alert-info" role="alert">
+        Aún no hay información de perfil registrada. Selecciona «Editar perfil» para comenzar.
+      </div>
+    </ng-template>
+    </ng-container>
+    </ng-container>
   </div>
+</div>
+</div>
+</div>
 </div>
 
 <ng-container *ngIf="editorOpen()">
-  <div
-    class="profile-editor"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="profileEditorTitle"
-    aria-describedby="profileEditorDescription"
-  >
+  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="profileEditorTitle"
+    aria-describedby="profileEditorDescription">
     <div class="profile-editor__backdrop" aria-hidden="true" (click)="closeEditor()"></div>
-    <div
-      class="profile-editor__panel"
-      (click)="$event.stopPropagation()"
-      tabindex="-1"
-      #profileEditorPanel
-    >
+    <div class="profile-editor__panel" (click)="$event.stopPropagation()" tabindex="-1" #profileEditorPanel>
       <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
         <div>
           <h2 id="profileEditorTitle" class="h5 mb-1 text-white">Editar perfil</h2>
@@ -791,18 +595,13 @@
         <form class="profile-form" [formGroup]="profileForm" (ngSubmit)="save()" novalidate>
           <div class="mb-3">
             <label for="profileDisplayName" class="form-label">Nombre para mostrar</label>
-            <input
-              id="profileDisplayName"
-              type="text"
-              class="form-control"
-              formControlName="displayName"
-              #profileEditorFirstField
-              [class.is-invalid]="
+            <input id="profileDisplayName" type="text" class="form-control" formControlName="displayName"
+              #profileEditorFirstField [class.is-invalid]="
                 (displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)) ||
                 fieldState().displayName.ok === false
-              "
-            />
-            <div class="invalid-feedback" *ngIf="displayNameControl.hasError('required') && (displayNameControl.dirty || displayNameControl.touched)">
+              " />
+            <div class="invalid-feedback"
+              *ngIf="displayNameControl.hasError('required') && (displayNameControl.dirty || displayNameControl.touched)">
               El nombre para mostrar es obligatorio.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
@@ -814,17 +613,11 @@
             <label for="profileSlug" class="form-label">URL personalizada</label>
             <div class="input-group">
               <span class="input-group-text text-secondary">{{ publicProfileBaseUrl }}</span>
-              <input
-                id="profileSlug"
-                type="text"
-                class="form-control"
-                formControlName="slug"
-                autocomplete="off"
+              <input id="profileSlug" type="text" class="form-control" formControlName="slug" autocomplete="off"
                 [class.is-invalid]="
                   (slugControl.invalid && (slugControl.dirty || slugControl.touched)) ||
                   fieldState().slug.ok === false
-                "
-              />
+                " />
             </div>
             <div class="form-text text-secondary">Usa solo minúsculas, números y guiones. Ej: mi-portafolio.</div>
             <div class="form-text text-muted" *ngIf="slugControl.value">
@@ -833,38 +626,26 @@
             <div class="form-text text-info" *ngIf="slugAvailabilityStatus() === 'checking'">
               Verificando disponibilidad…
             </div>
-            <div
-              class="form-text text-success"
-              *ngIf="
+            <div class="form-text text-success" *ngIf="
                 slugAvailabilityStatus() === 'available' &&
                 slugControl.valid &&
                 slugAvailabilityMessage()
-              "
-            >
+              ">
               {{ slugAvailabilityMessage() }}
             </div>
-            <div
-              class="form-text text-warning"
-              *ngIf="slugAvailabilityStatus() === 'error' && slugAvailabilityMessage()"
-            >
+            <div class="form-text text-warning"
+              *ngIf="slugAvailabilityStatus() === 'error' && slugAvailabilityMessage()">
               {{ slugAvailabilityMessage() }}
             </div>
-            <div
-              class="invalid-feedback d-block"
-              *ngIf="slugAvailabilityStatus() === 'unavailable'"
-            >
+            <div class="invalid-feedback d-block" *ngIf="slugAvailabilityStatus() === 'unavailable'">
               {{ slugAvailabilityMessage() }}
             </div>
-            <div
-              class="invalid-feedback"
-              *ngIf="slugControl.hasError('required') && (slugControl.dirty || slugControl.touched)"
-            >
+            <div class="invalid-feedback"
+              *ngIf="slugControl.hasError('required') && (slugControl.dirty || slugControl.touched)">
               La URL personalizada es obligatoria.
             </div>
-            <div
-              class="invalid-feedback"
-              *ngIf="slugControl.hasError('pattern') && (slugControl.dirty || slugControl.touched)"
-            >
+            <div class="invalid-feedback"
+              *ngIf="slugControl.hasError('pattern') && (slugControl.dirty || slugControl.touched)">
               Ingresa de 3 a 40 caracteres válidos (minúsculas, números y guiones).
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().slug.ok === false">
@@ -874,23 +655,15 @@
 
           <div class="mb-3">
             <label for="profileCareer" class="form-label">Carrera</label>
-            <select
-              id="profileCareer"
-              class="form-select"
-              formControlName="career"
-              aria-label="Selecciona tu carrera"
+            <select id="profileCareer" class="form-select" formControlName="career" aria-label="Selecciona tu carrera"
               [class.is-invalid]="
                 (careerControl.invalid && (careerControl.dirty || careerControl.touched)) ||
                 fieldState().career.ok === false
-              "
-            >
+              ">
               <option value="" disabled [selected]="!careerControl.value">Selecciona una carrera</option>
               <ng-container *ngFor="let group of careerCategoryOptions(); trackBy: trackCareerCategory">
                 <optgroup [label]="group.name">
-                  <option
-                    *ngFor="let option of group.options; trackBy: trackCareerOption"
-                    [value]="option"
-                  >
+                  <option *ngFor="let option of group.options; trackBy: trackCareerOption" [value]="option">
                     {{ option }}
                   </option>
                 </optgroup>
@@ -898,10 +671,8 @@
             </select>
             <div class="form-text text-light" *ngIf="careersLoading()">Cargando carreras...</div>
             <div class="form-text text-warning" *ngIf="careersError()">{{ careersError() }}</div>
-            <div
-              class="invalid-feedback"
-              *ngIf="careerControl.hasError('required') && (careerControl.dirty || careerControl.touched)"
-            >
+            <div class="invalid-feedback"
+              *ngIf="careerControl.hasError('required') && (careerControl.dirty || careerControl.touched)">
               La carrera es obligatoria.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().career.ok === false">
@@ -911,21 +682,18 @@
 
           <div class="mb-3">
             <label for="profileBiography" class="form-label">Biografía</label>
-            <textarea
-              id="profileBiography"
-              class="form-control"
-              formControlName="biography"
-              rows="4"
+            <textarea id="profileBiography" class="form-control" formControlName="biography" rows="4"
               [class.is-invalid]="
                 (biographyControl.invalid && (biographyControl.dirty || biographyControl.touched)) ||
                 fieldState().biography.ok === false
-              "
-            ></textarea>
+              "></textarea>
             <div class="form-text text-light">Escribe al menos 80 caracteres sobre ti.</div>
-            <div class="invalid-feedback" *ngIf="biographyControl.hasError('required') && (biographyControl.dirty || biographyControl.touched)">
+            <div class="invalid-feedback"
+              *ngIf="biographyControl.hasError('required') && (biographyControl.dirty || biographyControl.touched)">
               La biografía es obligatoria.
             </div>
-            <div class="invalid-feedback" *ngIf="biographyControl.hasError('minTrimmedLength') && (biographyControl.dirty || biographyControl.touched)">
+            <div class="invalid-feedback"
+              *ngIf="biographyControl.hasError('minTrimmedLength') && (biographyControl.dirty || biographyControl.touched)">
               La biografía debe contener al menos 80 caracteres.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().biography.ok === false">
@@ -936,24 +704,17 @@
           <div class="row g-3">
             <div class="col-md-6 col-lg-4">
               <div class="form-floating">
-                <select
-                  id="profileCountry"
-                  class="form-select"
-                  formControlName="country"
-                  aria-label="Selecciona tu país"
-                  [class.is-invalid]="
+                <select id="profileCountry" class="form-select" formControlName="country"
+                  aria-label="Selecciona tu país" [class.is-invalid]="
                     (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
                     fieldState().country.ok === false
-                  "
-                >
+                  ">
                   <option [value]="defaultCountry">{{ defaultCountry }}</option>
                 </select>
                 <label for="profileCountry">País</label>
               </div>
-              <div
-                class="invalid-feedback"
-                *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)"
-              >
+              <div class="invalid-feedback"
+                *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
                 El país es obligatorio.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().country.ok === false">
@@ -963,21 +724,13 @@
 
             <div class="col-md-6 col-lg-4">
               <div class="form-floating">
-                <select
-                  id="profileCity"
-                  class="form-select"
-                  formControlName="city"
-                  aria-label="Selecciona tu ciudad"
+                <select id="profileCity" class="form-select" formControlName="city" aria-label="Selecciona tu ciudad"
                   [class.is-invalid]="
                     (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
                     fieldState().city.ok === false
-                  "
-                >
+                  ">
                   <option value="" disabled [selected]="!cityControl.value">Selecciona una ciudad</option>
-                  <option
-                    *ngFor="let option of cityOptions(); trackBy: trackCityOption"
-                    [value]="option"
-                  >
+                  <option *ngFor="let option of cityOptions(); trackBy: trackCityOption" [value]="option">
                     {{ option }}
                   </option>
                 </select>
@@ -985,10 +738,8 @@
               </div>
               <div class="form-text text-light" *ngIf="citiesLoading()">Cargando ciudades...</div>
               <div class="form-text text-warning" *ngIf="citiesError()">{{ citiesError() }}</div>
-              <div
-                class="invalid-feedback"
-                *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)"
-              >
+              <div class="invalid-feedback"
+                *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
                 La ciudad es obligatoria.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().city.ok === false">
@@ -1000,31 +751,19 @@
               <label for="profilePhoneNumber" class="form-label">Teléfono</label>
               <div class="input-group">
                 <span class="input-group-text text-secondary">+56</span>
-                <input
-                  id="profilePhoneNumber"
-                  type="tel"
-                  class="form-control"
-                  maxlength="9"
-                  inputmode="numeric"
-                  formControlName="phoneNumber"
-                  placeholder="912345678"
-                  [class.is-invalid]="
+                <input id="profilePhoneNumber" type="tel" class="form-control" maxlength="9" inputmode="numeric"
+                  formControlName="phoneNumber" placeholder="912345678" [class.is-invalid]="
                     (phoneNumberControl.invalid && (phoneNumberControl.dirty || phoneNumberControl.touched)) ||
                     fieldState().phoneNumber.ok === false
-                  "
-                />
+                  " />
               </div>
               <div class="form-text text-secondary">Ingresa 9 dígitos sin incluir el prefijo.</div>
-              <div
-                class="invalid-feedback"
-                *ngIf="phoneNumberControl.hasError('required') && (phoneNumberControl.dirty || phoneNumberControl.touched)"
-              >
+              <div class="invalid-feedback"
+                *ngIf="phoneNumberControl.hasError('required') && (phoneNumberControl.dirty || phoneNumberControl.touched)">
                 El número de teléfono es obligatorio.
               </div>
-              <div
-                class="invalid-feedback"
-                *ngIf="phoneNumberControl.hasError('pattern') && (phoneNumberControl.dirty || phoneNumberControl.touched)"
-              >
+              <div class="invalid-feedback"
+                *ngIf="phoneNumberControl.hasError('pattern') && (phoneNumberControl.dirty || phoneNumberControl.touched)">
                 Debes ingresar exactamente 9 dígitos.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().phoneNumber.ok === false">
@@ -1035,23 +774,16 @@
 
           <div class="mb-4 mt-3">
             <label for="profileAvatarUrl" class="form-label">URL de la foto de perfil</label>
-            <input
-              id="profileAvatarUrl"
-              type="url"
-              class="form-control"
-              formControlName="avatarUrl"
-              [class.is-invalid]="
+            <input id="profileAvatarUrl" type="url" class="form-control" formControlName="avatarUrl" [class.is-invalid]="
                 (avatarUrlControl.invalid && (avatarUrlControl.dirty || avatarUrlControl.touched)) ||
                 fieldState().avatarUrl.ok === false
-              "
-            />
-            <div class="invalid-feedback" *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
+              " />
+            <div class="invalid-feedback"
+              *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
               La URL de la foto de perfil es obligatoria.
             </div>
-                        <div
-              class="invalid-feedback"
-              *ngIf="avatarUrlControl.hasError('invalidAvatarUrl') && (avatarUrlControl.dirty || avatarUrlControl.touched)"
-            >
+            <div class="invalid-feedback"
+              *ngIf="avatarUrlControl.hasError('invalidAvatarUrl') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
               Ingresa una URL válida (http/https) o una ruta que comience con <code>/</code>.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().avatarUrl.ok === false">
@@ -1059,12 +791,8 @@
             </div>
             <div class="mt-3">
               <span class="form-label d-block mb-2">O selecciona una imagen predeterminada</span>
-              <button
-                type="button"
-                class="btn btn-outline-info avatar-selector-trigger"
-                (click)="openAvatarSelector()"
-                [disabled]="profileForm.disabled"
-              >
+              <button type="button" class="btn btn-outline-info avatar-selector-trigger" (click)="openAvatarSelector()"
+                [disabled]="profileForm.disabled">
                 InfoTex Avatar
               </button>
               <div class="form-text text-light mt-2">
@@ -1077,7 +805,8 @@
             <button type="button" class="btn btn-outline-light" (click)="closeEditor()" [disabled]="saving()">
               Cancelar
             </button>
-            <button type="submit" class="btn btn-primary" [disabled]="profileForm.invalid || profileForm.disabled || saving()">
+            <button type="submit" class="btn btn-primary"
+              [disabled]="profileForm.invalid || profileForm.disabled || saving()">
               <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="saving()"></span>
               Guardar cambios
             </button>
@@ -1088,12 +817,7 @@
   </div>
 </ng-container>
 <ng-container *ngIf="educationEditorOpen()">
-  <div
-    class="profile-editor"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="educationEditorTitle"
-  >
+  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="educationEditorTitle">
     <div class="profile-editor__backdrop" (click)="cancelEducationEdit()"></div>
     <div class="profile-editor__panel" (click)="$event.stopPropagation()">
       <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
@@ -1105,13 +829,8 @@
             Mantén actualizado tu historial académico para mostrar tu formación.
           </p>
         </div>
-        <button
-          type="button"
-          class="btn-close btn-close-white"
-          aria-label="Cerrar"
-          (click)="cancelEducationEdit()"
-          [disabled]="educationSaving()"
-        ></button>
+        <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="cancelEducationEdit()"
+          [disabled]="educationSaving()"></button>
       </div>
       <div class="profile-editor__body">
         <div *ngIf="educationSubmitError()" class="alert alert-danger" role="alert">
@@ -1121,20 +840,12 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="educationInstitution" class="form-label">Institución</label>
-              <select
-                id="educationInstitution"
-                class="form-select"
-                formControlName="institution"
-                [class.is-invalid]="
+              <select id="educationInstitution" class="form-select" formControlName="institution" [class.is-invalid]="
                   educationForm.controls.institution.invalid &&
                   (educationForm.controls.institution.dirty || educationForm.controls.institution.touched)
-                "
-              >
+                ">
                 <option value="" disabled>Selecciona una institución</option>
-                <option
-                  *ngFor="let option of institutionOptions(); trackBy: trackInstitutionOption"
-                  [value]="option"
-                >
+                <option *ngFor="let option of institutionOptions(); trackBy: trackInstitutionOption" [value]="option">
                   {{ option }}
                 </option>
                 <option [value]="otherInstitutionOption">Otra institución</option>
@@ -1148,17 +859,12 @@
               <div class="invalid-feedback">La institución es obligatoria.</div>
               <div class="mt-3" *ngIf="educationInstitutionRequiresDetails()">
                 <label for="educationInstitutionOther" class="form-label">Especifica la institución</label>
-                <input
-                  id="educationInstitutionOther"
-                  type="text"
-                  class="form-control"
-                  formControlName="institutionOther"
-                  [class.is-invalid]="
+                <input id="educationInstitutionOther" type="text" class="form-control"
+                  formControlName="institutionOther" [class.is-invalid]="
                     educationForm.controls.institutionOther.invalid &&
                     (educationForm.controls.institutionOther.dirty ||
                       educationForm.controls.institutionOther.touched)
-                  "
-                />
+                  " />
                 <div class="invalid-feedback">La institución es obligatoria.</div>
               </div>
             </div>
@@ -1170,53 +876,37 @@
               <label for="educationField" class="form-label">Área de estudio</label>
               <input id="educationField" type="text" class="form-control" formControlName="fieldOfStudy" />
             </div>
-              <div class="col-md-3">
-                <label for="educationStart" class="form-label">Año inicio</label>
-                <select id="educationStart" class="form-control" formControlName="startDate">
-                  <option *ngFor="let year of years" [value]="year">{{ year }}</option>
-                </select>
-              </div>
+            <div class="col-md-3">
+              <label for="educationStart" class="form-label">Año inicio</label>
+              <select id="educationStart" class="form-control" formControlName="startDate">
+                <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+              </select>
+            </div>
 
-              <div class="col-md-3">
-                <label for="educationEnd" class="form-label">Año fin</label>
-                <select id="educationEnd" class="form-control" formControlName="endDate">
-                  <option *ngFor="let year of years" [value]="year">{{ year }}</option>
-                </select>
-              </div>
+            <div class="col-md-3">
+              <label for="educationEnd" class="form-label">Año fin</label>
+              <select id="educationEnd" class="form-control" formControlName="endDate">
+                <option *ngFor="let year of years" [value]="year">{{ year }}</option>
+              </select>
+            </div>
 
             <div class="col-12">
               <label for="educationDescription" class="form-label">Descripción</label>
-              <textarea
-                id="educationDescription"
-                class="form-control"
-                rows="3"
-                formControlName="description"
-              ></textarea>
+              <textarea id="educationDescription" class="form-control" rows="3"
+                formControlName="description"></textarea>
               <div class="form-text text-light">
                 Describe tus logros, proyectos o actividades destacadas.
               </div>
             </div>
           </div>
           <div class="d-flex justify-content-end gap-2 mt-4">
-            <button
-              type="button"
-              class="btn btn-outline-light"
-              (click)="cancelEducationEdit()"
-              [disabled]="educationSaving()"
-            >
+            <button type="button" class="btn btn-outline-light" (click)="cancelEducationEdit()"
+              [disabled]="educationSaving()">
               Cancelar
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="educationForm.invalid || educationSaving()"
-            >
-              <span
-                *ngIf="educationSaving()"
-                class="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
+            <button type="submit" class="btn btn-primary" [disabled]="educationForm.invalid || educationSaving()">
+              <span *ngIf="educationSaving()" class="spinner-border spinner-border-sm me-2" role="status"
+                aria-hidden="true"></span>
               {{ educationSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -1236,13 +926,8 @@
           </h2>
           <p class="mb-0 text-secondary">Comparte tu trayectoria profesional y proyectos destacados.</p>
         </div>
-        <button
-          type="button"
-          class="btn-close btn-close-white"
-          aria-label="Cerrar"
-          (click)="cancelExperienceEdit()"
-          [disabled]="experienceSaving()"
-        ></button>
+        <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="cancelExperienceEdit()"
+          [disabled]="experienceSaving()"></button>
       </div>
       <div class="profile-editor__body">
         <div *ngIf="experienceSubmitError()" class="alert alert-danger" role="alert">
@@ -1252,16 +937,10 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label for="experienceTitle" class="form-label">Título o cargo</label>
-              <input
-                id="experienceTitle"
-                type="text"
-                class="form-control"
-                formControlName="title"
-                [class.is-invalid]="
+              <input id="experienceTitle" type="text" class="form-control" formControlName="title" [class.is-invalid]="
                   experienceForm.controls.title.invalid &&
                   (experienceForm.controls.title.dirty || experienceForm.controls.title.touched)
-                "
-              />
+                " />
               <div class="invalid-feedback">El título es obligatorio.</div>
             </div>
             <div class="col-md-6">
@@ -1288,31 +967,19 @@
             </div>
             <div class="col-12">
               <label for="experienceDescription" class="form-label">Descripción</label>
-              <textarea
-                id="experienceDescription"
-                class="form-control"
-                rows="3"
-                formControlName="description"
-              ></textarea>
+              <textarea id="experienceDescription" class="form-control" rows="3"
+                formControlName="description"></textarea>
               <div class="form-text text-light">Describe tus responsabilidades, logros o aprendizajes clave.</div>
             </div>
           </div>
           <div class="d-flex justify-content-end gap-2 mt-4">
-            <button
-              type="button"
-              class="btn btn-outline-light"
-              (click)="cancelExperienceEdit()"
-              [disabled]="experienceSaving()"
-            >
+            <button type="button" class="btn btn-outline-light" (click)="cancelExperienceEdit()"
+              [disabled]="experienceSaving()">
               Cancelar
             </button>
             <button type="submit" class="btn btn-primary" [disabled]="experienceForm.invalid || experienceSaving()">
-              <span
-                *ngIf="experienceSaving()"
-                class="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
+              <span *ngIf="experienceSaving()" class="spinner-border spinner-border-sm me-2" role="status"
+                aria-hidden="true"></span>
               {{ experienceSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -1333,13 +1000,8 @@
           </h2>
           <p class="mb-0 text-secondary">Comparte tus conocimientos y destaca tus fortalezas.</p>
         </div>
-        <button
-          type="button"
-          class="btn-close btn-close-white"
-          aria-label="Cerrar"
-          (click)="cancelSkillEdit()"
-          [disabled]="skillsSaving()"
-        ></button>
+        <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="cancelSkillEdit()"
+          [disabled]="skillsSaving()"></button>
       </div>
       <div class="profile-editor__body">
         <div *ngIf="skillsSubmitError()" class="alert alert-danger" role="alert">
@@ -1349,21 +1011,16 @@
           <div class="row g-3">
             <div class="col-12">
               <label for="skillName" class="form-label">Habilidad</label>
-              <select
-                id="skillName"
-                class="form-select"
-                formControlName="skillId"
-                [disabled]="skillCatalogLoading() || editingSkillId() !== null"
-                [class.is-invalid]="
+              <select id="skillName" class="form-select" formControlName="skillId"
+                [disabled]="skillCatalogLoading() || editingSkillId() !== null" [class.is-invalid]="
                   editingSkillId() === null && skillForm.controls.skillId.invalid &&
                   (skillForm.controls.skillId.dirty || skillForm.controls.skillId.touched)
-                "
-              >
+                ">
                 <option [ngValue]="null" disabled>
                   {{
-                    skillCatalogLoading()
-                      ? 'Cargando catálogo de habilidades...'
-                      : 'Selecciona una habilidad'
+                  skillCatalogLoading()
+                  ? 'Cargando catálogo de habilidades...'
+                  : 'Selecciona una habilidad'
                   }}
                 </option>
                 <ng-container *ngFor="let group of skillCatalogGroups()">
@@ -1384,9 +1041,7 @@
                     Cargando catálogo de habilidades...
                   </ng-container>
                   <ng-template #skillCatalogReady>
-                    <ng-container
-                      *ngIf="skillCatalog().length > 0; else emptySkillCatalog"
-                    >
+                    <ng-container *ngIf="skillCatalog().length > 0; else emptySkillCatalog">
                       Selecciona la habilidad tal como aparece en el catálogo.
                     </ng-container>
                     <ng-template #emptySkillCatalog>
@@ -1406,51 +1061,25 @@
             </div>
             <div class="col-sm-6">
               <label for="skillYears" class="form-label">Años de experiencia</label>
-              <input
-                id="skillYears"
-                type="number"
-                class="form-control"
-                formControlName="yearsExperience"
-                min="0"
-                step="0.1"
-                placeholder="Ej. 3.5"
-              />
+              <input id="skillYears" type="number" class="form-control" formControlName="yearsExperience" min="0"
+                step="0.1" placeholder="Ej. 3.5" />
               <div class="form-text text-light">Puedes ingresar valores decimales para mayor precisión.</div>
             </div>
             <div class="col-sm-6">
               <label for="skillEndorsements" class="form-label">Respaldos</label>
-              <input
-                id="skillEndorsements"
-                type="number"
-                class="form-control"
-                formControlName="endorsementCount"
-                min="0"
-                step="1"
-                placeholder="0"
-              />
+              <input id="skillEndorsements" type="number" class="form-control" formControlName="endorsementCount"
+                min="0" step="1" placeholder="0" />
               <div class="form-text text-light">Cantidad de recomendaciones recibidas en la plataforma.</div>
             </div>
           </div>
           <div class="d-flex justify-content-end gap-2 mt-4">
-            <button
-              type="button"
-              class="btn btn-outline-light"
-              (click)="cancelSkillEdit()"
-              [disabled]="skillsSaving()"
-            >
+            <button type="button" class="btn btn-outline-light" (click)="cancelSkillEdit()" [disabled]="skillsSaving()">
               Cancelar
             </button>
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="skillsSaving() || (editingSkillId() === null && skillForm.controls.skillId.invalid)"
-            >
-              <span
-                *ngIf="skillsSaving()"
-                class="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              ></span>
+            <button type="submit" class="btn btn-primary"
+              [disabled]="skillsSaving() || (editingSkillId() === null && skillForm.controls.skillId.invalid)">
+              <span *ngIf="skillsSaving()" class="spinner-border spinner-border-sm me-2" role="status"
+                aria-hidden="true"></span>
               {{ skillsSaving() ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -1465,23 +1094,16 @@
   <div class="avatar-selector__dialog" role="dialog" aria-modal="true" aria-labelledby="avatarSelectorTitle">
     <div class="avatar-selector__header">
       <h5 id="avatarSelectorTitle" class="mb-0">Elige tu avatar InfoTex</h5>
-      <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="closeAvatarSelector()"></button>
+      <button type="button" class="btn-close btn-close-white" aria-label="Cerrar"
+        (click)="closeAvatarSelector()"></button>
     </div>
     <div class="avatar-selector__body">
       <div class="row g-3">
         <div class="col-6" *ngFor="let avatar of defaultAvatars">
-          <button
-            type="button"
-            class="btn btn-outline-light w-100 avatar-option"
-            [class.active]="isDefaultAvatarSelected(avatar.url)"
-            (click)="selectDefaultAvatar(avatar.url)"
-            [disabled]="profileForm.disabled"
-          >
-            <img
-              [src]="avatar.url"
-              [alt]="'Avatar predeterminado ' + avatar.label"
-              class="img-fluid rounded mb-2"
-            />
+          <button type="button" class="btn btn-outline-light w-100 avatar-option"
+            [class.active]="isDefaultAvatarSelected(avatar.url)" (click)="selectDefaultAvatar(avatar.url)"
+            [disabled]="profileForm.disabled">
+            <img [src]="avatar.url" [alt]="'Avatar predeterminado ' + avatar.label" class="img-fluid rounded mb-2" />
             <span>{{ avatar.label }}</span>
           </button>
         </div>

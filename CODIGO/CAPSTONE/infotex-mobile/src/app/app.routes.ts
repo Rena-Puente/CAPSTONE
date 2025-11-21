@@ -7,8 +7,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    // ❌ NO se puede usar canActivate junto a redirectTo
-    // canActivate: [guestGuard],
+    // OJO: no se puede usar canActivate aquí
     redirectTo: 'login',
   },
   {
@@ -21,13 +20,17 @@ export const routes: Routes = [
     path: 'register',
     canActivate: [guestGuard],
     loadComponent: () =>
-      import('./pages/auth/register/register.page').then((m) => m.RegisterPage),
+      import('./pages/auth/register/register.page').then(
+        (m) => m.RegisterPage
+      ),
   },
   {
     path: 'usuario-logueado',
     canActivate: [authGuard],
     loadChildren: () =>
-      import('./usuario-logueado/usuario-logueado.routes').then((m) => m.routes),
+      import('./pages/usuario-logueado/usuario-logueado.routes').then(
+        (m) => m.routes
+      ),
   },
   {
     path: '**',
