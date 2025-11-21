@@ -1,17 +1,38 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title>
-      Mis empleos
-    </ion-title>
+    <ion-title>Mis empleos</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="loadCompanyJobs($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
   <ion-header collapse="condense">
     <ion-toolbar>
       <ion-title size="large">Mis empleos</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <app-explore-container name="Página de mis empleos"></app-explore-container>
+  <ion-list *ngIf="!loading && jobs.length">
+    <app-job-card
+      *ngFor="let job of jobs"
+      [job]="job"
+      [showFavorite]="false"
+      [showApply]="false"
+      [showManageActions]="true"
+      [disabled]="updating.has(job.id)"
+      (toggleActive)="toggleActive(job)"
+      (remove)="remove(job)"
+      (view)="viewDetail(job)"
+    ></app-job-card>
+  </ion-list>
+
+  <div class="empty-state" *ngIf="!loading && !jobs.length">
+    Aún no has publicado ofertas.
+  </div>
+
+  <div class="loading" *ngIf="loading">Cargando ofertas...</div>
+  <div class="error" *ngIf="error">{{ error }}</div>
 </ion-content>
