@@ -7,6 +7,7 @@ import {
   IonIcon,
   IonLabel,
   IonRouterOutlet,
+  IonPage,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { briefcase, clipboard, person } from 'ionicons/icons';
@@ -28,6 +29,7 @@ const COMPANY_USER_TYPE = 3;
     IonIcon,
     IonLabel,
     IonRouterOutlet,
+    IonPage,
   ],
 })
 export class UsuarioLogueadoPage implements OnInit {
