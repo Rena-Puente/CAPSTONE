@@ -4,6 +4,9 @@
     <p class="admin-careers__subtitle">
       Administra las carreras disponibles para el perfil de los candidatos y los niveles de seniority en las ofertas.
     </p>
+    <div class="admin-careers__actions-bar">
+      <a class="admin-careers__link" routerLink="/admin/resumen-anual">Ver resumen anual</a>
+    </div>
   </header>
 
   <form class="admin-careers__form" [formGroup]="form" (ngSubmit)="createCareer()" novalidate>
