@@ -22,51 +22,87 @@
     </ion-toolbar>
   </ion-header>
 
-  <div class="profile-hero">
+  <div class="profile-hero" *ngIf="!loading && profileData; else profileHeroSkeleton">
     <ion-avatar class="profile-avatar">
-      <ion-icon aria-hidden="true" name="person-circle-outline"></ion-icon>
+      <ng-container *ngIf="profileData.profile.avatarUrl; else avatarPlaceholder">
+        <img
+          [src]="profileData.profile.avatarUrl"
+          [alt]="'Avatar de ' + profileData.profile.displayName"
+        />
+      </ng-container>
+      <ng-template #avatarPlaceholder>
+        <ion-icon aria-hidden="true" name="person-circle-outline"></ion-icon>
+      </ng-template>
     </ion-avatar>
 
     <div class="profile-meta">
-      <h2>Hola nuevamente</h2>
-      <p *ngIf="sessionSummary.isLoggedIn; else loggedOutMessage">
-        Este es el resumen de tu sesión dentro de Infotex Mobile.
-      </p>
-      <ng-template #loggedOutMessage>
-        <p>No has iniciado sesión. Inicia sesión para ver los detalles de tu perfil.</p>
-      </ng-template>
+      <h2>{{ profileData.profile.displayName }}</h2>
+      <p class="career">{{ profileData.profile.career }}</p>
+      <p class="location">{{ profileData.profile.city }} · {{ profileData.profile.country }}</p>
+      <p class="slug">Slug: {{ profileData.profile.slug || 'No disponible' }}</p>
 
-      <ion-badge [color]="sessionSummary.isLoggedIn ? 'success' : 'medium'">
-        {{ sessionSummary.isLoggedIn ? 'Sesión activa' : 'Sesión cerrada' }}
-      </ion-badge>
+      <div class="badges">
+        <ion-badge [color]="sessionSummary.isLoggedIn ? 'success' : 'medium'">
+          {{ sessionSummary.isLoggedIn ? 'Sesión activa' : 'Sesión cerrada' }}
+        </ion-badge>
 
-      <ion-badge [color]="sessionSummary.isProfileComplete ? 'success' : 'warning'">
-        {{ profileStatusLabel }}
-      </ion-badge>
+        <ion-badge [color]="sessionSummary.isProfileComplete ? 'success' : 'warning'">
+          {{ profileStatusLabel }}
+        </ion-badge>
+      </div>
     </div>
   </div>
+
+  <ng-template #profileHeroSkeleton>
+    <div class="profile-hero">
+      <ion-avatar class="profile-avatar">
+        <ion-skeleton-text animated style="width: 100%; height: 100%"></ion-skeleton-text>
+      </ion-avatar>
+      <div class="profile-meta">
+        <h2><ion-skeleton-text animated style="width: 150px"></ion-skeleton-text></h2>
+        <p><ion-skeleton-text animated style="width: 120px"></ion-skeleton-text></p>
+        <p><ion-skeleton-text animated style="width: 180px"></ion-skeleton-text></p>
+        <div class="badges">
+          <ion-skeleton-text animated style="width: 80px"></ion-skeleton-text>
+          <ion-skeleton-text animated style="width: 80px"></ion-skeleton-text>
+        </div>
+      </div>
+    </div>
+  </ng-template>
 
   <ion-grid>
     <ion-row>
       <ion-col size="12">
+        <ion-card *ngIf="profileError" color="warning">
+          <ion-card-header>
+            <ion-card-title>Problemas al cargar el perfil</ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            {{ profileError }}
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <ion-row *ngIf="profileData">
+      <ion-col size="12">
         <ion-card>
           <ion-card-header>
             <ion-card-subtitle>Información básica</ion-card-subtitle>
-            <ion-card-title>Resumen de usuario</ion-card-title>
+            <ion-card-title>Sobre mí</ion-card-title>
           </ion-card-header>
 
           <ion-card-content>
+            <p class="bio">{{ profileData.profile.biography }}</p>
+
             <ion-list lines="full">
               <ion-item>
                 <ion-icon slot="start" name="person-circle-outline" aria-hidden="true"></ion-icon>
                 <ion-label>
                   <h3>Identificador</h3>
-                  <p *ngIf="!loading; else userIdSkeleton">
+                  <p>
                     {{ sessionSummary.userId !== null ? ('Usuario #' + sessionSummary.userId) : 'No disponible' }}
                   </p>
-                  <ng-template #userIdSkeleton>
-                    <ion-skeleton-text animated style="width: 120px"></ion-skeleton-text>
-                  </ng-template>
                 </ion-label>
                 <ion-badge slot="end" color="primary">Usuario</ion-badge>
               </ion-item>
@@ -75,10 +111,7 @@
                 <ion-icon slot="start" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
                 <ion-label>
                   <h3>Tipo de usuario</h3>
-                  <p *ngIf="!loading; else userTypeSkeleton">{{ userTypeLabel }}</p>
-                  <ng-template #userTypeSkeleton>
-                    <ion-skeleton-text animated style="width: 140px"></ion-skeleton-text>
-                  </ng-template>
+                  <p>{{ userTypeLabel }}</p>
                 </ion-label>
               </ion-item>
 
@@ -86,32 +119,106 @@
                 <ion-icon slot="start" name="business-outline" aria-hidden="true"></ion-icon>
                 <ion-label>
                   <h3>Empresa asociada</h3>
-                  <p *ngIf="!loading; else companySkeleton">
-                    {{ sessionSummary.companyId !== null ? ('ID de empresa #' + sessionSummary.companyId) : 'No asociado' }}
-                  </p>
-                  <ng-template #companySkeleton>
-                    <ion-skeleton-text animated style="width: 160px"></ion-skeleton-text>
-                  </ng-template>
+                  <p>{{ sessionSummary.companyId !== null ? ('ID de empresa #' + sessionSummary.companyId) : 'No asociado' }}</p>
                 </ion-label>
               </ion-item>
 
               <ion-item>
-                <ion-icon slot="start" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+                <ion-icon slot="start" name="call-outline" aria-hidden="true"></ion-icon>
                 <ion-label>
-                  <h3>Estado del perfil</h3>
-                  <p *ngIf="!loading; else profileSkeleton">{{ profileStatusLabel }}</p>
-                  <ng-template #profileSkeleton>
-                    <ion-skeleton-text animated style="width: 100px"></ion-skeleton-text>
-                  </ng-template>
+                  <h3>Contacto</h3>
+                  <p>{{ profileData.profile.phoneNumber }}</p>
                 </ion-label>
-                <ion-badge
-                  slot="end"
-                  [color]="sessionSummary.isProfileComplete ? 'success' : 'warning'"
-                >
-                  {{ sessionSummary.isProfileComplete ? 'Completo' : 'Pendiente' }}
-                </ion-badge>
               </ion-item>
             </ion-list>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <ion-row *ngIf="profileData">
+      <ion-col size="12" sizeMd="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Formación</ion-card-subtitle>
+            <ion-card-title>Educación</ion-card-title>
+          </ion-card-header>
+
+          <ion-card-content>
+            <ng-container *ngIf="profileData.education.length; else noEducation">
+              <ion-list lines="full">
+                <ion-item *ngFor="let education of profileData.education; trackBy: trackById">
+                  <ion-icon slot="start" name="school-outline" aria-hidden="true"></ion-icon>
+                  <ion-label>
+                    <h3>{{ education.institution }}</h3>
+                    <p>{{ education.grado }} · {{ education.fieldOfStudy }}</p>
+                    <p class="meta">{{ formatDateRange(education.startDate, education.endDate) }}</p>
+                  </ion-label>
+                </ion-item>
+              </ion-list>
+            </ng-container>
+            <ng-template #noEducation>
+              <p class="muted">Aún no registras estudios.</p>
+            </ng-template>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+
+      <ion-col size="12" sizeMd="6">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Trayectoria</ion-card-subtitle>
+            <ion-card-title>Experiencia</ion-card-title>
+          </ion-card-header>
+
+          <ion-card-content>
+            <ng-container *ngIf="profileData.experience.length; else noExperience">
+              <ion-list lines="full">
+                <ion-item *ngFor="let job of profileData.experience; trackBy: trackById">
+                  <ion-icon slot="start" name="briefcase-outline" aria-hidden="true"></ion-icon>
+                  <ion-label>
+                    <h3>{{ job.title }}</h3>
+                    <p>{{ job.company }}</p>
+                    <p class="meta">{{ job.location }}</p>
+                    <p class="meta">{{ formatDateRange(job.startDate, job.endDate) }}</p>
+                    <p class="muted description">{{ job.description }}</p>
+                  </ion-label>
+                </ion-item>
+              </ion-list>
+            </ng-container>
+            <ng-template #noExperience>
+              <p class="muted">Todavía no agregas experiencia.</p>
+            </ng-template>
+          </ion-card-content>
+        </ion-card>
+      </ion-col>
+    </ion-row>
+
+    <ion-row *ngIf="profileData">
+      <ion-col size="12">
+        <ion-card>
+          <ion-card-header>
+            <ion-card-subtitle>Lo que mejor sabes hacer</ion-card-subtitle>
+            <ion-card-title>Habilidades</ion-card-title>
+          </ion-card-header>
+
+          <ion-card-content>
+            <ng-container *ngIf="profileData.skills.length; else noSkills">
+              <ion-list>
+                <ion-item *ngFor="let skill of profileData.skills; trackBy: trackById">
+                  <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
+                  <ion-label>
+                    <h3>{{ skill.name }}</h3>
+                    <p>{{ skill.category }}</p>
+                    <p class="meta">Nivel {{ skill.level }} · {{ skill.yearsExperience }} años de experiencia</p>
+                  </ion-label>
+                  <ion-badge slot="end" color="tertiary">{{ skill.endorsementCount }} apoyo(s)</ion-badge>
+                </ion-item>
+              </ion-list>
+            </ng-container>
+            <ng-template #noSkills>
+              <p class="muted">No hay habilidades registradas.</p>
+            </ng-template>
           </ion-card-content>
         </ion-card>
       </ion-col>

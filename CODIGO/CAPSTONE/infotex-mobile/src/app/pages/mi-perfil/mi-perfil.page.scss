@@ -34,8 +34,44 @@ ion-badge + ion-badge {
   margin-left: 0.35rem;
 }
 
+.profile-meta .career {
+  font-weight: 600;
+  color: var(--ion-color-dark-shade);
+}
+
+.profile-meta .slug {
+  font-size: 0.9rem;
+  color: var(--ion-color-medium-shade);
+}
+
+.profile-meta .badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 ion-card .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.bio {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: var(--ion-color-dark-shade);
+}
+
+.muted {
+  color: var(--ion-color-medium);
+  margin: 0;
+}
+
+.meta {
+  color: var(--ion-color-medium);
+  font-size: 0.95rem;
+}
+
+.description {
+  margin-top: 0.35rem;
 }

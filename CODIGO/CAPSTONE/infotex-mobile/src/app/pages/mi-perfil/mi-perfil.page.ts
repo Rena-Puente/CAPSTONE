@@ -26,13 +26,25 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
+  briefcaseOutline,
   businessOutline,
+  callOutline,
   logInOutline,
   personCircleOutline,
   refreshOutline,
+  schoolOutline,
   shieldCheckmarkOutline,
+  sparklesOutline,
 } from 'ionicons/icons';
+import { firstValueFrom } from 'rxjs';
 import { SessionService } from '../../core/services/session.service';
+import {
+  ProfileEducationEntry,
+  ProfileExperienceEntry,
+  ProfileService,
+  ProfileSkillEntry,
+  UserProfileData,
+} from '../../core/services/profile.service';
 
 @Component({
   selector: 'app-mi-perfil',
@@ -67,6 +79,7 @@ import { SessionService } from '../../core/services/session.service';
 })
 export class MiPerfilPage implements OnInit {
   private readonly sessionService = inject(SessionService);
+  private readonly profileService = inject(ProfileService);
 
   protected loading = true;
   protected sessionSummary: {
@@ -75,35 +88,44 @@ export class MiPerfilPage implements OnInit {
     companyId: number | null;
     isProfileComplete: boolean | null;
     isLoggedIn: boolean;
+    profileSlug: string | null;
   } = {
     userId: null,
     userType: null,
     companyId: null,
     isProfileComplete: null,
     isLoggedIn: false,
+    profileSlug: null,
   };
+
+  protected profileData: UserProfileData | null = null;
+  protected profileError: string | null = null;
 
   constructor() {
     addIcons({
+      briefcaseOutline,
       personCircleOutline,
       businessOutline,
       shieldCheckmarkOutline,
+      callOutline,
+      schoolOutline,
+      sparklesOutline,
       refreshOutline,
       logInOutline,
     });
   }
 
   ngOnInit(): void {
-    void this.loadSessionSummary();
+    void this.loadProfile();
   }
 
   protected async refresh(event: CustomEvent): Promise<void> {
-    await this.loadSessionSummary();
+    await this.loadProfile();
     event.detail.complete();
   }
 
   protected async refreshNow(): Promise<void> {
-    await this.loadSessionSummary();
+    await this.loadProfile();
   }
 
   protected get userTypeLabel(): string {
@@ -126,15 +148,45 @@ export class MiPerfilPage implements OnInit {
     return this.sessionSummary.isProfileComplete ? 'Completo' : 'Pendiente';
   }
 
-  private async loadSessionSummary(): Promise<void> {
-    this.loading = true;
+  protected trackById(_: number, item: ProfileEducationEntry | ProfileExperienceEntry | ProfileSkillEntry): number {
+    return item.id;
+  }
 
-    const [userId, userType, companyId, isProfileComplete, isLoggedIn] = await Promise.all([
+  protected formatDateRange(start: string | null, end: string | null): string {
+    const startLabel = this.formatDate(start);
+    const endLabel = end ? this.formatDate(end) : 'Actualidad';
+
+    if (!startLabel && !endLabel) {
+      return 'Sin fecha';
+    }
+
+    return [startLabel || 'Sin inicio', endLabel || 'Sin fin'].join(' - ');
+  }
+
+  private formatDate(value: string | null): string {
+    if (!value) {
+      return '';
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '';
+    }
+
+    return parsed.toLocaleDateString('es-CL', { year: 'numeric', month: 'short' });
+  }
+
+  private async loadProfile(): Promise<void> {
+    this.loading = true;
+    this.profileError = null;
+
+    const [userId, userType, companyId, isProfileComplete, isLoggedIn, profileSlug] = await Promise.all([
       this.sessionService.getUserId(),
       this.sessionService.getUserType(),
       this.sessionService.getCompanyId(),
       this.sessionService.getProfileCompletionStatus(),
       this.sessionService.isLoggedIn(),
+      this.sessionService.getProfileSlug(),
     ]);
 
     this.sessionSummary = {
@@ -143,8 +195,26 @@ export class MiPerfilPage implements OnInit {
       companyId,
       isProfileComplete,
       isLoggedIn,
+      profileSlug,
     };
 
-    this.loading = false;
+    if (!profileSlug) {
+      this.profileData = null;
+      this.profileError = 'No encontramos el perfil del usuario logueado.';
+      this.loading = false;
+      return;
+    }
+
+    try {
+      this.profileData = await firstValueFrom(this.profileService.getProfile(profileSlug));
+    } catch (error) {
+      const errorMessage =
+        (error as Error)?.message ?? 'No pudimos recuperar la información de tu perfil.';
+      this.profileData = null;
+      this.profileError = errorMessage;
+    } finally {
+      this.loading = false;
+    }
+
   }
 }

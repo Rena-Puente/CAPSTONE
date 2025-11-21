@@ -60,7 +60,8 @@ describe('AuthService', () => {
       userType: 'admin',
       userId: null,
       companyId: null,
-      isProfileComplete: true
+      isProfileComplete: true,
+      profileSlug: null,
     });
     expect(sessionService.setSession).toHaveBeenCalledWith({
       tokens: { accessToken: 'access-123', refreshToken: 'refresh-456' },
@@ -68,6 +69,7 @@ describe('AuthService', () => {
       userType: 'admin',
       companyId: null,
       isProfileComplete: true,
+      profileSlug: null,
     });
   });
 
@@ -99,7 +101,8 @@ describe('AuthService', () => {
       userType: 'candidate',
       userId: null,
       companyId: null,
-      isProfileComplete: false
+      isProfileComplete: false,
+      profileSlug: null,
     });
     expect(sessionService.setSession).toHaveBeenCalledWith({
       tokens: { accessToken: 'nested-access', refreshToken: 'nested-refresh' },
@@ -107,6 +110,7 @@ describe('AuthService', () => {
       userType: 'candidate',
       companyId: null,
       isProfileComplete: false,
+      profileSlug: null,
     });
   });
 
