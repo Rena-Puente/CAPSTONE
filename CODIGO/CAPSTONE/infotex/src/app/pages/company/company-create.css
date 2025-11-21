@@ -93,6 +93,11 @@
   color: #ffa198;
 }
 
+.company-card .form-text {
+  color: #8b949e;
+  margin-top: 0.35rem;
+}
+
 .company-card .btn-primary {
   background-color: #238636;
   border-color: #2ea043;
