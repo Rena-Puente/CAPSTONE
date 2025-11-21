@@ -85,12 +85,12 @@ export function normalizeResumenEjecutivo(payload: unknown): ResumenEjecutivo {
   const data = (payload && typeof payload === 'object' ? payload : {}) as Record<string, unknown>;
 
   return {
-    postulantes_por_mes: normalizeSerie(data.postulantes_por_mes),
-    empresas_por_mes: normalizeSerie(data.empresas_por_mes),
-    ofertas_por_mes: normalizeSerie(data.ofertas_por_mes),
-    postulaciones_por_mes: normalizeSerie(data.postulaciones_por_mes),
-    avg_postulantes_por_oferta: normalizeMetric(data.avg_postulantes_por_oferta),
-    ofertas_activas: normalizeMetric(data.ofertas_activas),
-    empresas_inactivas: normalizeMetric(data.empresas_inactivas)
+    postulantes_por_mes: normalizeSerie(data['postulantes_por_mes']),
+    empresas_por_mes: normalizeSerie(data['empresas_por_mes']),
+    ofertas_por_mes: normalizeSerie(data['ofertas_por_mes']),
+    postulaciones_por_mes: normalizeSerie(data['postulaciones_por_mes']),
+    avg_postulantes_por_oferta: normalizeMetric(data['avg_postulantes_por_oferta']),
+    ofertas_activas: normalizeMetric(data['ofertas_activas']),
+    empresas_inactivas: normalizeMetric(data['empresas_inactivas'])
   };
 }

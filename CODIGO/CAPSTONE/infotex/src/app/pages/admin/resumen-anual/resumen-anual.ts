@@ -37,13 +37,14 @@ function isoDateValidator() {
 function dateRangeValidator(): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const group = control as ReturnType<FormBuilder['group']>;
-
-    if (!fechaInicio || !fechaFin) {
+    const fechaInicioControl = group.get('fechaInicio');
+    const fechaFinControl = group.get('fechaFin');
+    if (!fechaInicioControl || !fechaFinControl) {
       return null;
     }
 
-    const start = fechaInicio.value;
-    const end = fechaFin.value;
+    const start = fechaInicioControl.value;
+    const end = fechaFinControl.value;
 
     if (!start || !end) {
       return null;
