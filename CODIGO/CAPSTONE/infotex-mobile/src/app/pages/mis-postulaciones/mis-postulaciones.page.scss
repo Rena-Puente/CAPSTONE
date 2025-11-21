@@ -1,8 +1,4 @@
-ion-content.content-scroll::part(scroll) {
-  padding: 1rem;
-  overflow-y: auto;
-}
-ion-content {
+ion-content.content-scroll {
   --padding-top: 16px;
   --padding-start: 16px;
   --padding-end: 16px;

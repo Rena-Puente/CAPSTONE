@@ -227,6 +227,19 @@ body {
   font-weight: 600;
 }
 
+/* Utilidad global para normalizar padding y comportamiento de scroll */
+.scrollable-page {
+  --padding-top: 16px;
+  --padding-end: 16px;
+  --padding-bottom: 20px;
+  --padding-start: 16px;
+}
+
+.scrollable-page::part(scroll) {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (min-width: 768px) {
   .auth-shell {
     padding: 2.5rem;
