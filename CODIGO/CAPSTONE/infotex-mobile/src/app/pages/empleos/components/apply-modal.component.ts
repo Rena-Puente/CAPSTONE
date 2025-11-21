@@ -43,7 +43,7 @@ import { Job, JobQuestion } from '../../../core/models';
           </ion-item>
 
           <ion-list *ngIf="job?.questions?.length">
-            <ion-item lines="inset" *ngFor="let question of job.questions; let i = index">
+            <ion-item lines="inset" *ngFor="let question of job?.questions; let i = index">
               <ion-label position="stacked">
                 {{ question.text }}
                 <span *ngIf="question.required" class="required">*</span>

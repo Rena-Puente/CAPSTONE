@@ -25,9 +25,9 @@ addIcons({ heartOutline, heartSharp, eyeOutline, createOutline, trashOutline });
   template: `
     <ion-card>
       <ion-card-header>
-        <ion-card-title>{{ job?.title || 'Oferta sin título' }}</ion-card-title>
+        <ion-card-title>{{ job.title || 'Oferta sin título' }}</ion-card-title>
         <ion-card-subtitle>
-          {{ job?.company?.name || 'Empresa no disponible' }}
+          {{ job.company?.name || 'Empresa no disponible' }}
         </ion-card-subtitle>
       </ion-card-header>
 
@@ -35,13 +35,13 @@ addIcons({ heartOutline, heartSharp, eyeOutline, createOutline, trashOutline });
         <ion-item lines="none">
           <ion-label>
             <div class="location">
-              {{ job?.city || 'Ubicación no especificada' }}
-              <ng-container *ngIf="job?.country"> - {{ job?.country }}</ng-container>
+              {{ job.city || 'Ubicación no especificada' }}
+              <ng-container *ngIf="job.country"> - {{ job.country }}</ng-container>
             </div>
             <div class="meta">
-              <span>{{ job?.seniority || 'Seniority no definido' }}</span>
+              <span>{{ job.seniority || 'Seniority no definido' }}</span>
               <span>•</span>
-              <span>{{ job?.contractType || 'Contrato no definido' }}</span>
+              <span>{{ job.contractType || 'Contrato no definido' }}</span>
             </div>
           </ion-label>
         </ion-item>
@@ -71,7 +71,7 @@ addIcons({ heartOutline, heartSharp, eyeOutline, createOutline, trashOutline });
           <div *ngIf="showManageActions" class="manage-actions">
             <ion-button size="small" color="medium" fill="outline" (click)="toggleActive.emit(job)">
               <ion-icon slot="start" name="create-outline"></ion-icon>
-              {{ job?.active ? 'Desactivar' : 'Activar' }}
+              {{ job.active ? 'Desactivar' : 'Activar' }}
             </ion-button>
             <ion-button size="small" color="danger" fill="outline" (click)="remove.emit(job)">
               <ion-icon slot="start" name="trash-outline"></ion-icon>
