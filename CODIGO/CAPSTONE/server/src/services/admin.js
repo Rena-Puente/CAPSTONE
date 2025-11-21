@@ -1,4 +1,5 @@
 const { executeQuery, oracledb } = require('../db/oracle');
+const { readOracleClob } = require('../utils/oracle');
 
 const defaultExecutiveSummary = Object.freeze({
   postulantes_por_mes: [],
@@ -15,7 +16,18 @@ function parseExecutiveSummary(rawValue) {
     return { raw: null, parsed: { ...defaultExecutiveSummary } };
   }
 
-  const raw = typeof rawValue === 'string' ? rawValue : JSON.stringify(rawValue);
+  let raw;
+
+  if (typeof rawValue === 'string') {
+    raw = rawValue;
+  } else {
+    try {
+      raw = JSON.stringify(rawValue);
+    } catch (error) {
+      console.warn('[Admin] Failed to serialize executive summary payload, falling back to defaults', error);
+      raw = '';
+    }
+  }
 
   try {
     const parsed = JSON.parse(raw);
@@ -41,7 +53,8 @@ async function fetchExecutiveSummary(startDate, endDate) {
   );
 
   const outBinds = result.outBinds || {};
-  const { raw, parsed } = parseExecutiveSummary(outBinds.summary ?? null);
+  const rawSummary = await readOracleClob(outBinds.summary ?? null);
+  const { raw, parsed } = parseExecutiveSummary(rawSummary);
 
   return { raw, parsed };
 }
