@@ -62,9 +62,8 @@ export class EmpleosPage implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.content?.getScrollElement().then((element) => {
-      this.presentingElement = element ?? null;
-    });
+    const routerOutlet = document.querySelector('ion-router-outlet');
+    this.presentingElement = (routerOutlet as HTMLElement) ?? null;
   }
 
   protected loadJobs(event?: CustomEvent): void {
