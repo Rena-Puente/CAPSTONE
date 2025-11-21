@@ -3,4 +3,5 @@ export const environment = {
   apiUrl: 'https://infotex.cl.ngrok.pizza'
 };
 
-export const API_AUTH_BASE = `${environment.apiUrl}/auth`;
+export const API_BASE = environment.apiUrl;
+export const API_AUTH_BASE = `${API_BASE}/auth`;
