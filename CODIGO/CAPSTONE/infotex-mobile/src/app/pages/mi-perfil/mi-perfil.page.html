@@ -1,19 +1,17 @@
-<ion-page>
-  <ion-header [translucent]="true">
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      Mi perfil
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" [scrollY]="true">
+  <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title>
-        Mi perfil
-      </ion-title>
+      <ion-title size="large">Mi perfil</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <ion-content [fullscreen]="true" [scrollY]="true">
-    <ion-header collapse="condense">
-      <ion-toolbar>
-        <ion-title size="large">Mi perfil</ion-title>
-      </ion-toolbar>
-    </ion-header>
-
-    <app-explore-container name="Página de mi perfil"></app-explore-container>
-  </ion-content>
-</ion-page>
+  <app-explore-container name="Página de mi perfil"></app-explore-container>
+</ion-content>

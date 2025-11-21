@@ -1,54 +1,52 @@
-<ion-page>
-  <ion-header [translucent]="true">
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Mis postulaciones</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" [scrollY]="true" class="content-scroll">
+  <ion-refresher slot="fixed" (ionRefresh)="loadApplications($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <ion-header collapse="condense">
     <ion-toolbar>
-      <ion-title>Mis postulaciones</ion-title>
+      <ion-title size="large">Mis postulaciones</ion-title>
     </ion-toolbar>
   </ion-header>
 
-  <ion-content [fullscreen]="true" [scrollY]="true" class="content-scroll">
-    <ion-refresher slot="fixed" (ionRefresh)="loadApplications($event)">
-      <ion-refresher-content></ion-refresher-content>
-    </ion-refresher>
+  <ion-list *ngIf="!loading && applications.length">
+    <ion-item
+      button
+      detail="false"
+      *ngFor="let application of applications"
+      (click)="viewOffer(application)"
+    >
+      <ion-label>
+        <h2>{{ application.offerTitle || 'Oferta sin título' }}</h2>
+        <p>{{ application.companyName || 'Empresa no disponible' }}</p>
+        <p class="meta">
+          <span>{{ application.city || 'Ciudad no especificada' }}</span>
+          <span *ngIf="application.country">- {{ application.country }}</span>
+          <span *ngIf="application.locationType">• {{ application.locationType }}</span>
+          <span *ngIf="application.seniority">• {{ application.seniority }}</span>
+          <span *ngIf="application.contractType">• {{ application.contractType }}</span>
+        </p>
+        <p class="dates">
+          Postulada: {{ application.submittedAt || 'Sin fecha' }}
+          <span *ngIf="application.updatedAt"> • Actualizada: {{ application.updatedAt }}</span>
+        </p>
+      </ion-label>
+      <ion-badge [color]="application.offerActive ? 'success' : 'medium'" slot="end">
+        {{ application.status || (application.offerActive ? 'Enviada' : 'Cerrada') }}
+      </ion-badge>
+    </ion-item>
+  </ion-list>
 
-    <ion-header collapse="condense">
-      <ion-toolbar>
-        <ion-title size="large">Mis postulaciones</ion-title>
-      </ion-toolbar>
-    </ion-header>
+  <div class="empty-state" *ngIf="!loading && !applications.length && !error">
+    Aún no has enviado postulaciones.
+  </div>
 
-    <ion-list *ngIf="!loading && applications.length">
-      <ion-item
-        button
-        detail="false"
-        *ngFor="let application of applications"
-        (click)="viewOffer(application)"
-      >
-        <ion-label>
-          <h2>{{ application.offerTitle || 'Oferta sin título' }}</h2>
-          <p>{{ application.companyName || 'Empresa no disponible' }}</p>
-          <p class="meta">
-            <span>{{ application.city || 'Ciudad no especificada' }}</span>
-            <span *ngIf="application.country">- {{ application.country }}</span>
-            <span *ngIf="application.locationType">• {{ application.locationType }}</span>
-            <span *ngIf="application.seniority">• {{ application.seniority }}</span>
-            <span *ngIf="application.contractType">• {{ application.contractType }}</span>
-          </p>
-          <p class="dates">
-            Postulada: {{ application.submittedAt || 'Sin fecha' }}
-            <span *ngIf="application.updatedAt"> • Actualizada: {{ application.updatedAt }}</span>
-          </p>
-        </ion-label>
-        <ion-badge [color]="application.offerActive ? 'success' : 'medium'" slot="end">
-          {{ application.status || (application.offerActive ? 'Enviada' : 'Cerrada') }}
-        </ion-badge>
-      </ion-item>
-    </ion-list>
-
-    <div class="empty-state" *ngIf="!loading && !applications.length && !error">
-      Aún no has enviado postulaciones.
-    </div>
-
-    <div class="loading" *ngIf="loading">Cargando postulaciones...</div>
-    <div class="error" *ngIf="error">{{ error }}</div>
-  </ion-content>
-</ion-page>
+  <div class="loading" *ngIf="loading">Cargando postulaciones...</div>
+  <div class="error" *ngIf="error">{{ error }}</div>
+</ion-content>
