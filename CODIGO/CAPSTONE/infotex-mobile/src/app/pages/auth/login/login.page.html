@@ -1,106 +1,108 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Iniciar sesión</ion-title>
-  </ion-toolbar>
-</ion-header>
+<ion-page>
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Iniciar sesión</ion-title>
+    </ion-toolbar>
+  </ion-header>
 
-<ion-content class="auth-shell" fullscreen [scrollY]="true">
-  <div class="auth-shell__body">
-    <ion-grid class="ion-no-padding">
-      <ion-row class="ion-justify-content-center">
-        <ion-col size="12" size-md="8" size-lg="6" size-xl="5">
-          <ion-card class="auth-card">
-            <ion-card-header>
-              <div class="auth-badge">
-                <ion-icon name="shield-checkmark-outline"></ion-icon>
-                <span>Acceso seguro</span>
-              </div>
-              <ion-card-title>Iniciar sesión</ion-card-title>
-              <ion-card-subtitle>Ingresa tus credenciales para continuar</ion-card-subtitle>
-            </ion-card-header>
-
-            <ion-card-content>
-              <div class="auth-highlight">
-                <ion-icon name="moon-outline"></ion-icon>
-                <div>
-                  <h4>Modo oscuro inspirado en GitHub</h4>
-                  <p>Interfaz limpia, con alto contraste y detalles neón para guiarte.</p>
+  <ion-content class="auth-shell" fullscreen [scrollY]="true">
+    <div class="auth-shell__body">
+      <ion-grid class="ion-no-padding">
+        <ion-row class="ion-justify-content-center">
+          <ion-col size="12" size-md="8" size-lg="6" size-xl="5">
+            <ion-card class="auth-card">
+              <ion-card-header>
+                <div class="auth-badge">
+                  <ion-icon name="shield-checkmark-outline"></ion-icon>
+                  <span>Acceso seguro</span>
                 </div>
-              </div>
+                <ion-card-title>Iniciar sesión</ion-card-title>
+                <ion-card-subtitle>Ingresa tus credenciales para continuar</ion-card-subtitle>
+              </ion-card-header>
 
-              <form class="auth-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-                <ion-list class="auth-fields" lines="none">
-                  <ion-item
-                    fill="solid"
-                    class="field"
-                    [class.invalid]="emailControl.touched && emailControl.invalid"
-                  >
-                    <ion-label position="stacked">Correo electrónico</ion-label>
-                    <ion-input
-                      type="email"
-                      formControlName="email"
-                      inputmode="email"
-                      placeholder="correo@ejemplo.com"
-                      autocomplete="email"
-                      required
-                    ></ion-input>
-                  </ion-item>
-                  <ion-note class="helper-text" color="danger" *ngIf="emailControl.touched && emailControl.invalid">
-                    <small *ngIf="emailControl.hasError('required')">El correo es obligatorio.</small>
-                    <small *ngIf="emailControl.hasError('email')">Debes ingresar un correo válido.</small>
-                  </ion-note>
-
-                  <ion-item
-                    fill="solid"
-                    class="field"
-                    [class.invalid]="passwordControl.touched && passwordControl.invalid"
-                  >
-                    <ion-label position="stacked">Contraseña</ion-label>
-                    <ion-input
-                      type="password"
-                      formControlName="password"
-                      placeholder="Mínimo 6 caracteres"
-                      autocomplete="current-password"
-                      required
-                    ></ion-input>
-                  </ion-item>
-                  <ion-note class="helper-text" color="danger" *ngIf="passwordControl.touched && passwordControl.invalid">
-                    <small *ngIf="passwordControl.hasError('required')">La contraseña es obligatoria.</small>
-                    <small *ngIf="passwordControl.hasError('minlength')">
-                      La contraseña debe tener al menos 6 caracteres.
-                    </small>
-                  </ion-note>
-                </ion-list>
-
-                <div class="form-actions">
-                  <ion-button
-                    type="submit"
-                    expand="block"
-                    color="primary"
-                    [disabled]="loading"
-                  >
-                    <ion-spinner slot="start" *ngIf="loading" name="crescent"></ion-spinner>
-                    {{ loading ? 'Ingresando...' : 'Ingresar' }}
-                  </ion-button>
-
-                  <ion-button fill="clear" expand="block" routerLink="/register">
-                    ¿No tienes cuenta? Crear una
-                  </ion-button>
+              <ion-card-content>
+                <div class="auth-highlight">
+                  <ion-icon name="moon-outline"></ion-icon>
+                  <div>
+                    <h4>Modo oscuro inspirado en GitHub</h4>
+                    <p>Interfaz limpia, con alto contraste y detalles neón para guiarte.</p>
+                  </div>
                 </div>
-              </form>
-            </ion-card-content>
-          </ion-card>
-        </ion-col>
-      </ion-row>
-    </ion-grid>
-  </div>
 
-  <ion-toast
-    [isOpen]="toast.open"
-    [message]="toast.message"
-    [color]="toast.color"
-    [duration]="2500"
-    position="bottom"
-    (didDismiss)="onToastDismiss()"
-  ></ion-toast>
-</ion-content>
+                <form class="auth-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+                  <ion-list class="auth-fields" lines="none">
+                    <ion-item
+                      fill="solid"
+                      class="field"
+                      [class.invalid]="emailControl.touched && emailControl.invalid"
+                    >
+                      <ion-label position="stacked">Correo electrónico</ion-label>
+                      <ion-input
+                        type="email"
+                        formControlName="email"
+                        inputmode="email"
+                        placeholder="correo@ejemplo.com"
+                        autocomplete="email"
+                        required
+                      ></ion-input>
+                    </ion-item>
+                    <ion-note class="helper-text" color="danger" *ngIf="emailControl.touched && emailControl.invalid">
+                      <small *ngIf="emailControl.hasError('required')">El correo es obligatorio.</small>
+                      <small *ngIf="emailControl.hasError('email')">Debes ingresar un correo válido.</small>
+                    </ion-note>
+
+                    <ion-item
+                      fill="solid"
+                      class="field"
+                      [class.invalid]="passwordControl.touched && passwordControl.invalid"
+                    >
+                      <ion-label position="stacked">Contraseña</ion-label>
+                      <ion-input
+                        type="password"
+                        formControlName="password"
+                        placeholder="Mínimo 6 caracteres"
+                        autocomplete="current-password"
+                        required
+                      ></ion-input>
+                    </ion-item>
+                    <ion-note class="helper-text" color="danger" *ngIf="passwordControl.touched && passwordControl.invalid">
+                      <small *ngIf="passwordControl.hasError('required')">La contraseña es obligatoria.</small>
+                      <small *ngIf="passwordControl.hasError('minlength')">
+                        La contraseña debe tener al menos 6 caracteres.
+                      </small>
+                    </ion-note>
+                  </ion-list>
+
+                  <div class="form-actions">
+                    <ion-button
+                      type="submit"
+                      expand="block"
+                      color="primary"
+                      [disabled]="loading"
+                    >
+                      <ion-spinner slot="start" *ngIf="loading" name="crescent"></ion-spinner>
+                      {{ loading ? 'Ingresando...' : 'Ingresar' }}
+                    </ion-button>
+
+                    <ion-button fill="clear" expand="block" routerLink="/register">
+                      ¿No tienes cuenta? Crear una
+                    </ion-button>
+                  </div>
+                </form>
+              </ion-card-content>
+            </ion-card>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </div>
+
+    <ion-toast
+      [isOpen]="toast.open"
+      [message]="toast.message"
+      [color]="toast.color"
+      [duration]="2500"
+      position="bottom"
+      (didDismiss)="onToastDismiss()"
+    ></ion-toast>
+  </ion-content>
+</ion-page>
