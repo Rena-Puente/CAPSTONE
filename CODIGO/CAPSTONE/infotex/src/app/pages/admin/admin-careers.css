@@ -34,6 +34,20 @@
   max-width: 720px;
 }
 
+.admin-careers__actions-bar {
+  margin-top: 0.35rem;
+}
+
+.admin-careers__link {
+  color: #58a6ff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-careers__link:hover {
+  text-decoration: underline;
+}
+
 .admin-careers__form {
   display: flex;
   flex-direction: column;

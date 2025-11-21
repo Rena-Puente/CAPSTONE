@@ -1,0 +1,141 @@
+<section class="admin-summary">
+  <header class="admin-summary__header">
+    <div>
+      <p class="admin-summary__eyebrow">Panel administrativo</p>
+      <h2 class="admin-summary__title">Resumen ejecutivo anual</h2>
+      <p class="admin-summary__subtitle">
+        Consulta el desempeño de la plataforma en el periodo seleccionado. Usa el formato
+        <code>YYYY-MM-DD</code> y asegúrate de que la fecha de inicio no supere la fecha de fin.
+      </p>
+    </div>
+    <div class="admin-summary__cta">
+      <span class="admin-summary__badge">Nuevo</span>
+      <p class="admin-summary__helper">Protegido por autenticación de administrador.</p>
+    </div>
+  </header>
+
+  <section class="admin-summary__card" aria-label="Filtros de resumen">
+    <form class="admin-summary__form" [formGroup]="form" (ngSubmit)="consultar()" novalidate>
+      <div class="admin-summary__form-grid">
+        <div class="admin-summary__field">
+          <label class="admin-summary__label" for="fechaInicio">Fecha inicio</label>
+          <input
+            id="fechaInicio"
+            type="date"
+            class="form-control admin-summary__control"
+            formControlName="fechaInicio"
+            placeholder="YYYY-MM-DD"
+            [class.is-invalid]="shouldShowError('fechaInicio')"
+          />
+          <div class="admin-summary__error" *ngIf="getControlError('fechaInicio')">
+            {{ getControlError('fechaInicio') }}
+          </div>
+        </div>
+
+        <div class="admin-summary__field">
+          <label class="admin-summary__label" for="fechaFin">Fecha fin</label>
+          <input
+            id="fechaFin"
+            type="date"
+            class="form-control admin-summary__control"
+            formControlName="fechaFin"
+            placeholder="YYYY-MM-DD"
+            [class.is-invalid]="shouldShowError('fechaFin')"
+          />
+          <div class="admin-summary__error" *ngIf="getControlError('fechaFin')">
+            {{ getControlError('fechaFin') }}
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-summary__actions">
+        <button type="submit" class="btn btn-primary admin-summary__submit" [disabled]="loading()">
+          <span class="spinner-border spinner-border-sm me-2" *ngIf="loading()" aria-hidden="true"></span>
+          {{ loading() ? 'Consultando...' : 'Consultar resumen' }}
+        </button>
+        <div class="admin-summary__hint" *ngIf="getRangeError() && !loading()">{{ getRangeError() }}</div>
+      </div>
+    </form>
+
+    <div class="alert alert-danger admin-summary__alert" *ngIf="error()">{{ error() }}</div>
+    <div class="alert alert-info admin-summary__alert" *ngIf="!loading() && !error() && !hasData() && hasRequested()">
+      No hay datos para el rango seleccionado. Intenta con otro periodo.
+    </div>
+  </section>
+
+  <section class="admin-summary__content" *ngIf="resumen() as resumenData">
+    <div class="admin-summary__cards" aria-label="Métricas destacadas">
+      <article class="admin-summary__metric">
+        <p class="admin-summary__metric-label">Postulantes promedio por oferta</p>
+        <p class="admin-summary__metric-value">{{ metricas().avg_postulantes_por_oferta | number: '1.0-2' }}</p>
+      </article>
+      <article class="admin-summary__metric">
+        <p class="admin-summary__metric-label">Ofertas activas</p>
+        <p class="admin-summary__metric-value">{{ metricas().ofertas_activas }}</p>
+      </article>
+      <article class="admin-summary__metric">
+        <p class="admin-summary__metric-label">Empresas inactivas</p>
+        <p class="admin-summary__metric-value">{{ metricas().empresas_inactivas }}</p>
+      </article>
+    </div>
+
+    <div class="admin-summary__visuals" *ngIf="chartModel() as model">
+      <div class="admin-summary__chart" role="img" aria-label="Series por mes">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+          <line x1="0" y1="95" x2="100" y2="95" class="admin-summary__axis" />
+          <line x1="0" y1="95" x2="0" y2="10" class="admin-summary__axis" />
+
+          <g *ngFor="let dataset of model.datasets">
+            <polyline [attr.points]="dataset.points" [attr.stroke]="dataset.color" />
+          </g>
+
+          <g *ngFor="let label of model.labels; let i = index">
+            <text
+              [attr.x]="model.labels.length > 1 ? (i / (model.labels.length - 1)) * 100 : 0"
+              y="99"
+              class="admin-summary__tick"
+            >
+              {{ label }}
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="admin-summary__legend">
+        <div class="admin-summary__legend-item" *ngFor="let dataset of model.datasets">
+          <span class="admin-summary__swatch" [style.backgroundColor]="dataset.color"></span>
+          <span>{{ dataset.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-summary__table" *ngIf="hasData()">
+      <div class="admin-summary__table-header">
+        <h3 class="admin-summary__table-title">Detalle mensual</h3>
+        <p class="admin-summary__table-subtitle">Valores agrupados por mes para cada indicador.</p>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Mes</th>
+              <th scope="col">Postulantes</th>
+              <th scope="col">Empresas</th>
+              <th scope="col">Ofertas</th>
+              <th scope="col">Postulaciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let mes of chartModel()?.labels">
+              <th scope="row">{{ mes }}</th>
+              <td>{{ resumenData.postulantes_por_mes.find((item) => item.mes === mes)?.total ?? 0 }}</td>
+              <td>{{ resumenData.empresas_por_mes.find((item) => item.mes === mes)?.total ?? 0 }}</td>
+              <td>{{ resumenData.ofertas_por_mes.find((item) => item.mes === mes)?.total ?? 0 }}</td>
+              <td>{{ resumenData.postulaciones_por_mes.find((item) => item.mes === mes)?.total ?? 0 }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</section>
