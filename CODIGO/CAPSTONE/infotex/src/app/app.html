@@ -42,5 +42,22 @@
   <router-outlet></router-outlet>
 </div>
 
+<footer class="infotex-footer mt-auto">
+  <div class="container infotex-footer__container">
+    
+    <div class="infotex-footer__brand">
+      <img src="../assets/img/favicon.png" alt="InfoTex" height="28" />
+      <span class="infotex-footer__brand-text">InfoTex</span>
+      <small class="infotex-footer__copyright">© {{ currentYear }}</small>
+    </div>
+
+    <nav class="infotex-footer__links">
+      <a routerLink="/welcome">Inicio</a>
+      <a routerLink="/about">Nosotros</a>
+      <a routerLink="/privacy">Privacidad</a>
+      <a routerLink="/contact">Contacto</a>
+    </nav>
+  </div>
+</footer>
 
 

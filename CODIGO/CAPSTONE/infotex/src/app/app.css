@@ -12,3 +12,60 @@
   min-height: 100vh;
 }
 
+/* --- FOOTER GITHUB STYLE --- */
+.infotex-footer {
+  background-color: #0d1117; /* GitHub dark base */
+  border-top: 1px solid #30363d; /* sutil, elegante */
+  padding: 1.2rem 0;
+  color: #8b949e; /* gris GitHub */
+  font-size: 0.9rem;
+}
+
+.infotex-footer__container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.infotex-footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.infotex-footer__brand-text {
+  font-weight: 600;
+  color: #e6edf3; /* blanco suave */
+  font-size: 1rem;
+}
+
+.infotex-footer__copyright {
+  color: #6e7681; /* gris GitHub más suave */
+  margin-left: 0.5rem;
+}
+
+.infotex-footer__links {
+  display: flex;
+  gap: 1.3rem;
+}
+
+.infotex-footer__links a {
+  color: #8b949e;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.infotex-footer__links a:hover {
+  color: #58a6ff; /* azul GitHub */
+  text-decoration: underline;
+}
+
+/* Mobile friendly */
+@media (max-width: 576px) {
+  .infotex-footer__container {
+    flex-direction: column;
+    text-align: center;
+  }
+}

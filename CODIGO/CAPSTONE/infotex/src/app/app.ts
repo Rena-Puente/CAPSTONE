@@ -14,8 +14,10 @@ import {
   imports: [CommonModule,NgIf,RouterOutlet, RouterLink],
   templateUrl: './app.html',
   styleUrl: './app.css'
+  
 })
 export class App {
+  
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly sessionState = this.authService.getSessionSignal();
@@ -31,4 +33,6 @@ export class App {
     this.authService.logout();
     void this.router.navigate(['/welcome']);
   }
+  currentYear = new Date().getFullYear();
 }
+

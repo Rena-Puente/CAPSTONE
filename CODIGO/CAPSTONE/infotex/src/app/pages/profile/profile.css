@@ -48,7 +48,7 @@
   border-radius: var(--profile-radius-lg);
   border: 1px solid var(--profile-color-primary-strong);
   background: linear-gradient(135deg, var(--profile-color-primary), #4095ff);
-  color: #0b0f16;
+  color: #3a82ff;
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 0.75rem 1.8rem rgba(64, 149, 255, 0.25);
