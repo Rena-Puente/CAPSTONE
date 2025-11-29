@@ -127,15 +127,16 @@
                               <div class="col">
                                 <div class="profile-detail">
                                   <span class="profile-detail-label">País</span>
+                                
                                   <span class="profile-detail-value" [class.text-secondary]="!profile()?.country">
                                     {{ profile()?.country || 'Sin registrar' }}
                                   </span>
                                 </div>
                               </div>
-
                               <div class="col">
                                 <div class="profile-detail">
                                   <span class="profile-detail-label">Ciudad</span>
+                                  
                                   <span class="profile-detail-value" [class.text-secondary]="!profile()?.city">
                                     {{ profile()?.city || 'Sin registrar' }}
                                   </span>
@@ -145,6 +146,7 @@
                               <div class="col">
                                 <div class="profile-detail">
                                   <span class="profile-detail-label">Teléfono</span>
+                    
                                   <span class="profile-detail-value" [class.text-secondary]="!profile()?.phoneNumber">
                                     {{ formatPhoneNumber(profile()?.phoneNumber) || 'Sin registrar' }}
                                   </span>
@@ -623,19 +625,46 @@
 </div>
 
 <ng-container *ngIf="editorOpen()">
-  <div class="profile-editor" role="dialog" aria-modal="true" aria-labelledby="profileEditorTitle"
-    aria-describedby="profileEditorDescription">
-    <div class="profile-editor__backdrop" aria-hidden="true" (click)="closeEditor()"></div>
-    <div class="profile-editor__panel" (click)="$event.stopPropagation()" tabindex="-1" #profileEditorPanel>
-      <div class="profile-editor__header d-flex justify-content-between align-items-start gap-3">
+  <div
+    class="profile-editor"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="profileEditorTitle"
+    aria-describedby="profileEditorDescription"
+  >
+    <div
+      class="profile-editor__backdrop"
+      aria-hidden="true"
+      (click)="closeEditor()"
+    ></div>
+
+    <div
+      class="profile-editor__panel"
+      (click)="$event.stopPropagation()"
+      tabindex="-1"
+      #profileEditorPanel
+    >
+      <!-- HEADER -->
+      <div
+        class="profile-editor__header d-flex justify-content-between align-items-start gap-3"
+      >
         <div>
-          <h2 id="profileEditorTitle" class="h5 mb-1 text-white">Editar perfil</h2>
+          <h2 id="profileEditorTitle" class="h5 mb-1 text-white">
+            Editar perfil
+          </h2>
           <p id="profileEditorDescription" class="mb-0 text-secondary">
             Actualiza y guarda tu información personal.
           </p>
         </div>
-        <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" (click)="closeEditor()"></button>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          aria-label="Cerrar"
+          (click)="closeEditor()"
+        ></button>
       </div>
+
+      <!-- BODY -->
       <div class="profile-editor__body">
         <div *ngIf="successMessage()" class="alert alert-success" role="alert">
           {{ successMessage() }}
@@ -645,221 +674,435 @@
         </div>
 
         <form class="profile-form" [formGroup]="profileForm" (ngSubmit)="save()" novalidate>
-          <div class="mb-3">
-            <label for="profileDisplayName" class="form-label">Nombre para mostrar</label>
-            <input id="profileDisplayName" type="text" class="form-control" formControlName="displayName"
-              #profileEditorFirstField [class.is-invalid]="
-                (displayNameControl.invalid && (displayNameControl.dirty || displayNameControl.touched)) ||
-                fieldState().displayName.ok === false
-              " />
-            <div class="invalid-feedback"
-              *ngIf="displayNameControl.hasError('required') && (displayNameControl.dirty || displayNameControl.touched)">
-              El nombre para mostrar es obligatorio.
-            </div>
-            <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
-              {{ fieldState().displayName.error || 'El servidor reportó un problema con este campo.' }}
-            </div>
-          </div>
-
-          <div class="mb-3">
-            <label for="profileSlug" class="form-label">URL personalizada</label>
-            <div class="input-group">
-              <span class="input-group-text text-secondary">{{ publicProfileBaseUrl }}</span>
-              <input id="profileSlug" type="text" class="form-control" formControlName="slug" autocomplete="off"
+          <!-- FILA 1: Nombre + URL -->
+          <div class="row g-3 mb-3">
+            <!-- Nombre para mostrar -->
+            <div class="col-12 col-md-6">
+              <label for="profileDisplayName" class="form-label">Nombre para mostrar</label>
+              <input
+                id="profileDisplayName"
+                type="text"
+                class="form-control"
+                formControlName="displayName"
+                #profileEditorFirstField
                 [class.is-invalid]="
-                  (slugControl.invalid && (slugControl.dirty || slugControl.touched)) ||
-                  fieldState().slug.ok === false
-                " />
+                  (displayNameControl.invalid &&
+                    (displayNameControl.dirty || displayNameControl.touched)) ||
+                  fieldState().displayName.ok === false
+                "
+              />
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  displayNameControl.hasError('required') &&
+                  (displayNameControl.dirty || displayNameControl.touched)
+                "
+              >
+                El nombre para mostrar es obligatorio.
+              </div>
+              <div class="invalid-feedback" *ngIf="fieldState().displayName.ok === false">
+                {{
+                  fieldState().displayName.error ||
+                    'El servidor reportó un problema con este campo.'
+                }}
+              </div>
             </div>
-            <div class="form-text text-secondary">Usa solo minúsculas, números y guiones. Ej: mi-portafolio.</div>
-            <div class="form-text text-muted" *ngIf="slugControl.value">
-              Vista previa: {{ publicProfileBaseUrl }}{{ (slugControl.value || '').trim().toLowerCase() }}
-            </div>
-            <div class="form-text text-info" *ngIf="slugAvailabilityStatus() === 'checking'">
-              Verificando disponibilidad…
-            </div>
-            <div class="form-text text-success" *ngIf="
-                slugAvailabilityStatus() === 'available' &&
-                slugControl.valid &&
-                slugAvailabilityMessage()
-              ">
-              {{ slugAvailabilityMessage() }}
-            </div>
-            <div class="form-text text-warning"
-              *ngIf="slugAvailabilityStatus() === 'error' && slugAvailabilityMessage()">
-              {{ slugAvailabilityMessage() }}
-            </div>
-            <div class="invalid-feedback d-block" *ngIf="slugAvailabilityStatus() === 'unavailable'">
-              {{ slugAvailabilityMessage() }}
-            </div>
-            <div class="invalid-feedback"
-              *ngIf="slugControl.hasError('required') && (slugControl.dirty || slugControl.touched)">
-              La URL personalizada es obligatoria.
-            </div>
-            <div class="invalid-feedback"
-              *ngIf="slugControl.hasError('pattern') && (slugControl.dirty || slugControl.touched)">
-              Ingresa de 3 a 40 caracteres válidos (minúsculas, números y guiones).
-            </div>
-            <div class="invalid-feedback" *ngIf="fieldState().slug.ok === false">
-              {{ fieldState().slug.error || 'El servidor reportó un problema con este campo.' }}
+
+            <!-- URL personalizada -->
+            <div class="col-12 col-md-6">
+              <label for="profileSlug" class="form-label">URL personalizada</label>
+              <div class="input-group">
+                <span class="input-group-text text-secondary">
+                  {{ publicProfileBaseUrl }}
+                </span>
+                <input
+                  id="profileSlug"
+                  type="text"
+                  class="form-control"
+                  formControlName="slug"
+                  autocomplete="off"
+                  [class.is-invalid]="
+                    (slugControl.invalid &&
+                      (slugControl.dirty || slugControl.touched)) ||
+                    fieldState().slug.ok === false
+                  "
+                />
+              </div>
+              <div class="form-text text-secondary">
+                Usa solo minúsculas, números y guiones. Ej: mi-portafolio.
+              </div>
+              <div class="form-text text-secondary" *ngIf="slugControl.value">
+                Vista previa:
+                {{ publicProfileBaseUrl }}{{ (slugControl.value || '').trim().toLowerCase() }}
+              </div>
+              <div class="form-text text-info" *ngIf="slugAvailabilityStatus() === 'checking'">
+                Verificando disponibilidad…
+              </div>
+              <div
+                class="form-text text-success"
+                *ngIf="
+                  slugAvailabilityStatus() === 'available' &&
+                  slugControl.valid &&
+                  slugAvailabilityMessage()
+                "
+              >
+                {{ slugAvailabilityMessage() }}
+              </div>
+              <div
+                class="form-text text-warning"
+                *ngIf="
+                  slugAvailabilityStatus() === 'error' &&
+                  slugAvailabilityMessage()
+                "
+              >
+                {{ slugAvailabilityMessage() }}
+              </div>
+              <div
+                class="invalid-feedback d-block"
+                *ngIf="slugAvailabilityStatus() === 'unavailable'"
+              >
+                {{ slugAvailabilityMessage() }}
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  slugControl.hasError('required') &&
+                  (slugControl.dirty || slugControl.touched)
+                "
+              >
+                La URL personalizada es obligatoria.
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  slugControl.hasError('pattern') &&
+                  (slugControl.dirty || slugControl.touched)
+                "
+              >
+                Ingresa de 3 a 40 caracteres válidos (minúsculas, números y guiones).
+              </div>
+              <div class="invalid-feedback" *ngIf="fieldState().slug.ok === false">
+                {{
+                  fieldState().slug.error ||
+                    'El servidor reportó un problema con este campo.'
+                }}
+              </div>
             </div>
           </div>
 
+          <!-- FILA 2: Carrera -->
           <div class="mb-3">
             <label for="profileCareer" class="form-label">Carrera</label>
-            <select id="profileCareer" class="form-select" formControlName="career" aria-label="Selecciona tu carrera"
+            <select
+              id="profileCareer"
+              class="form-select"
+              formControlName="career"
+              aria-label="Selecciona tu carrera"
               [class.is-invalid]="
-                (careerControl.invalid && (careerControl.dirty || careerControl.touched)) ||
+                (careerControl.invalid &&
+                  (careerControl.dirty || careerControl.touched)) ||
                 fieldState().career.ok === false
-              ">
-              <option value="" disabled [selected]="!careerControl.value">Selecciona una carrera</option>
-              <ng-container *ngFor="let group of careerCategoryOptions(); trackBy: trackCareerCategory">
+              "
+            >
+              <option value="" disabled [selected]="!careerControl.value">
+                Selecciona una carrera
+              </option>
+              <ng-container
+                *ngFor="let group of careerCategoryOptions(); trackBy: trackCareerCategory"
+              >
                 <optgroup [label]="group.name">
-                  <option *ngFor="let option of group.options; trackBy: trackCareerOption" [value]="option">
+                  <option
+                    *ngFor="let option of group.options; trackBy: trackCareerOption"
+                    [value]="option"
+                  >
                     {{ option }}
                   </option>
                 </optgroup>
               </ng-container>
             </select>
-            <div class="form-text text-light" *ngIf="careersLoading()">Cargando carreras...</div>
-            <div class="form-text text-warning" *ngIf="careersError()">{{ careersError() }}</div>
-            <div class="invalid-feedback"
-              *ngIf="careerControl.hasError('required') && (careerControl.dirty || careerControl.touched)">
+            <div class="form-text text-light" *ngIf="careersLoading()">
+              Cargando carreras...
+            </div>
+            <div class="form-text text-warning" *ngIf="careersError()">
+              {{ careersError() }}
+            </div>
+            <div
+              class="invalid-feedback"
+              *ngIf="
+                careerControl.hasError('required') &&
+                (careerControl.dirty || careerControl.touched)
+              "
+            >
               La carrera es obligatoria.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().career.ok === false">
-              {{ fieldState().career.error || 'El servidor reportó un problema con este campo.' }}
+              {{
+                fieldState().career.error ||
+                  'El servidor reportó un problema con este campo.'
+              }}
             </div>
           </div>
 
+          <!-- FILA 3: Biografía -->
           <div class="mb-3">
             <label for="profileBiography" class="form-label">Biografía</label>
-            <textarea id="profileBiography" class="form-control" formControlName="biography" rows="4"
+            <textarea
+              id="profileBiography"
+              class="form-control"
+              formControlName="biography"
+              rows="4"
               [class.is-invalid]="
-                (biographyControl.invalid && (biographyControl.dirty || biographyControl.touched)) ||
+                (biographyControl.invalid &&
+                  (biographyControl.dirty || biographyControl.touched)) ||
                 fieldState().biography.ok === false
-              "></textarea>
-            <div class="form-text text-light">Escribe al menos 80 caracteres sobre ti.</div>
-            <div class="invalid-feedback"
-              *ngIf="biographyControl.hasError('required') && (biographyControl.dirty || biographyControl.touched)">
+              "
+            ></textarea>
+            <div class="form-text text-light">
+              Escribe al menos 80 caracteres sobre ti.
+            </div>
+            <div
+              class="invalid-feedback"
+              *ngIf="
+                biographyControl.hasError('required') &&
+                (biographyControl.dirty || biographyControl.touched)
+              "
+            >
               La biografía es obligatoria.
             </div>
-            <div class="invalid-feedback"
-              *ngIf="biographyControl.hasError('minTrimmedLength') && (biographyControl.dirty || biographyControl.touched)">
+            <div
+              class="invalid-feedback"
+              *ngIf="
+                biographyControl.hasError('minTrimmedLength') &&
+                (biographyControl.dirty || biographyControl.touched)
+              "
+            >
               La biografía debe contener al menos 80 caracteres.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().biography.ok === false">
-              {{ fieldState().biography.error || 'El servidor reportó un problema con este campo.' }}
+              {{
+                fieldState().biography.error ||
+                  'El servidor reportó un problema con este campo.'
+              }}
             </div>
           </div>
 
-          <div class="row g-3">
-            <div class="col-md-6 col-lg-4">
+          <!-- FILA 4: País / Ciudad / Teléfono -->
+          <div class="row g-3 mb-3 profile-location-row">
+            <!-- País -->
+            <div class="col-12 col-md-4">
               <div class="form-floating">
-                <select id="profileCountry" class="form-select" formControlName="country"
-                  aria-label="Selecciona tu país" [class.is-invalid]="
-                    (countryControl.invalid && (countryControl.dirty || countryControl.touched)) ||
+                <select
+                  id="profileCountry"
+                  class="form-select"
+                  formControlName="country"
+                  aria-label="Selecciona tu país"
+                  [class.is-invalid]="
+                    (countryControl.invalid &&
+                      (countryControl.dirty || countryControl.touched)) ||
                     fieldState().country.ok === false
-                  ">
+                  "
+                >
                   <option [value]="defaultCountry">{{ defaultCountry }}</option>
                 </select>
                 <label for="profileCountry">País</label>
               </div>
-              <div class="invalid-feedback"
-                *ngIf="countryControl.hasError('required') && (countryControl.dirty || countryControl.touched)">
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  countryControl.hasError('required') &&
+                  (countryControl.dirty || countryControl.touched)
+                "
+              >
                 El país es obligatorio.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().country.ok === false">
-                {{ fieldState().country.error || 'El servidor reportó un problema con este campo.' }}
+                {{
+                  fieldState().country.error ||
+                    'El servidor reportó un problema con este campo.'
+                }}
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
+            <!-- Ciudad -->
+            <div class="col-12 col-md-4">
               <div class="form-floating">
-                <select id="profileCity" class="form-select" formControlName="city" aria-label="Selecciona tu ciudad"
+                <select
+                  id="profileCity"
+                  class="form-select"
+                  formControlName="city"
+                  aria-label="Selecciona tu ciudad"
                   [class.is-invalid]="
-                    (cityControl.invalid && (cityControl.dirty || cityControl.touched)) ||
+                    (cityControl.invalid &&
+                      (cityControl.dirty || cityControl.touched)) ||
                     fieldState().city.ok === false
-                  ">
-                  <option value="" disabled [selected]="!cityControl.value">Selecciona una ciudad</option>
-                  <option *ngFor="let option of cityOptions(); trackBy: trackCityOption" [value]="option">
+                  "
+                >
+                  <option value="" disabled [selected]="!cityControl.value">
+                    Selecciona una ciudad
+                  </option>
+                  <option
+                    *ngFor="let option of cityOptions(); trackBy: trackCityOption"
+                    [value]="option"
+                  >
                     {{ option }}
                   </option>
                 </select>
                 <label for="profileCity">Ciudad</label>
               </div>
-              <div class="form-text text-light" *ngIf="citiesLoading()">Cargando ciudades...</div>
-              <div class="form-text text-warning" *ngIf="citiesError()">{{ citiesError() }}</div>
-              <div class="invalid-feedback"
-                *ngIf="cityControl.hasError('required') && (cityControl.dirty || cityControl.touched)">
+              <div class="form-text text-light" *ngIf="citiesLoading()">
+                Cargando ciudades...
+              </div>
+              <div class="form-text text-warning" *ngIf="citiesError()">
+                {{ citiesError() }}
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  cityControl.hasError('required') &&
+                  (cityControl.dirty || cityControl.touched)
+                "
+              >
                 La ciudad es obligatoria.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().city.ok === false">
-                {{ fieldState().city.error || 'El servidor reportó un problema con este campo.' }}
+                {{
+                  fieldState().city.error ||
+                    'El servidor reportó un problema con este campo.'
+                }}
               </div>
             </div>
 
-            <div class="col-md-6 col-lg-4">
+            <!-- Teléfono -->
+            <div class="col-12 col-md-4">
               <label for="profilePhoneNumber" class="form-label">Teléfono</label>
               <div class="input-group">
                 <span class="input-group-text text-secondary">+56</span>
-                <input id="profilePhoneNumber" type="tel" class="form-control" maxlength="9" inputmode="numeric"
-                  formControlName="phoneNumber" placeholder="912345678" [class.is-invalid]="
-                    (phoneNumberControl.invalid && (phoneNumberControl.dirty || phoneNumberControl.touched)) ||
+                <input
+                  id="profilePhoneNumber"
+                  type="tel"
+                  class="form-control"
+                  maxlength="9"
+                  inputmode="numeric"
+                  formControlName="phoneNumber"
+                  placeholder="912345678"
+                  [class.is-invalid]="
+                    (phoneNumberControl.invalid &&
+                      (phoneNumberControl.dirty || phoneNumberControl.touched)) ||
                     fieldState().phoneNumber.ok === false
-                  " />
+                  "
+                />
               </div>
-              <div class="form-text text-secondary">Ingresa 9 dígitos sin incluir el prefijo.</div>
-              <div class="invalid-feedback"
-                *ngIf="phoneNumberControl.hasError('required') && (phoneNumberControl.dirty || phoneNumberControl.touched)">
+              <div class="form-text text-secondary">
+                Ingresa 9 dígitos sin incluir el prefijo.
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  phoneNumberControl.hasError('required') &&
+                  (phoneNumberControl.dirty || phoneNumberControl.touched)
+                "
+              >
                 El número de teléfono es obligatorio.
               </div>
-              <div class="invalid-feedback"
-                *ngIf="phoneNumberControl.hasError('pattern') && (phoneNumberControl.dirty || phoneNumberControl.touched)">
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  phoneNumberControl.hasError('pattern') &&
+                  (phoneNumberControl.dirty || phoneNumberControl.touched)
+                "
+              >
                 Debes ingresar exactamente 9 dígitos.
               </div>
               <div class="invalid-feedback" *ngIf="fieldState().phoneNumber.ok === false">
-                {{ fieldState().phoneNumber.error || 'El servidor reportó un problema con este campo.' }}
+                {{
+                  fieldState().phoneNumber.error ||
+                    'El servidor reportó un problema con este campo.'
+                }}
               </div>
             </div>
           </div>
 
+          <!-- FILA 5: Avatar URL + selector -->
           <div class="mb-4 mt-3">
-            <label for="profileAvatarUrl" class="form-label">URL de la foto de perfil</label>
-            <input id="profileAvatarUrl" type="url" class="form-control" formControlName="avatarUrl" [class.is-invalid]="
-                (avatarUrlControl.invalid && (avatarUrlControl.dirty || avatarUrlControl.touched)) ||
+            <label for="profileAvatarUrl" class="form-label">
+              URL de la foto de perfil
+            </label>
+            <input
+              id="profileAvatarUrl"
+              type="url"
+              class="form-control"
+              formControlName="avatarUrl"
+              [class.is-invalid]="
+                (avatarUrlControl.invalid &&
+                  (avatarUrlControl.dirty || avatarUrlControl.touched)) ||
                 fieldState().avatarUrl.ok === false
-              " />
-            <div class="invalid-feedback"
-              *ngIf="avatarUrlControl.hasError('required') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
+              "
+            />
+            <div
+              class="invalid-feedback"
+              *ngIf="
+                avatarUrlControl.hasError('required') &&
+                (avatarUrlControl.dirty || avatarUrlControl.touched)
+              "
+            >
               La URL de la foto de perfil es obligatoria.
             </div>
-            <div class="invalid-feedback"
-              *ngIf="avatarUrlControl.hasError('invalidAvatarUrl') && (avatarUrlControl.dirty || avatarUrlControl.touched)">
-              Ingresa una URL válida (http/https) o una ruta que comience con <code>/</code>.
+            <div
+              class="invalid-feedback"
+              *ngIf="
+                avatarUrlControl.hasError('invalidAvatarUrl') &&
+                (avatarUrlControl.dirty || avatarUrlControl.touched)
+              "
+            >
+              Ingresa una URL válida (http/https) o una ruta que comience con
+              <code>/</code>.
             </div>
             <div class="invalid-feedback" *ngIf="fieldState().avatarUrl.ok === false">
-              {{ fieldState().avatarUrl.error || 'El servidor reportó un problema con este campo.' }}
+              {{
+                fieldState().avatarUrl.error ||
+                  'El servidor reportó un problema con este campo.'
+              }}
             </div>
+
             <div class="mt-3">
-              <span class="form-label d-block mb-2">O selecciona una imagen predeterminada</span>
-              <button type="button" class="btn btn-outline-info avatar-selector-trigger" (click)="openAvatarSelector()"
-                [disabled]="profileForm.disabled">
+              <span class="form-label d-block mb-2">
+                O selecciona una imagen predeterminada
+              </span>
+              <button
+                type="button"
+                class="btn btn-outline-info avatar-selector-trigger"
+                (click)="openAvatarSelector()"
+                [disabled]="profileForm.disabled"
+              >
                 InfoTex Avatar
               </button>
               <div class="form-text text-light mt-2">
-                Guarda tus imágenes en <code>public/avatars</code> y actualiza las rutas si es necesario.
+                Guarda tus imágenes en <code>public/avatars</code> y actualiza las rutas
+                si es necesario.
               </div>
             </div>
           </div>
 
+          <!-- ACCIONES -->
           <div class="d-flex justify-content-end gap-2">
-            <button type="button" class="btn btn-outline-light" (click)="closeEditor()" [disabled]="saving()">
+            <button
+              type="button"
+              class="btn btn-outline-light"
+              (click)="closeEditor()"
+              [disabled]="saving()"
+            >
               Cancelar
             </button>
-            <button type="submit" class="btn btn-primary"
-              [disabled]="profileForm.invalid || profileForm.disabled || saving()">
-              <span class="spinner-border spinner-border-sm me-2" role="status" *ngIf="saving()"></span>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              [disabled]="profileForm.invalid || profileForm.disabled || saving()"
+            >
+              <span
+                class="spinner-border spinner-border-sm me-2"
+                role="status"
+                *ngIf="saving()"
+              ></span>
               Guardar cambios
             </button>
           </div>

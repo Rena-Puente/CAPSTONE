@@ -661,7 +661,7 @@
 }
 
 .profile-form .form-select option {
-  color: #0b0f16;
+  color: #ffffff;
 }
 
 .profile-form .form-select optgroup {
@@ -774,15 +774,17 @@
 .profile-editor__backdrop {
   position: absolute;
   inset: 0;
-  background: #0d1117;
+  background: rgba(13, 17, 23, 0.7); /* 60% opacidad */
+  backdrop-filter: blur(4px);        /* opcional: blur */
   animation: profile-editor-fade-in 0.35s ease forwards;
 }
 
+
 .profile-editor__panel {
   position: relative;
-  width: min(640px, 90vw);
+  width: min(840px, 140vw);
   max-width: 100%;
-  background: #0d1117;
+  background: #0d1117; /*label de editar perfil*/
   border: 1px solid #30363d;
   border-radius: 0.9rem;
   color: #c9d1d9;
@@ -799,7 +801,7 @@
 .profile-editor__header {
   padding: var(--profile-spacing-lg);
   border-bottom: 1px solid #30363d;
-  background: #0f1623;
+  
 }
 
 .profile-editor__body {
@@ -818,9 +820,13 @@
 }
 
 .profile-form {
+  padding: 1rem 0.75rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+.profile-location-row {
+  margin-top: 1.75rem;
 }
 
 .profile-form .row.g-3 {
